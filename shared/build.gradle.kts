@@ -9,26 +9,30 @@ plugins {
 
 kotlin {
     jvm()
-    
+
     androidLibrary {
-       namespace = "org.liganddraw.app.shared"
-       compileSdk = libs.versions.android.compileSdk.get().toInt()
-       minSdk = libs.versions.android.minSdk.get().toInt()
-    
-       compilerOptions {
-           jvmTarget = JvmTarget.JVM_11
-       }
-       androidResources {
-           enable = true
-       }
-       withHostTest {
-           isIncludeAndroidResources = true
-       }
+        namespace = "org.liganddraw.app.shared"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
+        }
+        androidResources {
+            enable = true
+        }
+        withHostTest {
+            isIncludeAndroidResources = true
+        }
     }
-    
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
+            implementation(files("libs/rdkit.aar"))
+        }
+        jvmMain.dependencies {
+            implementation(files("libs/org.RDKit.jar"))
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
