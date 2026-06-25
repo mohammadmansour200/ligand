@@ -30,6 +30,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(files("libs/rdkit.aar"))
+
+            implementation(libs.koin.android)
+            implementation(libs.koin.androidx.compose)
         }
         jvmMain.dependencies {
             implementation(files("libs/org.RDKit.jar"))
@@ -47,9 +50,14 @@ kotlin {
             implementation(libs.androidx.adaptive)
             implementation(libs.androidx.adaptive.layout)
             implementation(libs.androidx.adaptive.navigation)
+
+            api(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.koin.test)
         }
     }
 }
