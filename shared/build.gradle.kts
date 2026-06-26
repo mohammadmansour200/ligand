@@ -29,13 +29,9 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
-            implementation(files("libs/rdkit.aar"))
 
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.compose)
-        }
-        jvmMain.dependencies {
-            implementation(files("libs/org.RDKit.jar"))
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -54,6 +50,8 @@ kotlin {
             api(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
+
+            implementation(files("libs/org.RDKit.jar"))
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
