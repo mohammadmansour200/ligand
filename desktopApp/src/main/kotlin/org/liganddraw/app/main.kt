@@ -2,6 +2,7 @@ package org.liganddraw.app
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import io.github.vinceglb.filekit.FileKit
 import org.liganddraw.app.di.initKoin
 
 fun main() {
@@ -23,6 +24,7 @@ fun main() {
     }
 
     initKoin()
+    FileKit.init(appId = "org.liganddraw.app")
 
     application {
         Window(

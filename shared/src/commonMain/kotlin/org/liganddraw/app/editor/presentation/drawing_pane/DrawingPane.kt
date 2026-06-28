@@ -4,31 +4,37 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import liganddraw.shared.generated.resources.Res
-import liganddraw.shared.generated.resources.menu
-import org.jetbrains.compose.resources.vectorResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
+import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingPaneTopBar
 
 @Composable
-fun DrawingPaneRoot() {
-    DrawingPane()
+fun DrawingPaneRoot(viewModel: DrawingPaneViewModel = koinViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    DrawingPane(state, viewModel::onAction)
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun DrawingPane() {
+fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) {
+
+
     Scaffold(
         topBar = {
             Surface {

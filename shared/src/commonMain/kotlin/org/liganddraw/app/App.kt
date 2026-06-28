@@ -13,7 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneRoot
+import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneViewModel
 import org.liganddraw.app.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -21,8 +23,9 @@ import org.liganddraw.app.ui.theme.AppTheme
 @Preview
 fun App() {
     AppTheme {
-        val navigator = rememberSupportingPaneScaffoldNavigator()
+        val drawingPaneViewModel = koinViewModel<DrawingPaneViewModel>()
 
+        val navigator = rememberSupportingPaneScaffoldNavigator()
         SupportingPaneScaffold(
             directive = navigator.scaffoldDirective,
             value = navigator.scaffoldValue,
