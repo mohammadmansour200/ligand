@@ -1,7 +1,9 @@
 package org.liganddraw.app
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDragHandle
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
@@ -38,6 +40,7 @@ fun App() {
                     DrawingPaneRoot()
                 }
             },
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface),
             paneExpansionState = rememberPaneExpansionState(navigator.scaffoldValue),
             paneExpansionDragHandle = { state ->
                 val interactionSource =
