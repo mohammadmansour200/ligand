@@ -7,9 +7,11 @@ import org.koin.dsl.module
 import org.liganddraw.app.editor.data.cheminformatics.RDKitCheminformaticsDataSource
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneViewModel
+import org.liganddraw.app.editor.presentation.molecule_pane.MoleculePaneViewModel
 
 val sharedModule = module {
     singleOf(::RDKitCheminformaticsDataSource).bind<CheminformaticsDataSource>()
 
     viewModelOf(::DrawingPaneViewModel)
+    viewModelOf(::MoleculePaneViewModel)
 }

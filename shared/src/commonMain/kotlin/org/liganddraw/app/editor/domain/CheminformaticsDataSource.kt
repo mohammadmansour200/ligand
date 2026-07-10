@@ -31,4 +31,18 @@ interface CheminformaticsDataSource {
      * @return [Result] containing a [List] of [Molecule] on success, or a [DataError.Local]
      */
     suspend fun cdxFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError.Local>
+
+    /**
+     * Predicts 3D conformer via ETKDGv3 & MMFF94 field optimization of 2D molecule
+     * @param [molecule] Selected Molecule from canvas.
+     * @return [Result] containing a [Molecule] on success, or a [DataError.Local]
+     */
+    suspend fun generate3DConformer(molecule: Molecule): Result<Molecule, DataError.Local>
+
+    /**
+     * Calculates LogP, Molecular Weight, HBA, HBD and Rotatable bonds of 2D molecule
+     * @param [molecule] Selected Molecule from canvas.
+     * @return [Result] containing [MoleculeProperties] on success, or a [DataError.Local]
+     */
+    suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, DataError.Local>
 }

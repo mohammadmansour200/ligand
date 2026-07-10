@@ -8,7 +8,13 @@ plugins {
 }
 
 kotlin {
-    jvm()
+    jvmToolchain(22)
+
+    jvm {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_22
+        }
+    }
 
     androidLibrary {
         namespace = "org.liganddraw.app.shared"
@@ -55,6 +61,9 @@ kotlin {
 
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs.compose)
+
+            implementation(libs.filament.compose)
+            implementation(libs.filament.utils)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

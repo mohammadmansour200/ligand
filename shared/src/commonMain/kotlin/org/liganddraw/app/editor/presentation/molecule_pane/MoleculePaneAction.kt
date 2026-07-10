@@ -1,0 +1,19 @@
+package org.liganddraw.app.editor.presentation.molecule_pane
+
+import org.liganddraw.app.editor.domain.Molecule
+
+sealed interface MoleculePaneAction {
+    /**
+     * Action triggered when a molecule is selected on canvas.
+     * Conformer is parsed using Cheminformatics engine. generated conformer is then saved in state
+     * @param molecule Selected molecule
+     */
+    data class OnGenerateConformer(val molecule: Molecule) : MoleculePaneAction
+
+    /**
+     * Action triggered when a molecule is selected on canvas.
+     * Properties are calculated using Cheminformatics engine. properties are then saved in state
+     * @param molecule Selected molecule
+     */
+    data class OnCalcProperties(val molecule: Molecule) : MoleculePaneAction
+}

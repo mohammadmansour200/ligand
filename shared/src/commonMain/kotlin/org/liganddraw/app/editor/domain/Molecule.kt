@@ -27,3 +27,11 @@ data class Molecule(
     val atoms: List<Atom>,
     val bonds: List<Bond>
 )
+
+data class MoleculeProperties(
+    val logp: Double,
+    val molecularWeight: Double,
+    val hydrogenBondAcceptors: Long,
+    val hydrogenBondDonors: Long,
+    val rotatableBonds: Long
+)
