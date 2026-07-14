@@ -8,20 +8,45 @@ data class Atom(
     val charge: Int,
 )
 
-enum class BondType {
-    SINGLE, DOUBLE, TRIPLE, IONIC, HYDROGEN;
-}
-
 enum class BondDir {
     NONE, BEGINWEDGE, BEGINDASH;
 }
 
-data class Bond(
-    val beginAtomIndex: Long,
-    val endAtomIndex: Long,
-    val type: BondType,
-    val direction: BondDir
-)
+enum class DoubleBondAlignment {
+    CENTERED, POSITIVE, NEGATIVE
+}
+
+sealed interface Bond {
+    val beginAtomIndex: Long
+    val endAtomIndex: Long
+
+    data class Single(
+        override val beginAtomIndex: Long,
+        override val endAtomIndex: Long,
+        val direction: BondDir = BondDir.NONE
+    ) : Bond
+
+    data class Double(
+        override val beginAtomIndex: Long,
+        override val endAtomIndex: Long,
+        val alignment: DoubleBondAlignment
+    ) : Bond
+
+    data class Triple(
+        override val beginAtomIndex: Long,
+        override val endAtomIndex: Long
+    ) : Bond
+
+    data class Ionic(
+        override val beginAtomIndex: Long,
+        override val endAtomIndex: Long
+    ) : Bond
+
+    data class Hydrogen(
+        override val beginAtomIndex: Long,
+        override val endAtomIndex: Long
+    ) : Bond
+}
 
 data class Molecule(
     val atoms: List<Atom>,

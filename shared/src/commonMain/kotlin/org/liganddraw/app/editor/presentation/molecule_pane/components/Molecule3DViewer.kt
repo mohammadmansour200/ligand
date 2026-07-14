@@ -38,7 +38,7 @@ import io.github.erkko68.filament.utils.Quaternion
 import io.github.erkko68.filament.utils.cross
 import io.github.erkko68.filament.utils.dot
 import io.github.erkko68.filament.utils.normalize
-import org.liganddraw.app.editor.domain.BondType
+import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculePaneConstants.CPK_ATOM_COLOR_MAP
 import org.liganddraw.app.editor.domain.MoleculePaneConstants.FALLBACK_ATOM_COLOR
@@ -97,7 +97,7 @@ fun ColumnScope.Molecule3DViewer(
             val hydrogenBondMaterial =
                 rememberSolidColorInstance(tmpl, FilColor(0.20f, 0.55f, 0.95f), isDashed = true)
             conformer.bonds.forEach { bond ->
-                if (bond.type == BondType.IONIC) return@forEach
+                if (bond is Bond.Ionic) return@forEach
 
                 val beginAtom = conformer.atoms[bond.beginAtomIndex.toInt()]
                 val beginAtomXPos = beginAtom.x.toFloat()
@@ -135,13 +135,13 @@ fun ColumnScope.Molecule3DViewer(
                     beginAtomZPos
                 )
 
-                when (bond.type) {
-                    BondType.SINGLE ->
+                when (bond) {
+                    is Bond.Single ->
                         CylinderBond(
                             bondMaterial, position, height, rotationAxis, rotationAngle
                         )
 
-                    BondType.DOUBLE -> {
+                    is Bond.Double -> {
                         val spacing = .15f
                         CylinderBond(
                             bondMaterial,
@@ -159,7 +159,7 @@ fun ColumnScope.Molecule3DViewer(
                         )
                     }
 
-                    BondType.TRIPLE -> {
+                    is Bond.Triple -> {
                         val spacing = 0.25f
                         CylinderBond(
                             bondMaterial,
@@ -180,7 +180,7 @@ fun ColumnScope.Molecule3DViewer(
                         )
                     }
 
-                    BondType.HYDROGEN -> CylinderBond(
+                    is Bond.Hydrogen -> CylinderBond(
                         hydrogenBondMaterial, position, height, rotationAxis, rotationAngle
                     )
                 }

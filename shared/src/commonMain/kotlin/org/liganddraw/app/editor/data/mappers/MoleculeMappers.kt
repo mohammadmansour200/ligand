@@ -5,6 +5,7 @@ import org.RDKit.Point3D
 import org.RDKit.ROMol
 import org.RDKit.RWMol
 import org.liganddraw.app.core.domain.utils.safeValueOf
+import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.Molecule
 
@@ -24,16 +25,18 @@ fun Molecule.toRdkitMol(): ROMol {
     this.bonds.forEach {
         val beginAtomIdx = it.beginAtomIndex
         val endAtomIdx = it.endAtomIndex
-        val bondType =
-            safeValueOf<org.RDKit.Bond.BondType>(
-                it.type.name,
-                org.RDKit.Bond.BondType.SINGLE
-            )
+        val bondType = when (it) {
+            is Bond.Double -> org.RDKit.Bond.BondType.DOUBLE
+            is Bond.Hydrogen -> org.RDKit.Bond.BondType.HYDROGEN
+            is Bond.Ionic -> org.RDKit.Bond.BondType.IONIC
+            is Bond.Triple -> org.RDKit.Bond.BondType.TRIPLE
+            else -> org.RDKit.Bond.BondType.SINGLE
+        }
 
         writableRdkitMol.addBond(beginAtomIdx, endAtomIdx, bondType)
 
         // Set bond direction if available
-        if (it.direction != BondDir.NONE) {
+        if (it is Bond.Single && it.direction != BondDir.NONE) {
             val rdkitBondDir =
                 safeValueOf<org.RDKit.Bond.BondDir>(
                     it.direction.name,
