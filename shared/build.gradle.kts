@@ -64,6 +64,8 @@ kotlin {
 
             implementation(libs.filament.compose)
             implementation(libs.filament.utils)
+
+            implementation(libs.compose.navigationevent)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

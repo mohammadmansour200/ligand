@@ -16,9 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneRoot
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneViewModel
@@ -33,6 +38,14 @@ import org.liganddraw.app.ui.theme.AppTheme
 fun App() {
     AppTheme {
         val navigator = rememberSupportingPaneScaffoldNavigator()
+        val scope = rememberCoroutineScope()
+
+        NavigationBackHandler(
+            state = rememberNavigationEventState(NavigationEventInfo.None),
+            onBackCompleted = {
+                if (navigator.canNavigateBack()) scope.launch { navigator.navigateBack() }
+            }
+        )
 
         val drawingPaneViewModel = koinViewModel<DrawingPaneViewModel>()
         val drawingPaneState by drawingPaneViewModel.state.collectAsStateWithLifecycle()
