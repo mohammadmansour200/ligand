@@ -33,7 +33,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             // Parse file to Molecule
             val parseFile = when (extension.lowercase()) {
                 "sdf" -> cheminformaticsDataSource.sdfFileToMolecule(tempFile.absolutePathString())
-                "cdx" -> cheminformaticsDataSource.cdxFileToMolecule(tempFile.absolutePathString())
                 else -> cheminformaticsDataSource.molFileToMolecule(tempFile.absolutePathString())
             }
 

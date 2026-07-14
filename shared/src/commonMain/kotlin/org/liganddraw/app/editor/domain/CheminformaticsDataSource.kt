@@ -24,15 +24,6 @@ interface CheminformaticsDataSource {
     suspend fun sdfFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError.Local>
 
     /**
-     * This suspend function performs non-blocking I/O to read .cdx file at the specified
-     * absolute path and converts the chemical structure data into list of [Molecule].
-     *
-     * @param absolutePath The full file system path to the `.cdx` file.
-     * @return [Result] containing a [List] of [Molecule] on success, or a [DataError.Local]
-     */
-    suspend fun cdxFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError.Local>
-
-    /**
      * Predicts 3D conformer via ETKDGv3 & MMFF94 field optimization of 2D molecule
      * @param [molecule] Selected Molecule from canvas.
      * @return [Result] containing a [Molecule] on success, or a [DataError.Local]
