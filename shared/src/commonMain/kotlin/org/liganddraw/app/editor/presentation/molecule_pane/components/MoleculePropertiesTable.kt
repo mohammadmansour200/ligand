@@ -1,6 +1,5 @@
 package org.liganddraw.app.editor.presentation.molecule_pane.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,8 +25,7 @@ fun MoleculePropertiesTable(properties: MoleculeProperties) {
     Box(
         modifier = Modifier
             .wrapContentSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
+            .padding(top = 8.dp, bottom = 8.dp, end = 8.dp)
     ) {
         Column(
             modifier = Modifier

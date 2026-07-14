@@ -47,7 +47,7 @@ const val centeredDoubleBondSpacing = 3f
 fun DrawingCanvas(state: DrawingPaneState) {
     val textMeasurer = rememberTextMeasurer()
     val color = MaterialTheme.colorScheme.inverseSurface
-    val background = MaterialTheme.colorScheme.surfaceBright
+    val background = MaterialTheme.colorScheme.outlineVariant
 
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -375,7 +375,7 @@ private fun offsetLine(
 ): Pair<Offset, Offset> {
     val angle = atan2(end.y - start.y, end.x - start.x)
     val perpAngle = angle + (Math.PI / 2).toFloat()
-    
+
     val dx = offsetDistance * cos(perpAngle)
     val dy = offsetDistance * sin(perpAngle)
 

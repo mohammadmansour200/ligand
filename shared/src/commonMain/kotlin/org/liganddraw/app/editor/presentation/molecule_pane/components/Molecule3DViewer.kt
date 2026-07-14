@@ -2,6 +2,7 @@ package org.liganddraw.app.editor.presentation.molecule_pane.components
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -190,6 +191,7 @@ fun ColumnScope.Molecule3DViewer(
 
     FilamentView(
         modifier = Modifier
+            .padding(top = 8.dp, bottom = 8.dp, end = 8.dp)
             .clip(RoundedCornerShape(10.dp))
             .weight(1f).fillMaxSize()
             .onSizeChanged { orbit.setViewport(it.width, it.height) }

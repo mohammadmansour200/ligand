@@ -62,7 +62,7 @@ fun App() {
                     DrawingPaneRoot(drawingPaneViewModel)
                 }
             },
-            modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
             paneExpansionState = rememberPaneExpansionState(navigator.scaffoldValue),
             paneExpansionDragHandle = { state ->
                 val interactionSource =

@@ -1,9 +1,11 @@
 package org.liganddraw.app.editor.presentation.drawing_pane.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import liganddraw.shared.generated.resources.Res
@@ -12,7 +14,9 @@ import org.jetbrains.compose.resources.vectorResource
 
 @Composable
 fun DrawingToolbar() {
-    Column(modifier = Modifier.fillMaxHeight()) {
+    Column(
+        modifier = Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
         IconButton(onClick = {}) {
             Icon(vectorResource(Res.drawable.drag_pan), contentDescription = null)
         }

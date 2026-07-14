@@ -25,7 +25,7 @@ fun MoleculePaneRoot(viewModel: MoleculePaneViewModel = koinViewModel()) {
 fun MoleculePane(state: MoleculePaneState) {
     Column(
         modifier = Modifier
-            .fillMaxSize().background(MaterialTheme.colorScheme.surface),
+            .fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
