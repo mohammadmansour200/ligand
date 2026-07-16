@@ -313,7 +313,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         mol: ROMol,
         conformer: Conformer
     ): DoubleBondAlignment {
-        val isCentered = bond.beginAtom.degree == 1L || bond.endAtom.degree == 1L
+        val isCentered =
+            (bond.beginAtom.degree == 1L && bond.endAtom.degree >= 3L) || (bond.endAtom.degree == 1L && bond.beginAtom.degree >= 3L)
+        
         return if (isCentered) DoubleBondAlignment.CENTERED else
             determineAsymmetricDoubleBondSide(
                 bond,
