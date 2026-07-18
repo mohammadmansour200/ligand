@@ -25,15 +25,21 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.DoubleBondAlignment
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
+import org.liganddraw.app.editor.presentation.utils.toLabel
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,6 +48,12 @@ const val scaleFactor = 40f
 const val strokeWidth = 2f
 const val bondSpacing = 6f
 const val centeredDoubleBondSpacing = 3f
+val symbolFontSize = 1.2.em
+val subscriptFontSize = .85.em
+val getSymbolStyle =
+    { color: Color -> TextStyle(fontSize = symbolFontSize, color = color) }
+val subscriptStyle =
+    SpanStyle(fontSize = subscriptFontSize, baselineShift = BaselineShift.Subscript)
 
 @Composable
 fun DrawingCanvas(state: DrawingPaneState) {
@@ -49,21 +61,63 @@ fun DrawingCanvas(state: DrawingPaneState) {
     val color = MaterialTheme.colorScheme.inverseSurface
     val background = MaterialTheme.colorScheme.outlineVariant
 
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    var canvasScale by remember { mutableFloatStateOf(1f) }
+    var canvasOffset by remember { mutableStateOf(Offset.Zero) }
+
+    val sizesCache = remember(state.molecules) {
+        val symbolSizes = mutableMapOf<String, IntSize>()
+        val hydrogenSizes = mutableMapOf<Long, IntSize>()
+        state.molecules.forEach { mol ->
+            mol.atoms.forEach { atom ->
+                val symbol = atom.symbol
+                if (!symbolSizes.containsKey(symbol)) {
+                    val measuredSymbol = textMeasurer.measure(
+                        text = symbol,
+                        style = getSymbolStyle(Color.Unspecified)
+                    )
+
+                    symbolSizes[symbol] = measuredSymbol.size
+                }
+
+                val hydrogenCount = atom.numImplicitHydrogen
+                if (hydrogenCount > 0 && !hydrogenSizes.containsKey(hydrogenCount)) {
+                    val hydrogenLabel = buildAnnotatedString {
+                        append("H")
+                        if (hydrogenCount > 1) {
+                            pushStyle(
+                                subscriptStyle
+                            )
+                            append(hydrogenCount.toString())
+                            pop()
+                        }
+                    }
+
+                    val measuredHydrogenLabel =
+                        textMeasurer.measure(hydrogenLabel, getSymbolStyle(Color.Unspecified))
+
+                    hydrogenSizes[hydrogenCount] = measuredHydrogenLabel.size
+                }
+            }
+        }
+
+        Pair(symbolSizes, hydrogenSizes)
+    }
+    val symbolSize = { symbol: String -> sizesCache.first.getOrDefault(symbol, IntSize.Zero) }
+    val hydrogenSize =
+        { hydrogenCount: Long -> sizesCache.second.getOrDefault(hydrogenCount, IntSize.Zero) }
 
     Canvas(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
             .fillMaxSize()
-            .transformable(state = rememberTransformableState { zoomChange, offsetChange, _ ->
-                scale *= zoomChange
-                offset += offsetChange
-            })
+            .clip(RoundedCornerShape(10.dp))
             .background(background)
+            .transformable(state = rememberTransformableState { zoomChange, offsetChange, _ ->
+                canvasScale *= zoomChange
+                canvasOffset += offsetChange
+            })
     ) {
-        translate(offset.x, offset.y) {
-            scale(scale, pivot = Offset.Zero) {
+        translate(canvasOffset.x, canvasOffset.y) {
+            scale(canvasScale, pivot = Offset.Zero) {
                 state.molecules.forEach { mol ->
                     // --- DRAW BONDS ---
                     // To apply clipRect only on bonds not atom symbols
@@ -72,34 +126,41 @@ fun DrawingCanvas(state: DrawingPaneState) {
                         val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
                         val endAtom = mol.atoms[bond.endAtomIndex.toInt()]
 
-                        val beginAtomX =
+                        val beginAtomXPositionPx =
                             ((beginAtom.x * scaleFactor)).toFloat()
-                        val beginAtomY =
+                        val beginAtomYPositionPx =
                             -((beginAtom.y * scaleFactor)).toFloat()
-                        val beginAtomOffset = Offset(beginAtomX, beginAtomY)
+                        val beginAtomOffset = Offset(beginAtomXPositionPx, beginAtomYPositionPx)
 
-                        val endAtomX = ((endAtom.x * scaleFactor)).toFloat()
-                        val endAtomY = -((endAtom.y * scaleFactor)).toFloat()
-                        val endAtomOffset = Offset(endAtomX, endAtomY)
+                        val endAtomXPositionPx = ((endAtom.x * scaleFactor)).toFloat()
+                        val endAtomYPositionPx = -((endAtom.y * scaleFactor)).toFloat()
+                        val endAtomOffset = Offset(endAtomXPositionPx, endAtomYPositionPx)
 
                         // clipRect to hide bond overlapping with atom symbol
                         if (beginAtom.symbol != "C") {
-                            val beginAtomRect =
-                                atomSymbolRect(
-                                    textMeasurer,
-                                    beginAtom.symbol,
-                                    beginAtomOffset
+                            val beginLabelRect =
+                                labelRect(
+                                    symbolSize = symbolSize(beginAtom.symbol),
+                                    hydrogenSize = hydrogenSize(beginAtom.numImplicitHydrogen),
+                                    isReversed = beginAtom.isLabelReversed,
+                                    atomOffset = beginAtomOffset
                                 )
+
                             drawContext.canvas.clipRect(
-                                rect = beginAtomRect,
+                                rect = beginLabelRect,
                                 clipOp = ClipOp.Difference
                             )
                         }
                         if (endAtom.symbol != "C") {
-                            val endAtomRect =
-                                atomSymbolRect(textMeasurer, endAtom.symbol, endAtomOffset)
+                            val endLabelRect =
+                                labelRect(
+                                    symbolSize = symbolSize(endAtom.symbol),
+                                    hydrogenSize = hydrogenSize(endAtom.numImplicitHydrogen),
+                                    isReversed = endAtom.isLabelReversed,
+                                    atomOffset = endAtomOffset
+                                )
                             drawContext.canvas.clipRect(
-                                rect = endAtomRect,
+                                rect = endLabelRect,
                                 clipOp = ClipOp.Difference
                             )
                         }
@@ -173,18 +234,24 @@ fun DrawingCanvas(state: DrawingPaneState) {
                     // --- DRAW ATOM SYMBOL ---
                     mol.atoms.forEach { atom ->
                         if (atom.symbol != "C") {
-                            val atomX = ((atom.x * scaleFactor)).toFloat()
-                            val atomY = -((atom.y * scaleFactor)).toFloat()
-                            val atomOffset = Offset(atomX, atomY)
+                            val atomXPositionPx = ((atom.x * scaleFactor)).toFloat()
+                            val atomYPositionPx = -((atom.y * scaleFactor)).toFloat()
+                            val atomOffset = Offset(atomXPositionPx, atomYPositionPx)
 
-                            val atomRect =
-                                atomSymbolRect(textMeasurer, atom.symbol, atomOffset)
+                            val labelRect =
+                                labelRect(
+                                    symbolSize = symbolSize(atom.symbol),
+                                    hydrogenSize = hydrogenSize(atom.numImplicitHydrogen),
+                                    isReversed = atom.isLabelReversed,
+                                    atomOffset = atomOffset
+                                )
 
                             drawText(
                                 textMeasurer = textMeasurer,
-                                text = atom.symbol,
-                                topLeft = atomRect.topLeft,
-                                style = TextStyle(color = color)
+                                text = atom.toLabel(),
+                                topLeft = labelRect.topLeft,
+                                style = getSymbolStyle(color),
+                                size = labelRect.size
                             )
                         }
                     }
@@ -388,17 +455,23 @@ private fun offsetLine(
     return Pair(finalStart, finalEnd)
 }
 
-private fun atomSymbolRect(textMeasurer: TextMeasurer, symbol: String, atomCenter: Offset): Rect {
-    val measuredText = textMeasurer.measure(symbol)
-    val boxSize = measuredText.size
+private fun labelRect(
+    symbolSize: IntSize,
+    hydrogenSize: IntSize,
+    isReversed: Boolean, // Reversed: [H][Symbol], Not reversed: [Symbol][H]
+    atomOffset: Offset, // Atom X and Y coordinates in pixels
+): Rect {
+    val totalWidth = symbolSize.width + hydrogenSize.width
+    val maxHeight = maxOf(symbolSize.height, hydrogenSize.height)
 
-    val halfWidth = boxSize.width / 2f
-    val halfHeight = boxSize.height / 2f
+    val leftOffset = if (isReversed) hydrogenSize.width + symbolSize.center.x
+    else symbolSize.center.x
 
-    val left = atomCenter.x - halfWidth
-    val top = atomCenter.y - halfHeight
-    val right = atomCenter.x + halfWidth
-    val bottom = atomCenter.y + halfHeight
+    val left = atomOffset.x - leftOffset
+    val right = left + totalWidth
+
+    val top = atomOffset.y - (maxHeight / 2)
+    val bottom = top + maxHeight
 
     return Rect(
         left,

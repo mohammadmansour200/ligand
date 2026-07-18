@@ -5,7 +5,9 @@ data class Atom(
     val y: Double,
     val z: Double,
     val symbol: String,
+    val numImplicitHydrogen: Long,
     val charge: Int,
+    val isLabelReversed: Boolean
 )
 
 enum class BondDir {

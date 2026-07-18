@@ -28,8 +28,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             Dispatchers.Default
         ) {
             try {
-                val mol: ROMol =
-                    RWMol.MolFromMolFile(absolutePath, false) // Sanitize is set to false
+                val mol =
+                    RWMol.MolFromMolFile(absolutePath, true) // Sanitize is set to true
+
+                mol.Kekulize()
 
                 // Generate 2d conformer if none available
                 if (mol.numConformers == 0L) {
@@ -51,7 +53,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                             y = atomPosition.y,
                             z = atomPosition.z,
                             symbol = atom.symbol,
-                            charge = atom.formalCharge
+                            numImplicitHydrogen = atom.numImplicitHs,
+                            charge = atom.formalCharge,
+                            isLabelReversed = determineAtomLabelIsReversed(atom, conformer)
                         )
                     )
                 }
@@ -113,12 +117,16 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             Dispatchers.Default
         ) {
             try {
-                val supplier = SDMolSupplier(absolutePath, false) // Sanitize is set to false
+                val supplier = SDMolSupplier(absolutePath, true) // Sanitize is set to true
                 val molecules = mutableListOf<Molecule>()
 
                 // Iterate molecules in SDF
                 while (!supplier.atEnd()) {
-                    val mol = supplier.next() ?: continue
+                    val roMol = supplier.next() ?: continue
+                    val mol = RWMol(roMol)
+                    roMol.delete()
+
+                    mol.Kekulize()
 
                     // Generate 2d conformer if none available
                     if (mol.numConformers == 0L) {
@@ -140,7 +148,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                                 y = atomPosition.y,
                                 z = atomPosition.z,
                                 symbol = atom.symbol,
-                                charge = atom.formalCharge
+                                numImplicitHydrogen = atom.numImplicitHs,
+                                charge = atom.formalCharge,
+                                isLabelReversed = determineAtomLabelIsReversed(atom, conformer)
                             )
                         )
                     }
@@ -239,7 +249,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                         y = atomPosition.y,
                         z = atomPosition.z,
                         symbol = atom.symbol,
-                        charge = atom.formalCharge
+                        numImplicitHydrogen = atom.numImplicitHs,
+                        charge = atom.formalCharge,
+                        isLabelReversed = false
                     )
                 )
             }
@@ -308,6 +320,28 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             )
         }
 
+    private fun determineAtomLabelIsReversed(atom: org.RDKit.Atom, conformer: Conformer): Boolean {
+        val hydrogenListedFirst = listOf("O", "F", "S", "Cl", "Se", "Br", "Te", "I", "Po", "At")
+        val atomIsNoBonds = atom.degree == 0L
+        if (atomIsNoBonds && hydrogenListedFirst.contains(atom.symbol)) return true
+
+        val isTerminalAtom = atom.degree == 1L
+
+        if (isTerminalAtom) {
+            val neighborAtom = atom.bonds[0].getOtherAtom(atom)
+
+            val atomPosition = conformer.getAtomPos(atom.idx)
+            val neighborAtomPosition = conformer.getAtomPos(neighborAtom.idx)
+
+            println("${atom.symbol} x: ${atomPosition.x} bonded to ${neighborAtom.symbol} x: ${neighborAtomPosition.x}")
+
+            val atomIsOnRight = (atomPosition.x - neighborAtomPosition.x) < 0.0
+            return atomIsOnRight
+        }
+
+        return false
+    }
+
     private fun determineDoubleBondAlignment(
         bond: org.RDKit.Bond,
         mol: ROMol,
@@ -315,7 +349,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     ): DoubleBondAlignment {
         val isCentered =
             (bond.beginAtom.degree == 1L && bond.endAtom.degree >= 3L) || (bond.endAtom.degree == 1L && bond.beginAtom.degree >= 3L)
-        
+
         return if (isCentered) DoubleBondAlignment.CENTERED else
             determineAsymmetricDoubleBondSide(
                 bond,
