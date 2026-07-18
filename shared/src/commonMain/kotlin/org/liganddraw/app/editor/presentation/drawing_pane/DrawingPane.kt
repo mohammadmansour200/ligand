@@ -29,8 +29,11 @@ fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) 
         },
     ) {
         Row(modifier = Modifier.fillMaxSize().padding(it)) {
-            DrawingToolbar()
-            DrawingCanvas(state)
+            DrawingToolbar(
+                selectedTool = state.selectedTool,
+                onSelectTool = { tool -> onAction(DrawingPaneAction.OnSelectTool(tool)) }
+            )
+            DrawingCanvas(state = state, onAction = { action -> onAction(action) })
         }
     }
 }

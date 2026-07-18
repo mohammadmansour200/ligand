@@ -1,5 +1,8 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,6 +11,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
+import org.liganddraw.app.editor.domain.Tool
+import org.liganddraw.app.editor.presentation.drawing_pane.components.scaleFactor
+import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
+import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
+import org.liganddraw.app.editor.presentation.utils.labelRect
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
@@ -21,6 +29,15 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     fun onAction(action: DrawingPaneAction) {
         when (action) {
             is DrawingPaneAction.OnFilePick -> parseFile(action.content, action.extension)
+            is DrawingPaneAction.OnCacheLabelDimensions -> cacheLabelDimensions(
+                action.uniqueSymbols,
+                action.uniqueHydrogenCounts
+            )
+
+            is DrawingPaneAction.OnSelectTool -> selectTool(action.tool)
+            is DrawingPaneAction.OnPointerMove -> handlePointerMove(action.x, action.y)
+            // TODO("Handle press")
+            is DrawingPaneAction.OnPointerPress -> {}
         }
     }
 
@@ -46,5 +63,55 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             // Delete temporary file
             tempFile.deleteIfExists()
         }
+    }
+
+    private fun cacheLabelDimensions(
+        symbols: Map<String, IntSize>,
+        hydrogens: Map<Long, IntSize>
+    ) {
+        _state.update {
+            it.copy(
+                symbolLabelDimensionsCache = symbols,
+                hydrogenLabelDimensionsCache = hydrogens
+            )
+        }
+    }
+
+    private fun selectTool(tool: Tool) {
+        _state.update { it.copy(selectedTool = tool) }
+    }
+
+    private fun handlePointerMove(x: Float, y: Float) {
+        val hitAtomId = findAtomByPosition(x, y)
+
+        if (state.value.hoveredAtomId != hitAtomId) {
+            _state.update { it.copy(hoveredAtomId = hitAtomId) }
+        }
+    }
+
+    private fun findAtomByPosition(x: Float, y: Float): Pair<Int, Int>? {
+        _state.value.molecules.fastForEachIndexed { molIndex, molecule ->
+            molecule.atoms.fastForEachIndexed { atomIndex, atom ->
+                val atomX = (atom.x * scaleFactor).toFloat()
+                val atomY = -(atom.y * scaleFactor).toFloat()
+
+                val rect = labelRect(
+                    symbolDimensions = getSymbolLabelDimensions(
+                        atom.symbol,
+                        _state.value.symbolLabelDimensionsCache
+                    ),
+                    hydrogenDimensions = if (atom.symbol == "C") IntSize.Zero else getHydrogenLabelDimensions(
+                        atom.numImplicitHydrogen, _state.value.hydrogenLabelDimensionsCache
+                    ),
+                    isReversed = atom.isLabelReversed,
+                    atomOffset = Offset(atomX, atomY)
+                )
+
+                if (x in rect.left..rect.right && y in rect.top..rect.bottom) {
+                    return Pair(molIndex, atomIndex)
+                }
+            }
+        }
+        return null
     }
 }
