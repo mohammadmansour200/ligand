@@ -3,7 +3,6 @@ package org.liganddraw.app.editor.data.cheminformatics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.RDKit.Bond.BondType
-import org.RDKit.Conformer
 import org.RDKit.DistanceGeom
 import org.RDKit.ForceField
 import org.RDKit.PeriodicTable
@@ -14,12 +13,14 @@ import org.RDKit.SDMolSupplier
 import org.liganddraw.app.core.domain.DataError
 import org.liganddraw.app.core.domain.Result
 import org.liganddraw.app.core.domain.utils.safeValueOf
-import org.liganddraw.app.editor.data.mappers.toRdkitMol
+import org.liganddraw.app.editor.data.mappers.doubleBondAlignment
+import org.liganddraw.app.editor.data.mappers.isLabelReversed
+import org.liganddraw.app.editor.data.mappers.toMolecule
+import org.liganddraw.app.editor.data.mappers.toRWMol
 import org.liganddraw.app.editor.domain.Atom
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
-import org.liganddraw.app.editor.domain.DoubleBondAlignment
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculeProperties
 
@@ -29,84 +30,16 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             Dispatchers.Default
         ) {
             try {
+                // --- READ .mol FILE ---
                 val mol =
                     RWMol.MolFromMolFile(absolutePath, true) // Sanitize is set to true
 
-                mol.Kekulize()
+                // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+                val molecule = mol.toMolecule()
 
-                // Generate 2d conformer if none available
-                if (mol.numConformers == 0L) {
-                    mol.compute2DCoords()
-                }
-
-                val conformer = mol.conformer
-                // Generating wedging information as RDKit doesn't store bond wedging information by default
-                mol.WedgeMolBonds(conformer)
-
-                val atoms = mutableListOf<Atom>()
-                for (i in 0 until mol.numAtoms) {
-                    val atomPosition = conformer.getAtomPos(i)
-                    val atom = mol.getAtomWithIdx(i)
-
-                    atoms.add(
-                        Atom(
-                            x = atomPosition.x,
-                            y = atomPosition.y,
-                            z = atomPosition.z,
-                            symbol = atom.symbol,
-                            numImplicitHydrogen = atom.numImplicitHs,
-                            charge = atom.formalCharge,
-                            isLabelReversed = determineAtomLabelIsReversed(atom, conformer)
-                        )
-                    )
-                }
-
-                val bonds = mutableListOf<Bond>()
-                for (i in 0 until mol.numBonds) {
-                    val bond = mol.getBondWithIdx(i)
-
-                    bonds.add(
-                        when (bond.bondType) {
-                            BondType.DOUBLE -> {
-                                val alignment =
-                                    determineDoubleBondAlignment(
-                                        bond,
-                                        mol,
-                                        conformer
-                                    )
-                                Bond.Double(
-                                    beginAtomIndex = bond.beginAtomIdx,
-                                    endAtomIndex = bond.endAtomIdx,
-                                    alignment = alignment
-                                )
-                            }
-
-                            BondType.TRIPLE -> Bond.Triple(
-                                beginAtomIndex = bond.beginAtomIdx,
-                                endAtomIndex = bond.endAtomIdx
-                            )
-
-                            BondType.IONIC -> Bond.Ionic(
-                                beginAtomIndex = bond.beginAtomIdx,
-                                endAtomIndex = bond.endAtomIdx
-                            )
-
-                            BondType.HYDROGEN -> Bond.Hydrogen(
-                                beginAtomIndex = bond.beginAtomIdx,
-                                endAtomIndex = bond.endAtomIdx
-                            )
-
-                            else -> Bond.Single(
-                                beginAtomIndex = bond.beginAtomIdx,
-                                endAtomIndex = bond.endAtomIdx,
-                                direction = safeValueOf<BondDir>(bond.bondDir.name, BondDir.NONE)
-                            )
-                        }
-                    )
-                }
-
+                // --- CLEANUP ---
                 mol.delete()
-                return@withContext Result.Success(listOf(Molecule(atoms, bonds)))
+                return@withContext Result.Success(listOf(molecule))
             } catch (e: Exception) {
                 println(e.message)
                 return@withContext Result.Error(DataError.Local.FILE_CORRUPTED)
@@ -121,91 +54,21 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 val supplier = SDMolSupplier(absolutePath, true) // Sanitize is set to true
                 val molecules = mutableListOf<Molecule>()
 
-                // Iterate molecules in SDF
+                // --- ITERATE MOLECULES FOUND IN SDF FILE ---
                 while (!supplier.atEnd()) {
                     val roMol = supplier.next() ?: continue
-                    val mol = RWMol(roMol)
+                    val rwMol = RWMol(roMol)
+
+                    // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+                    val molecule = rwMol.toMolecule()
+
+                    // Cleanup
                     roMol.delete()
-
-                    mol.Kekulize()
-
-                    // Generate 2d conformer if none available
-                    if (mol.numConformers == 0L) {
-                        mol.compute2DCoords()
-                    }
-
-                    val conformer = mol.conformer
-                    // Generating wedging information as RDKit doesn't store bond wedging information by default
-                    mol.WedgeMolBonds(conformer)
-
-                    val atoms = mutableListOf<Atom>()
-                    for (i in 0 until mol.numAtoms) {
-                        val atomPosition = conformer.getAtomPos(i)
-                        val atom = mol.getAtomWithIdx(i)
-
-                        atoms.add(
-                            Atom(
-                                x = atomPosition.x,
-                                y = atomPosition.y,
-                                z = atomPosition.z,
-                                symbol = atom.symbol,
-                                numImplicitHydrogen = atom.numImplicitHs,
-                                charge = atom.formalCharge,
-                                isLabelReversed = determineAtomLabelIsReversed(atom, conformer)
-                            )
-                        )
-                    }
-
-                    val bonds = mutableListOf<Bond>()
-                    for (i in 0 until mol.numBonds) {
-                        val bond = mol.getBondWithIdx(i)
-
-                        bonds.add(
-                            when (bond.bondType) {
-                                BondType.DOUBLE -> {
-                                    val alignment =
-                                        determineDoubleBondAlignment(
-                                            bond,
-                                            mol,
-                                            conformer
-                                        )
-                                    Bond.Double(
-                                        beginAtomIndex = bond.beginAtomIdx,
-                                        endAtomIndex = bond.endAtomIdx,
-                                        alignment = alignment
-                                    )
-                                }
-
-                                BondType.TRIPLE -> Bond.Triple(
-                                    beginAtomIndex = bond.beginAtomIdx,
-                                    endAtomIndex = bond.endAtomIdx
-                                )
-
-                                BondType.IONIC -> Bond.Ionic(
-                                    beginAtomIndex = bond.beginAtomIdx,
-                                    endAtomIndex = bond.endAtomIdx
-                                )
-
-                                BondType.HYDROGEN -> Bond.Hydrogen(
-                                    beginAtomIndex = bond.beginAtomIdx,
-                                    endAtomIndex = bond.endAtomIdx
-                                )
-
-                                else -> Bond.Single(
-                                    beginAtomIndex = bond.beginAtomIdx,
-                                    endAtomIndex = bond.endAtomIdx,
-                                    direction = safeValueOf<BondDir>(
-                                        bond.bondDir.name,
-                                        BondDir.NONE
-                                    )
-                                )
-                            }
-                        )
-                    }
-
-                    mol.delete()
-                    molecules.add(Molecule(atoms, bonds))
+                    rwMol.delete()
+                    molecules.add(molecule)
                 }
+                // Cleanup
+                supplier.delete()
                 return@withContext Result.Success(molecules)
             } catch (e: Exception) {
                 println(e.message)
@@ -217,18 +80,19 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         withContext(
             Dispatchers.Default
         ) {
-            val rdkitMol = molecule.toRdkitMol()
+            // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+            val rdkitMol: ROMol = molecule.toRWMol()
 
             // --- GENERATE CONFORMER ---
             // Add hydrogens for more accurate conformer prediction
-            val hydrogenatedRdkitMol = RDKFuncs.addHs(rdkitMol)
+            val hydrogenatedRdkitROMol = RDKFuncs.addHs(rdkitMol)
             rdkitMol.delete()
 
             val embedParams = RDKFuncs.getETKDGv3()
-            val conformerId = DistanceGeom.EmbedMolecule(hydrogenatedRdkitMol, embedParams)
+            val conformerId = DistanceGeom.EmbedMolecule(hydrogenatedRdkitROMol, embedParams)
 
             ForceField.MMFFOptimizeMolecule(
-                hydrogenatedRdkitMol,
+                hydrogenatedRdkitROMol,
                 "MMFF94",
                 1000,
                 10.0,
@@ -236,79 +100,30 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 false
             )
 
-            // --- CONVERT TO MOLECULE ---
-            // Set atoms
-            val generated3DConformer = hydrogenatedRdkitMol.getConformer(conformerId)
-            val atoms = mutableListOf<Atom>()
-            for (i in 0 until hydrogenatedRdkitMol.numAtoms) {
-                val atomPosition = generated3DConformer.getAtomPos(i)
-                val atom = hydrogenatedRdkitMol.getAtomWithIdx(i)
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            val hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
 
-                atoms.add(
-                    Atom(
-                        x = atomPosition.x,
-                        y = atomPosition.y,
-                        z = atomPosition.z,
-                        symbol = atom.symbol,
-                        numImplicitHydrogen = atom.numImplicitHs,
-                        charge = atom.formalCharge,
-                        isLabelReversed = false
-                    )
-                )
-            }
+            // Cleanup
+            hydrogenatedRdkitROMol.delete()
 
-            // Set bonds
-            val bonds = mutableListOf<Bond>()
-            for (i in 0 until hydrogenatedRdkitMol.numBonds) {
-                val bond = hydrogenatedRdkitMol.getBondWithIdx(i)
+            val molecule = hydrogenatedRdkitRWMol.toMolecule(false)
 
-                bonds.add(
-                    when (bond.bondType) {
-                        BondType.DOUBLE ->
-                            Bond.Double(
-                                beginAtomIndex = bond.beginAtomIdx,
-                                endAtomIndex = bond.endAtomIdx,
-                                alignment = DoubleBondAlignment.POSITIVE
-                            )
-
-                        BondType.TRIPLE -> Bond.Triple(
-                            beginAtomIndex = bond.beginAtomIdx,
-                            endAtomIndex = bond.endAtomIdx
-                        )
-
-                        BondType.IONIC -> Bond.Ionic(
-                            beginAtomIndex = bond.beginAtomIdx,
-                            endAtomIndex = bond.endAtomIdx
-                        )
-
-                        BondType.HYDROGEN -> Bond.Hydrogen(
-                            beginAtomIndex = bond.beginAtomIdx,
-                            endAtomIndex = bond.endAtomIdx
-                        )
-
-                        else -> Bond.Single(
-                            beginAtomIndex = bond.beginAtomIdx,
-                            endAtomIndex = bond.endAtomIdx,
-                            direction = safeValueOf<BondDir>(bond.bondDir.name, BondDir.NONE)
-                        )
-                    }
-                )
-            }
-            hydrogenatedRdkitMol.delete()
-
-            return@withContext Result.Success(Molecule(atoms, bonds))
+            return@withContext Result.Success(molecule)
         }
 
     override suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, DataError.Local> =
         withContext(Dispatchers.Default) {
-            val rdkitMol = molecule.toRdkitMol()
+            // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+            val rdkitMol = molecule.toRWMol()
 
+            // --- CALCULATE PROPERTIES ---
             val logp = RDKFuncs.calcMolLogP(rdkitMol)
             val hba = RDKFuncs.calcNumHBA(rdkitMol)
             val hbd = RDKFuncs.calcNumHBD(rdkitMol)
             val mwt = RDKFuncs.calcAMW(rdkitMol)
             val rotatable = RDKFuncs.calcNumRotatableBonds(rdkitMol)
 
+            // --- CLEANUP ---
             rdkitMol.delete()
             return@withContext Result.Success(
                 MoleculeProperties(
@@ -327,14 +142,18 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         type: BondType,
         dir: org.RDKit.Bond.BondDir
     ): Result<Molecule, DataError.Local> = withContext(Dispatchers.Default) {
-        val rdkitROMol = molecule.toRdkitMol()
-        val rdkitRWMol = RWMol(rdkitROMol)
+        // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+        val rdkitRWMol = molecule.toRWMol()
+        val template = ROMol(rdkitRWMol)
 
+        // --- ADD END ATOM IN RDKIT MOLECULE ---
         val endAtomIdx = rdkitRWMol.addAtom(org.RDKit.Atom("C"))
-        rdkitRWMol.addBond(beginAtomIdx, endAtomIdx, type)
 
-        rdkitRWMol.generateDepictionMatching2DStructure(rdkitROMol)
-        rdkitROMol.delete()
+        // --- ADD BOND IN RDKIT MOLECULE ---
+        rdkitRWMol.addBond(beginAtomIdx, endAtomIdx, type)
+        // Maintains accurate bond angles
+        rdkitRWMol.generateDepictionMatching2DStructure(template)
+        template.delete()
 
         try {
             rdkitRWMol.sanitizeMol()
@@ -349,7 +168,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         val conformer = rdkitRWMol.conformer
         val atoms = molecule.atoms.toMutableList()
 
-        // --- UPDATE BEGIN ATOM ---
+        // --- UPDATE UI BEGIN ATOM ---
         val beginAtomPosition = conformer.getAtomPos(beginAtomIdx)
         val beginAtom = rdkitRWMol.getAtomWithIdx(beginAtomIdx)
         atoms[beginAtomIdx.toInt()] = Atom(
@@ -359,10 +178,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             symbol = beginAtom.symbol,
             numImplicitHydrogen = beginAtom.numImplicitHs,
             charge = beginAtom.formalCharge,
-            isLabelReversed = determineAtomLabelIsReversed(beginAtom, conformer)
+            isLabelReversed = beginAtom.isLabelReversed(conformer)
         )
 
-        // --- ADD END ATOM ---
+        // --- ADD UI END ATOM ---
         val endAtomPosition = conformer.getAtomPos(endAtomIdx)
         val endAtom = rdkitRWMol.getAtomWithIdx(endAtomIdx)
 
@@ -378,7 +197,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             )
         )
 
-        // --- ADD BOND ---
+        // --- ADD UI BOND ---
         val bonds = molecule.bonds.toMutableList()
         bonds.add(
             when (type) {
@@ -386,7 +205,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                     Bond.Double(
                         beginAtomIndex = addedBond.beginAtomIdx,
                         endAtomIndex = addedBond.endAtomIdx,
-                        alignment = determineDoubleBondAlignment(addedBond, rdkitRWMol, conformer)
+                        alignment = addedBond.doubleBondAlignment(conformer)
                     )
 
                 BondType.TRIPLE -> Bond.Triple(
@@ -411,6 +230,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 )
             }
         )
+        // --- CLEANUP ---
         rdkitRWMol.delete()
 
         return@withContext Result.Success(Molecule(atoms, bonds))
@@ -421,14 +241,13 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         atomIdx: Long,
         newAtomSymbol: String,
     ): Result<Molecule, DataError.Local> = withContext(Dispatchers.Default) {
-        val rdkitROMol = molecule.toRdkitMol()
-        val rdkitRWMol = RWMol(rdkitROMol)
-        rdkitROMol.delete()
+        // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+        val rdkitRWMol = molecule.toRWMol()
 
         val periodicTable = PeriodicTable.getTable()
         val newAtomAtomicNumber = periodicTable.getAtomicNumber(newAtomSymbol)
 
-        // --- EDIT ATOM IN RDKit ---
+        // --- EDIT ATOM IN RDKit MOLECULE ---
         rdkitRWMol.getAtomWithIdx(atomIdx).atomicNum = newAtomAtomicNumber
 
         try {
@@ -437,10 +256,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             // TODO(Handle valence error)
             println(e)
         }
-
+        
+        // --- EDIT ATOM IN UI MOLECULE ---
         val conformer = rdkitRWMol.conformer
-
-        // --- EDIT ATOM IN MOLECULE DATA CLASS ---
         val replacedAtom = rdkitRWMol.getAtomWithIdx(atomIdx)
         val replacedAtomPosition = conformer.getAtomPos(atomIdx)
         val atoms = molecule.atoms.toMutableList()
@@ -451,137 +269,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             symbol = replacedAtom.symbol,
             numImplicitHydrogen = replacedAtom.numImplicitHs,
             charge = replacedAtom.formalCharge,
-            isLabelReversed = determineAtomLabelIsReversed(replacedAtom, conformer)
+            isLabelReversed = replacedAtom.isLabelReversed(conformer)
         )
 
+        // --- CLEANUP ---
         rdkitRWMol.delete()
 
         return@withContext Result.Success(Molecule(atoms, molecule.bonds))
-    }
-
-    private fun determineAtomLabelIsReversed(atom: org.RDKit.Atom, conformer: Conformer): Boolean {
-        val hydrogenListedFirst = listOf("O", "F", "S", "Cl", "Se", "Br", "Te", "I", "Po", "At")
-        val atomIsNoBonds = atom.degree == 0L
-        if (atomIsNoBonds && hydrogenListedFirst.contains(atom.symbol)) return true
-
-        val isTerminalAtom = atom.degree == 1L
-
-        if (isTerminalAtom) {
-            val neighborAtom = atom.bonds[0].getOtherAtom(atom)
-
-            val atomPosition = conformer.getAtomPos(atom.idx)
-            val neighborAtomPosition = conformer.getAtomPos(neighborAtom.idx)
-
-            println("${atom.symbol} x: ${atomPosition.x} bonded to ${neighborAtom.symbol} x: ${neighborAtomPosition.x}")
-
-            val atomIsOnRight = (atomPosition.x - neighborAtomPosition.x) < 0.0
-            return atomIsOnRight
-        }
-
-        return false
-    }
-
-    private fun determineDoubleBondAlignment(
-        bond: org.RDKit.Bond,
-        mol: ROMol,
-        conformer: Conformer
-    ): DoubleBondAlignment {
-        val isCentered =
-            (bond.beginAtom.degree == 1L && bond.endAtom.degree >= 3L) || (bond.endAtom.degree == 1L && bond.beginAtom.degree >= 3L)
-
-        return if (isCentered) DoubleBondAlignment.CENTERED else
-            determineAsymmetricDoubleBondSide(
-                bond,
-                mol,
-                conformer
-            )
-    }
-
-    private fun determineAsymmetricDoubleBondSide(
-        bond: org.RDKit.Bond,
-        mol: ROMol,
-        conformer: Conformer
-    ): DoubleBondAlignment {
-        val startPos = conformer.getAtomPos(bond.beginAtomIdx)
-        val endPos = conformer.getAtomPos(bond.endAtomIdx)
-
-        // 1. Identify which rings contain this bond
-        val bondRings = mol.ringInfo.bondRings()
-
-        if (bondRings.isEmpty) return DoubleBondAlignment.POSITIVE
-
-        val bondInRings = mutableListOf<Int>()
-
-        for (i in 0 until bondRings.size()) {
-            val ring = bondRings.get(i.toInt())
-            for (j in 0 until ring.size()) {
-                val ringBondIdx = ring.get(j.toInt())
-                if (ringBondIdx == bond.idx.toInt()) {
-                    bondInRings.add(i.toInt())
-                }
-            }
-        }
-
-        if (bondInRings.isEmpty()) return DoubleBondAlignment.POSITIVE
-
-        // 2. Choose the ring to use
-        val currentBond = mol.getBondWithIdx(bond.idx)
-        var ringToUse = bondRings.get(bondInRings.first())
-
-        if (bondInRings.size > 1) {
-            for (i in bondInRings) {
-                val ring = bondRings.get(i)
-                var ringOk = true
-                for (j in 0 until ring.size()) {
-                    val bIdx = ring.get(j.toInt())
-                    val otherBond = mol.getBondWithIdx(bIdx.toLong())
-                    if (currentBond.isAromatic != otherBond.isAromatic) {
-                        ringOk = false
-                        break
-                    }
-                }
-                if (ringOk) {
-                    ringToUse = ring
-                    break
-                }
-            }
-        }
-
-        val ringBondSet = HashSet<Int>()
-        for (i in 0 until ringToUse.size()) {
-            ringBondSet.add(ringToUse.get(i.toInt()))
-        }
-
-        // 3. Find one adjacent ring atom connected to the start of our bond
-        var thirdAtomIdx = -1L
-        val beginAtom = mol.getAtomWithIdx(bond.beginAtomIdx)
-        val beginAtomBonds = mol.getAtomBonds(beginAtom)
-
-        for (i in 0 until beginAtomBonds.size()) {
-            val b = beginAtomBonds.get(i.toInt())
-            if (b.idx == bond.idx) continue
-            if (ringBondSet.contains(b.idx.toInt())) {
-                thirdAtomIdx =
-                    if (b.beginAtomIdx == bond.beginAtomIdx) b.endAtomIdx else b.beginAtomIdx
-                break
-            }
-        }
-
-        // 4. Calculate the side pointing "inside" the ring
-        if (thirdAtomIdx != -1L) {
-            val thirdAtomPos = conformer.getAtomPos(thirdAtomIdx)
-
-            val vx = endPos.x - startPos.x
-            val vy = endPos.y - startPos.y
-
-            val rx = thirdAtomPos.x - startPos.x
-            val ry = thirdAtomPos.y - startPos.y
-
-            val crossProduct = (vx * ry) - (vy * rx)
-
-            return if (crossProduct >= 0.0) DoubleBondAlignment.NEGATIVE else DoubleBondAlignment.POSITIVE
-        }
-
-        return DoubleBondAlignment.POSITIVE
     }
 }
