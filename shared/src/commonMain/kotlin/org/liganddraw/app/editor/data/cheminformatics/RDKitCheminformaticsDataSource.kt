@@ -167,10 +167,22 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
         val conformer = rdkitRWMol.conformer
         val atoms = molecule.atoms.toMutableList()
+        val bonds = molecule.bonds.toMutableList()
+
+        val beginAtom = rdkitRWMol.getAtomWithIdx(beginAtomIdx)
+        // --- UPDATE UI BEGIN ATOM DOUBLE BONDS ---
+        for (i in 0 until beginAtom.bonds.size()) {
+            val currentBond = beginAtom.bonds[i.toInt()]
+            if (currentBond.bondType == BondType.DOUBLE)
+                bonds[currentBond.idx.toInt()] = Bond.Double(
+                    beginAtomIndex = currentBond.beginAtomIdx,
+                    endAtomIndex = currentBond.endAtomIdx,
+                    alignment = currentBond.doubleBondAlignment(conformer)
+                )
+        }
 
         // --- UPDATE UI BEGIN ATOM ---
         val beginAtomPosition = conformer.getAtomPos(beginAtomIdx)
-        val beginAtom = rdkitRWMol.getAtomWithIdx(beginAtomIdx)
         atoms[beginAtomIdx.toInt()] = Atom(
             x = beginAtomPosition.x,
             y = beginAtomPosition.y,
@@ -198,7 +210,6 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         )
 
         // --- ADD UI BOND ---
-        val bonds = molecule.bonds.toMutableList()
         bonds.add(
             when (type) {
                 BondType.DOUBLE ->
@@ -256,7 +267,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             // TODO(Handle valence error)
             println(e)
         }
-        
+
         // --- EDIT ATOM IN UI MOLECULE ---
         val conformer = rdkitRWMol.conformer
         val replacedAtom = rdkitRWMol.getAtomWithIdx(atomIdx)
