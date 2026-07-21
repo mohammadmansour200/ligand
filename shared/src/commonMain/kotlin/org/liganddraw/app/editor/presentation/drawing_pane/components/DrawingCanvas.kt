@@ -121,7 +121,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     Canvas(
         modifier = Modifier.pointerHoverIcon(
             when (state.selectedTool) {
-                Tool.PAN -> PointerIcon.Hand
+                Tool.Pan -> PointerIcon.Hand
                 else -> PointerIcon.Default
             }
         )
@@ -131,11 +131,11 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             .transformable(state = rememberTransformableState { zoomChange, offsetChange, _ ->
                 canvasScale *= zoomChange
                 when (state.selectedTool) {
-                    Tool.PAN -> canvasOffset += offsetChange
-                    Tool.SELECT -> {}
+                    Tool.Pan -> canvasOffset += offsetChange
+                    else -> {}
                 }
             }).pointerInput(state.selectedTool) {
-                if (state.selectedTool == Tool.PAN) return@pointerInput
+                if (state.selectedTool == Tool.Pan) return@pointerInput
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()

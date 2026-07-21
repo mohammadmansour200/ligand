@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.RDKit.Bond
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
 import org.liganddraw.app.editor.domain.Tool
@@ -36,8 +37,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
             is DrawingPaneAction.OnSelectTool -> selectTool(action.tool)
             is DrawingPaneAction.OnPointerMove -> handlePointerMove(action.x, action.y)
-            // TODO("Handle press")
-            is DrawingPaneAction.OnPointerPress -> {}
+            is DrawingPaneAction.OnPointerPress -> handlePointerPress(action.x, action.y)
         }
     }
 
@@ -57,7 +57,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             val existingMols = _state.value.molecules
             parseFile.onSuccess { mols ->
                 _state.update { it.copy(molecules = existingMols + mols) }
-                println(mols.toString())
             }
 
             // Delete temporary file
@@ -81,7 +80,49 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         _state.update { it.copy(selectedTool = tool) }
     }
 
+    private fun handlePointerPress(x: Float, y: Float) {
+        // TODO(Handle null hit)
+        // TODO(Handle bond hit)
+        val hitAtomId = findAtomByPosition(x, y) ?: return
+        val moleculeIdx = hitAtomId.first
+        val atomIdx = hitAtomId.second
+
+        when (val currentTool = _state.value.selectedTool) {
+            is Tool.SingleBond -> addBond(
+                moleculeIdx,
+                atomIdx,
+                Bond.BondType.SINGLE
+            )
+
+            is Tool.WedgeBond -> addBond(
+                moleculeIdx,
+                atomIdx,
+                Bond.BondType.SINGLE,
+                Bond.BondDir.BEGINWEDGE
+            )
+
+            is Tool.HashedWedgeBond -> addBond(
+                moleculeIdx,
+                atomIdx,
+                Bond.BondType.SINGLE,
+                Bond.BondDir.BEGINDASH
+            )
+
+            is Tool.Element -> {
+                val selectedSymbol = currentTool.symbol
+                replaceAtom(
+                    moleculeIdx,
+                    atomIdx,
+                    selectedSymbol
+                )
+            }
+
+            else -> {}
+        }
+    }
+
     private fun handlePointerMove(x: Float, y: Float) {
+        // TODO(Handle bond hit)
         val hitAtomId = findAtomByPosition(x, y)
 
         if (state.value.hoveredAtomId != hitAtomId) {
@@ -113,5 +154,45 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             }
         }
         return null
+    }
+
+    private fun addBond(
+        moleculeIdx: Int,
+        atomIdx: Int,
+        type: Bond.BondType,
+        dir: Bond.BondDir = Bond.BondDir.NONE
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.addBond(
+                molecule,
+                atomIdx.toLong(),
+                type,
+                dir
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+                editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun replaceAtom(
+        moleculeIdx: Int,
+        atomIdx: Int,
+        newSymbol: String
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.replaceAtom(
+                molecule,
+                atomIdx.toLong(),
+                newSymbol,
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+                editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
     }
 }

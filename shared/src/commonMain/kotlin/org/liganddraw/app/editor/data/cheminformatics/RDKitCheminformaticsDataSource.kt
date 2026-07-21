@@ -6,6 +6,7 @@ import org.RDKit.Bond.BondType
 import org.RDKit.Conformer
 import org.RDKit.DistanceGeom
 import org.RDKit.ForceField
+import org.RDKit.PeriodicTable
 import org.RDKit.RDKFuncs
 import org.RDKit.ROMol
 import org.RDKit.RWMol
@@ -319,6 +320,144 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 )
             )
         }
+
+    override suspend fun addBond(
+        molecule: Molecule,
+        beginAtomIdx: Long,
+        type: BondType,
+        dir: org.RDKit.Bond.BondDir
+    ): Result<Molecule, DataError.Local> = withContext(Dispatchers.Default) {
+        val rdkitROMol = molecule.toRdkitMol()
+        val rdkitRWMol = RWMol(rdkitROMol)
+
+        val endAtomIdx = rdkitRWMol.addAtom(org.RDKit.Atom("C"))
+        rdkitRWMol.addBond(beginAtomIdx, endAtomIdx, type)
+
+        rdkitRWMol.generateDepictionMatching2DStructure(rdkitROMol)
+        rdkitROMol.delete()
+
+        try {
+            rdkitRWMol.sanitizeMol()
+        } catch (e: Exception) {
+            // TODO(Handle valence error)
+            println(e)
+        }
+
+        val addedBond = rdkitRWMol.getBondBetweenAtoms(beginAtomIdx, endAtomIdx)
+        addedBond.bondDir = dir
+
+        val conformer = rdkitRWMol.conformer
+        val atoms = molecule.atoms.toMutableList()
+
+        // --- UPDATE BEGIN ATOM ---
+        val beginAtomPosition = conformer.getAtomPos(beginAtomIdx)
+        val beginAtom = rdkitRWMol.getAtomWithIdx(beginAtomIdx)
+        atoms[beginAtomIdx.toInt()] = Atom(
+            x = beginAtomPosition.x,
+            y = beginAtomPosition.y,
+            z = beginAtomPosition.z,
+            symbol = beginAtom.symbol,
+            numImplicitHydrogen = beginAtom.numImplicitHs,
+            charge = beginAtom.formalCharge,
+            isLabelReversed = determineAtomLabelIsReversed(beginAtom, conformer)
+        )
+
+        // --- ADD END ATOM ---
+        val endAtomPosition = conformer.getAtomPos(endAtomIdx)
+        val endAtom = rdkitRWMol.getAtomWithIdx(endAtomIdx)
+
+        atoms.add(
+            Atom(
+                x = endAtomPosition.x,
+                y = endAtomPosition.y,
+                z = endAtomPosition.z,
+                symbol = endAtom.symbol,
+                numImplicitHydrogen = endAtom.numImplicitHs,
+                charge = endAtom.formalCharge,
+                isLabelReversed = false
+            )
+        )
+
+        // --- ADD BOND ---
+        val bonds = molecule.bonds.toMutableList()
+        bonds.add(
+            when (type) {
+                BondType.DOUBLE ->
+                    Bond.Double(
+                        beginAtomIndex = addedBond.beginAtomIdx,
+                        endAtomIndex = addedBond.endAtomIdx,
+                        alignment = determineDoubleBondAlignment(addedBond, rdkitRWMol, conformer)
+                    )
+
+                BondType.TRIPLE -> Bond.Triple(
+                    beginAtomIndex = addedBond.beginAtomIdx,
+                    endAtomIndex = addedBond.endAtomIdx
+                )
+
+                BondType.IONIC -> Bond.Ionic(
+                    beginAtomIndex = addedBond.beginAtomIdx,
+                    endAtomIndex = addedBond.endAtomIdx
+                )
+
+                BondType.HYDROGEN -> Bond.Hydrogen(
+                    beginAtomIndex = addedBond.beginAtomIdx,
+                    endAtomIndex = addedBond.endAtomIdx
+                )
+
+                else -> Bond.Single(
+                    beginAtomIndex = addedBond.beginAtomIdx,
+                    endAtomIndex = addedBond.endAtomIdx,
+                    direction = safeValueOf<BondDir>(dir.name, BondDir.NONE)
+                )
+            }
+        )
+        rdkitRWMol.delete()
+
+        return@withContext Result.Success(Molecule(atoms, bonds))
+    }
+
+    override suspend fun replaceAtom(
+        molecule: Molecule,
+        atomIdx: Long,
+        newAtomSymbol: String,
+    ): Result<Molecule, DataError.Local> = withContext(Dispatchers.Default) {
+        val rdkitROMol = molecule.toRdkitMol()
+        val rdkitRWMol = RWMol(rdkitROMol)
+        rdkitROMol.delete()
+
+        val periodicTable = PeriodicTable.getTable()
+        val newAtomAtomicNumber = periodicTable.getAtomicNumber(newAtomSymbol)
+
+        // --- EDIT ATOM IN RDKit ---
+        rdkitRWMol.getAtomWithIdx(atomIdx).atomicNum = newAtomAtomicNumber
+
+        try {
+            rdkitRWMol.sanitizeMol()
+        } catch (e: Exception) {
+            // TODO(Handle valence error)
+            println(e)
+        }
+
+        val conformer = rdkitRWMol.conformer
+
+        // --- EDIT ATOM IN MOLECULE DATA CLASS ---
+        val replacedAtom = rdkitRWMol.getAtomWithIdx(atomIdx)
+        val replacedAtomPosition = conformer.getAtomPos(atomIdx)
+        val atoms = molecule.atoms.toMutableList()
+        atoms[atomIdx.toInt()] = Atom(
+            x = replacedAtomPosition.x,
+            y = replacedAtomPosition.y,
+            z = replacedAtomPosition.z,
+            symbol = replacedAtom.symbol,
+            numImplicitHydrogen = replacedAtom.numImplicitHs,
+            charge = replacedAtom.formalCharge,
+            isLabelReversed = determineAtomLabelIsReversed(replacedAtom, conformer)
+        )
+
+        rdkitRWMol.delete()
+
+        return@withContext Result.Success(Molecule(atoms, molecule.bonds))
+    }
 
     private fun determineAtomLabelIsReversed(atom: org.RDKit.Atom, conformer: Conformer): Boolean {
         val hydrogenListedFirst = listOf("O", "F", "S", "Cl", "Se", "Br", "Te", "I", "Po", "At")

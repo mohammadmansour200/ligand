@@ -10,9 +10,11 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
+import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingCanvas
 import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingPaneTopBar
 import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingToolbar
+import org.liganddraw.app.editor.presentation.drawing_pane.components.ElementPalette
 
 @Composable
 fun DrawingPaneRoot(viewModel: DrawingPaneViewModel = koinViewModel()) {
@@ -35,5 +37,11 @@ fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) 
             )
             DrawingCanvas(state = state, onAction = { action -> onAction(action) })
         }
+        val selectedElement =
+            if (state.selectedTool is Tool.Element) state.selectedTool.symbol else null
+        ElementPalette(
+            onAtomSelected = { symbol -> onAction(DrawingPaneAction.OnSelectTool(Tool.Element(symbol))) },
+            selectedAtom = selectedElement
+        )
     }
 }
