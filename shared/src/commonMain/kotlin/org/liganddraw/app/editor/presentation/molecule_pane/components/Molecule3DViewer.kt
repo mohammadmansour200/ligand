@@ -5,21 +5,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
-import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
 import io.github.erkko68.filament.compose.FilamentSceneScope
 import io.github.erkko68.filament.compose.FilamentView
-import io.github.erkko68.filament.compose.LocalFilamentEngine
 import io.github.erkko68.filament.compose.orbitGestures
 import io.github.erkko68.filament.compose.rememberFilamentEngine
 import io.github.erkko68.filament.compose.rememberFilamentScene
-import io.github.erkko68.filament.compose.rememberOrbitCameraState
+import io.github.erkko68.filament.compose.rememberOrbitCameraController
 import io.github.erkko68.filament.compose.scene.AmbientOcclusion
 import io.github.erkko68.filament.compose.scene.AntiAliasing
 import io.github.erkko68.filament.compose.scene.Bloom
@@ -33,7 +28,9 @@ import io.github.erkko68.filament.compose.scene.primitives.Sphere
 import io.github.erkko68.filament.compose.scene.rememberCameraState
 import io.github.erkko68.filament.compose.scene.rememberKTXEnvironment
 import io.github.erkko68.filament.compose.scene.rememberMaterial
+import io.github.erkko68.filament.compose.scene.rememberMaterialInstance
 import io.github.erkko68.filament.compose.scene.rememberSkyboxState
+import io.github.erkko68.filament.compose.scene.setParameter
 import io.github.erkko68.filament.utils.Float3
 import io.github.erkko68.filament.utils.Quaternion
 import io.github.erkko68.filament.utils.cross
@@ -60,131 +57,142 @@ fun ColumnScope.Molecule3DViewer(
     val engine = rememberFilamentEngine()
 
     // Black background
-    val skybox = rememberSkyboxState(source = SkyboxSource.Color(FilColor(0f, 0f, 0f)))
+    val skybox = rememberSkyboxState(initialSource = SkyboxSource.Color(FilColor(0f, 0f, 0f)))
 
-    val cameraState = rememberCameraState(eye = Position(0f, 1f, 25f))
-    val orbit = rememberOrbitCameraState(cameraState = cameraState, zoomSpeed = 10f)
+    val cameraState = rememberCameraState(initialEye = Position(0f, 1f, 25f))
+    val orbit = rememberOrbitCameraController(cameraState = cameraState, zoomSpeed = 10f)
 
     val environment = rememberKTXEnvironment(
         engine = engine,
-        intensity = 10_000F,
+        initialIntensity = 10_000F,
         ibl = { ibl },
     )
-    val material = rememberMaterial(engine) { solidColorMaterial }
 
     val scene = rememberFilamentScene(
         engine = engine,
         skyboxState = skybox,
         indirectLightState = environment.indirectLightState,
     ) {
-        material?.let { tmpl ->
-            // --- ATOM SPHERES ---
-            conformer.atoms.forEach { atom ->
-                // Reference: https://en.wikipedia.org/wiki/CPK_coloring
-                val atomColor = CPK_ATOM_COLOR_MAP.getOrDefault(atom.symbol, FALLBACK_ATOM_COLOR)
-                val red = atomColor.first / MAX_COLOR_VALUE
-                val green = atomColor.second / MAX_COLOR_VALUE
-                val blue = atomColor.third / MAX_COLOR_VALUE
-                Sphere(
-                    material = rememberSolidColorInstance(tmpl, FilColor(red, green, blue)),
-                    position = Position(atom.x.toFloat(), atom.y.toFloat(), atom.z.toFloat()),
-                    // TODO("Radius according to atomic size")
-                    radius = .4f
+        // --- ATOM SPHERES ---
+        conformer.atoms.forEach { atom ->
+            // Reference: https://en.wikipedia.org/wiki/CPK_coloring
+            val atomColor = CPK_ATOM_COLOR_MAP.getOrDefault(atom.symbol, FALLBACK_ATOM_COLOR)
+            val red = atomColor.first / MAX_COLOR_VALUE
+            val green = atomColor.second / MAX_COLOR_VALUE
+            val blue = atomColor.third / MAX_COLOR_VALUE
+            Sphere(
+                material = rememberSolidColorInstance(
+                    solidColorMaterialBytes = solidColorMaterial,
+                    key = atom.symbol,
+                    color = FilColor(red, green, blue)
+                ),
+                position = Position(atom.x.toFloat(), atom.y.toFloat(), atom.z.toFloat()),
+                // TODO("Radius according to atomic size")
+                radius = .4f
+            )
+        }
+
+        // --- BOND CYLINDERS ---
+        val bondMaterial =
+            rememberSolidColorInstance(
+                solidColorMaterialBytes = solidColorMaterial,
+                key = "bond",
+                color = FilColor(0.20f, 0.55f, 0.95f)
+            )
+        val hydrogenBondMaterial =
+            rememberSolidColorInstance(
+                solidColorMaterialBytes = solidColorMaterial,
+                key = "hydrogenBond",
+                color = FilColor(0.20f, 0.55f, 0.95f),
+                isDashed = true
+            )
+        conformer.bonds.forEach { bond ->
+            if (bond is Bond.Ionic) return@forEach
+
+            val beginAtom = conformer.atoms[bond.beginAtomIndex.toInt()]
+            val beginAtomXPos = beginAtom.x.toFloat()
+            val beginAtomYPos = beginAtom.y.toFloat()
+            val beginAtomZPos = beginAtom.z.toFloat()
+            val endAtom = conformer.atoms[bond.endAtomIndex.toInt()]
+            val endAtomXPos = endAtom.x.toFloat()
+            val endAtomYPos = endAtom.y.toFloat()
+            val endAtomZPos = endAtom.z.toFloat()
+
+            // Height is the distance between the two atoms determined by Pythagoras theorem
+            val height = sqrt(
+                (endAtomXPos - beginAtomXPos).pow(2) + (endAtomYPos - beginAtomYPos).pow(2) + (endAtomZPos - beginAtomZPos).pow(
+                    2
                 )
-            }
+            )
 
-            // --- BOND CYLINDERS ---
-            val bondMaterial = rememberSolidColorInstance(tmpl, FilColor(0.20f, 0.55f, 0.95f))
-            val hydrogenBondMaterial =
-                rememberSolidColorInstance(tmpl, FilColor(0.20f, 0.55f, 0.95f), isDashed = true)
-            conformer.bonds.forEach { bond ->
-                if (bond is Bond.Ionic) return@forEach
+            val initialDirection = normalize(Float3(0f, 1f, 0f))
+            val targetDirection = normalize(
+                Float3(
+                    endAtomXPos - beginAtomXPos,
+                    endAtomYPos - beginAtomYPos,
+                    endAtomZPos - beginAtomZPos
+                )
+            )
 
-                val beginAtom = conformer.atoms[bond.beginAtomIndex.toInt()]
-                val beginAtomXPos = beginAtom.x.toFloat()
-                val beginAtomYPos = beginAtom.y.toFloat()
-                val beginAtomZPos = beginAtom.z.toFloat()
-                val endAtom = conformer.atoms[bond.endAtomIndex.toInt()]
-                val endAtomXPos = endAtom.x.toFloat()
-                val endAtomYPos = endAtom.y.toFloat()
-                val endAtomZPos = endAtom.z.toFloat()
+            val rotationAxis = normalize(cross(initialDirection, targetDirection))
 
-                // Height is the distance between the two atoms determined by Pythagoras theorem
-                val height = sqrt(
-                    (endAtomXPos - beginAtomXPos).pow(2) + (endAtomYPos - beginAtomYPos).pow(2) + (endAtomZPos - beginAtomZPos).pow(
-                        2
+            val rotationAngleRadians = acos(dot(initialDirection, targetDirection))
+            val rotationAngle = rotationAngleRadians.times(180.div(PI)).toFloat()
+
+            val position = Position(
+                beginAtomXPos,
+                beginAtomYPos,
+                beginAtomZPos
+            )
+
+            when (bond) {
+                is Bond.Single ->
+                    CylinderBond(
+                        bondMaterial, position, height, rotationAxis, rotationAngle
                     )
-                )
 
-                val initialDirection = normalize(Float3(0f, 1f, 0f))
-                val targetDirection = normalize(
-                    Float3(
-                        endAtomXPos - beginAtomXPos,
-                        endAtomYPos - beginAtomYPos,
-                        endAtomZPos - beginAtomZPos
+                is Bond.Double -> {
+                    val spacing = .15f
+                    CylinderBond(
+                        bondMaterial,
+                        position.plus(Direction(rotationAxis.times(spacing))),
+                        height,
+                        rotationAxis,
+                        rotationAngle
                     )
-                )
-
-                val rotationAxis = normalize(cross(initialDirection, targetDirection))
-
-                val rotationAngleRadians = acos(dot(initialDirection, targetDirection))
-                val rotationAngle = rotationAngleRadians.times(180.div(PI)).toFloat()
-
-                val position = Position(
-                    beginAtomXPos,
-                    beginAtomYPos,
-                    beginAtomZPos
-                )
-
-                when (bond) {
-                    is Bond.Single ->
-                        CylinderBond(
-                            bondMaterial, position, height, rotationAxis, rotationAngle
-                        )
-
-                    is Bond.Double -> {
-                        val spacing = .15f
-                        CylinderBond(
-                            bondMaterial,
-                            position.plus(Direction(rotationAxis.times(spacing))),
-                            height,
-                            rotationAxis,
-                            rotationAngle
-                        )
-                        CylinderBond(
-                            bondMaterial,
-                            position.minus(Direction(rotationAxis.times(spacing))),
-                            height,
-                            rotationAxis,
-                            rotationAngle
-                        )
-                    }
-
-                    is Bond.Triple -> {
-                        val spacing = 0.25f
-                        CylinderBond(
-                            bondMaterial,
-                            position.plus(Direction(rotationAxis.times(spacing))),
-                            height,
-                            rotationAxis,
-                            rotationAngle
-                        )
-                        CylinderBond(
-                            bondMaterial, position, height, rotationAxis, rotationAngle
-                        )
-                        CylinderBond(
-                            bondMaterial,
-                            position.minus(Direction(rotationAxis.times(spacing))),
-                            height,
-                            rotationAxis,
-                            rotationAngle
-                        )
-                    }
-
-                    is Bond.Hydrogen -> CylinderBond(
-                        hydrogenBondMaterial, position, height, rotationAxis, rotationAngle
+                    CylinderBond(
+                        bondMaterial,
+                        position.minus(Direction(rotationAxis.times(spacing))),
+                        height,
+                        rotationAxis,
+                        rotationAngle
                     )
                 }
+
+                is Bond.Triple -> {
+                    val spacing = 0.25f
+                    CylinderBond(
+                        bondMaterial,
+                        position.plus(Direction(rotationAxis.times(spacing))),
+                        height,
+                        rotationAxis,
+                        rotationAngle
+                    )
+                    CylinderBond(
+                        bondMaterial, position, height, rotationAxis, rotationAngle
+                    )
+                    CylinderBond(
+                        bondMaterial,
+                        position.minus(Direction(rotationAxis.times(spacing))),
+                        height,
+                        rotationAxis,
+                        rotationAngle
+                    )
+                }
+
+                is Bond.Hydrogen -> CylinderBond(
+                    hydrogenBondMaterial, position, height, rotationAxis, rotationAngle
+                )
             }
         }
     }
@@ -194,7 +202,6 @@ fun ColumnScope.Molecule3DViewer(
             .padding(top = 8.dp, bottom = 8.dp, end = 8.dp)
             .clip(RoundedCornerShape(10.dp))
             .weight(1f).fillMaxSize()
-            .onSizeChanged { orbit.setViewport(it.width, it.height) }
             .orbitGestures(orbit),
         cameraState = cameraState,
         postProcessing = PostProcessing(
@@ -208,7 +215,7 @@ fun ColumnScope.Molecule3DViewer(
 
 @Composable
 private fun FilamentSceneScope.CylinderBond(
-    material: MaterialInstance,
+    material: MaterialInstance?,
     position: Position,
     height: Float,
     rotationAxis: Float3,
@@ -226,21 +233,21 @@ private fun FilamentSceneScope.CylinderBond(
 
 @Composable
 private fun rememberSolidColorInstance(
-    template: Material,
+    solidColorMaterialBytes: ByteArray,
+    key: String,
     color: Color,
     isDashed: Boolean = false
-): MaterialInstance {
-    val engine = LocalFilamentEngine.current
-    val instance = remember(template, color) {
-        template.createInstance().also {
-            it.setParameter("baseColor", color.r, color.g, color.b)
-            if (isDashed)
-                it.setParameter("dashed", 1.0f)
-        }
-    }
-    DisposableEffect(instance) {
+): MaterialInstance? {
+    val material = rememberMaterial(key) { solidColorMaterialBytes }
+    return rememberMaterialInstance(
+        material
+    ) {
+        setParameter("baseColor", color)
+        if (isDashed)
+            setParameter("dashed", 1.0f)
 
-        onDispose { engine.destroyMaterialInstance(instance) }
+        setParameter("metallic", 0f)
+        setParameter("roughness", .5f)
+        setParameter("reflectance", .5f)
     }
-    return instance
 }
