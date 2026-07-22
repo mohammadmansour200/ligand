@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
 import io.github.erkko68.filament.compose.FilamentSceneScope
 import io.github.erkko68.filament.compose.FilamentView
@@ -73,6 +74,8 @@ fun ColumnScope.Molecule3DViewer(
         skyboxState = skybox,
         indirectLightState = environment.indirectLightState,
     ) {
+        val template = rememberMaterial { solidColorMaterialBytes }
+
         // --- ATOM SPHERES ---
         conformer.atoms.forEach { atom ->
             // Reference: https://en.wikipedia.org/wiki/CPK_coloring
@@ -82,8 +85,7 @@ fun ColumnScope.Molecule3DViewer(
             val blue = atomColor.third / MAX_COLOR_VALUE
             Sphere(
                 material = rememberSolidColorInstance(
-                    solidColorMaterialBytes = solidColorMaterialBytes,
-                    key = atom.symbol,
+                    template = template,
                     color = FilColor(red, green, blue)
                 ),
                 position = Position(atom.x.toFloat(), atom.y.toFloat(), atom.z.toFloat()),
@@ -95,14 +97,12 @@ fun ColumnScope.Molecule3DViewer(
         // --- BOND CYLINDERS ---
         val bondMaterial =
             rememberSolidColorInstance(
-                solidColorMaterialBytes = solidColorMaterialBytes,
-                key = "bond",
+                template = template,
                 color = FilColor(0.20f, 0.55f, 0.95f)
             )
         val hydrogenBondMaterial =
             rememberSolidColorInstance(
-                solidColorMaterialBytes = solidColorMaterialBytes,
-                key = "hydrogenBond",
+                template = template,
                 color = FilColor(0.20f, 0.55f, 0.95f),
                 isDashed = true
             )
@@ -233,14 +233,13 @@ private fun FilamentSceneScope.CylinderBond(
 
 @Composable
 private fun rememberSolidColorInstance(
-    solidColorMaterialBytes: ByteArray,
-    key: String,
+    template: Material?,
     color: Color,
     isDashed: Boolean = false
 ): MaterialInstance? {
-    val material = rememberMaterial(key) { solidColorMaterialBytes }
+
     return rememberMaterialInstance(
-        material
+        template, color
     ) {
         setParameter("baseColor", color)
         if (isDashed)
