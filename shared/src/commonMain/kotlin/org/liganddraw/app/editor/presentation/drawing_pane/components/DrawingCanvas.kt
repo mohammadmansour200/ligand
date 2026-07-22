@@ -180,7 +180,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val endAtomOffset = Offset(endAtomXPositionPx, endAtomYPositionPx)
 
                         // clipRect to hide bond overlapping with atom symbol
-                        if (beginAtom.symbol != "C") {
+                        if (beginAtom.isLabelVisible) {
                             val beginLabelRect =
                                 labelRect(
                                     symbolDimensions = getSymbolLabelDimensions(
@@ -200,7 +200,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                 clipOp = ClipOp.Difference
                             )
                         }
-                        if (endAtom.symbol != "C") {
+                        if (endAtom.isLabelVisible) {
                             val endLabelRect =
                                 labelRect(
                                     symbolDimensions = getSymbolLabelDimensions(
@@ -300,7 +300,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     atom.symbol,
                                     state.symbolLabelDimensionsCache
                                 ),
-                                hydrogenDimensions = if (atom.symbol == "C") IntSize.Zero else getHydrogenLabelDimensions(
+                                hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
                                     atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
                                 ),
                                 isReversed = atom.isLabelReversed,
@@ -315,7 +315,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                             cornerRadius = highlightCornerRadius
                         )
 
-                        if (atom.symbol != "C")
+                        if (atom.isLabelVisible)
                             drawText(
                                 textMeasurer = textMeasurer,
                                 text = atom.toLabel(),

@@ -141,7 +141,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                         atom.symbol,
                         _state.value.symbolLabelDimensionsCache
                     ),
-                    hydrogenDimensions = if (atom.symbol == "C") IntSize.Zero else getHydrogenLabelDimensions(
+                    hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
                         atom.numImplicitHydrogen, _state.value.hydrogenLabelDimensionsCache
                     ),
                     isReversed = atom.isLabelReversed,

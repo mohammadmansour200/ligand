@@ -89,7 +89,8 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
                 symbol = atom.symbol,
                 numImplicitHydrogen = atom.numImplicitHs,
                 charge = atom.formalCharge,
-                isLabelReversed = if (includeDepictionMetadata) atom.isLabelReversed(conformer) else false
+                isLabelReversed = if (includeDepictionMetadata) atom.isLabelReversed(conformer) else false,
+                isLabelVisible = if (includeDepictionMetadata) atom.isLabelVisible() else false,
             )
         )
     }

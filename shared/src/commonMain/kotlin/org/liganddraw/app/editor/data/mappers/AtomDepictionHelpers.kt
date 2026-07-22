@@ -26,3 +26,21 @@ fun Atom.isLabelReversed(conformer: Conformer): Boolean {
 
     return false
 }
+
+/**Determines whether to show label on 2D canvas or not*/
+fun Atom.isLabelVisible(): Boolean {
+    val isCarbon = this.symbol == "C"
+
+    // Heteroatoms
+    if (!isCarbon) return true
+
+    // Methane
+    val isIsolated = this.degree == 0L
+    if (isIsolated) return true
+
+    // Ethane, Methanol etc.
+    val otherAtom = this.bonds[0].getOtherAtom(this)
+    val isDiatomic = this.degree == 1L && otherAtom.degree == 1L
+
+    return isDiatomic
+}

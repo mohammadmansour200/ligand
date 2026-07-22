@@ -15,6 +15,7 @@ import org.liganddraw.app.core.domain.Result
 import org.liganddraw.app.core.domain.utils.safeValueOf
 import org.liganddraw.app.editor.data.mappers.doubleBondAlignment
 import org.liganddraw.app.editor.data.mappers.isLabelReversed
+import org.liganddraw.app.editor.data.mappers.isLabelVisible
 import org.liganddraw.app.editor.data.mappers.toMolecule
 import org.liganddraw.app.editor.data.mappers.toRWMol
 import org.liganddraw.app.editor.domain.Atom
@@ -190,7 +191,8 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             symbol = beginAtom.symbol,
             numImplicitHydrogen = beginAtom.numImplicitHs,
             charge = beginAtom.formalCharge,
-            isLabelReversed = beginAtom.isLabelReversed(conformer)
+            isLabelReversed = beginAtom.isLabelReversed(conformer),
+            isLabelVisible = beginAtom.isLabelVisible(),
         )
 
         // --- ADD UI END ATOM ---
@@ -205,7 +207,8 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 symbol = endAtom.symbol,
                 numImplicitHydrogen = endAtom.numImplicitHs,
                 charge = endAtom.formalCharge,
-                isLabelReversed = false
+                isLabelReversed = endAtom.isLabelReversed(conformer),
+                isLabelVisible = endAtom.isLabelVisible(),
             )
         )
 
@@ -270,17 +273,18 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
         // --- EDIT ATOM IN UI MOLECULE ---
         val conformer = rdkitRWMol.conformer
-        val replacedAtom = rdkitRWMol.getAtomWithIdx(atomIdx)
-        val replacedAtomPosition = conformer.getAtomPos(atomIdx)
+        val newAtom = rdkitRWMol.getAtomWithIdx(atomIdx)
+        val newAtomPosition = conformer.getAtomPos(atomIdx)
         val atoms = molecule.atoms.toMutableList()
         atoms[atomIdx.toInt()] = Atom(
-            x = replacedAtomPosition.x,
-            y = replacedAtomPosition.y,
-            z = replacedAtomPosition.z,
-            symbol = replacedAtom.symbol,
-            numImplicitHydrogen = replacedAtom.numImplicitHs,
-            charge = replacedAtom.formalCharge,
-            isLabelReversed = replacedAtom.isLabelReversed(conformer)
+            x = newAtomPosition.x,
+            y = newAtomPosition.y,
+            z = newAtomPosition.z,
+            symbol = newAtom.symbol,
+            numImplicitHydrogen = newAtom.numImplicitHs,
+            charge = newAtom.formalCharge,
+            isLabelReversed = newAtom.isLabelReversed(conformer),
+            isLabelVisible = newAtom.isLabelVisible(),
         )
 
         // --- CLEANUP ---
