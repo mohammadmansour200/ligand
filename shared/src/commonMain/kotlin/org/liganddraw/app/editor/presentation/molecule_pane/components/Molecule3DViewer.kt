@@ -51,8 +51,8 @@ const val MAX_COLOR_VALUE = 255f
 @Composable
 fun ColumnScope.Molecule3DViewer(
     conformer: Molecule,
-    ibl: ByteArray,
-    solidColorMaterial: ByteArray
+    iblBytes: ByteArray,
+    solidColorMaterialBytes: ByteArray
 ) {
     val engine = rememberFilamentEngine()
 
@@ -65,7 +65,7 @@ fun ColumnScope.Molecule3DViewer(
     val environment = rememberKTXEnvironment(
         engine = engine,
         initialIntensity = 10_000F,
-        ibl = { ibl },
+        ibl = { iblBytes },
     )
 
     val scene = rememberFilamentScene(
@@ -82,7 +82,7 @@ fun ColumnScope.Molecule3DViewer(
             val blue = atomColor.third / MAX_COLOR_VALUE
             Sphere(
                 material = rememberSolidColorInstance(
-                    solidColorMaterialBytes = solidColorMaterial,
+                    solidColorMaterialBytes = solidColorMaterialBytes,
                     key = atom.symbol,
                     color = FilColor(red, green, blue)
                 ),
@@ -95,13 +95,13 @@ fun ColumnScope.Molecule3DViewer(
         // --- BOND CYLINDERS ---
         val bondMaterial =
             rememberSolidColorInstance(
-                solidColorMaterialBytes = solidColorMaterial,
+                solidColorMaterialBytes = solidColorMaterialBytes,
                 key = "bond",
                 color = FilColor(0.20f, 0.55f, 0.95f)
             )
         val hydrogenBondMaterial =
             rememberSolidColorInstance(
-                solidColorMaterialBytes = solidColorMaterial,
+                solidColorMaterialBytes = solidColorMaterialBytes,
                 key = "hydrogenBond",
                 color = FilColor(0.20f, 0.55f, 0.95f),
                 isDashed = true

@@ -8,6 +8,6 @@ import org.liganddraw.app.editor.domain.MoleculeProperties
 data class MoleculePaneState(
     val conformer: Molecule? = null,
     val properties: MoleculeProperties? = null,
-    val ibl: ByteArray = byteArrayOf(),
-    val solidColorMaterial: ByteArray = byteArrayOf()
+    val iblBytes: ByteArray = byteArrayOf(),
+    val solidColorMaterialBytes: ByteArray = byteArrayOf()
 )
