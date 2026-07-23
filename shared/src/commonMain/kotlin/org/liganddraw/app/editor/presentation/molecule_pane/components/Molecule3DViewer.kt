@@ -86,7 +86,10 @@ fun ColumnScope.Molecule3DViewer(
             Sphere(
                 material = rememberSolidColorInstance(
                     template = template,
-                    color = FilColor(red, green, blue)
+                    color = FilColor(red, green, blue),
+                    metallic = .2f,
+                    roughness = .55f,
+                    reflectance = .5f
                 ),
                 position = Position(atom.x.toFloat(), atom.y.toFloat(), atom.z.toFloat()),
                 // TODO("Radius according to atomic size")
@@ -98,12 +101,18 @@ fun ColumnScope.Molecule3DViewer(
         val bondMaterial =
             rememberSolidColorInstance(
                 template = template,
-                color = FilColor(0.20f, 0.55f, 0.95f)
+                color = FilColor(.70f, .80f, 1f),
+                metallic = 1f,
+                roughness = .6f,
+                reflectance = 0f,
             )
         val hydrogenBondMaterial =
             rememberSolidColorInstance(
                 template = template,
-                color = FilColor(0.20f, 0.55f, 0.95f),
+                color = FilColor(.70f, .80f, 1f),
+                metallic = 1f,
+                roughness = .6f,
+                reflectance = 0f,
                 isDashed = true
             )
         conformer.bonds.forEach { bond ->
@@ -235,6 +244,9 @@ private fun FilamentSceneScope.CylinderBond(
 private fun rememberSolidColorInstance(
     template: Material?,
     color: Color,
+    metallic: Float = 0f,
+    roughness: Float = 0.5f,
+    reflectance: Float = 0.5f,
     isDashed: Boolean = false
 ): MaterialInstance? {
 
@@ -245,8 +257,8 @@ private fun rememberSolidColorInstance(
         if (isDashed)
             setParameter("dashed", 1.0f)
 
-        setParameter("metallic", 0f)
-        setParameter("roughness", .5f)
-        setParameter("reflectance", .5f)
+        setParameter("metallic", metallic)
+        setParameter("roughness", roughness)
+        setParameter("reflectance", reflectance)
     }
 }

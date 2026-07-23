@@ -7,7 +7,7 @@ object MoleculePaneConstants {
         "Li" to Triple(204, 128, 255),
         "Be" to Triple(194, 255, 0),
         "B" to Triple(255, 181, 181),
-        "C" to Triple(144, 144, 144),
+        "C" to Triple(79, 87, 87),
         "N" to Triple(48, 80, 248),
         "O" to Triple(255, 13, 13),
         "F" to Triple(144, 224, 80),
