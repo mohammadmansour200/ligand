@@ -5,11 +5,15 @@ import kotlinx.coroutines.withContext
 import org.RDKit.Bond.BondType
 import org.RDKit.DistanceGeom
 import org.RDKit.ForceField
+import org.RDKit.Int_Pair
+import org.RDKit.Match_Vect
 import org.RDKit.PeriodicTable
+import org.RDKit.Point3D
 import org.RDKit.RDKFuncs
 import org.RDKit.ROMol
 import org.RDKit.RWMol
 import org.RDKit.SDMolSupplier
+import org.RDKit.Transform3D
 import org.liganddraw.app.core.domain.DataError
 import org.liganddraw.app.core.domain.Result
 import org.liganddraw.app.core.domain.utils.safeValueOf
@@ -87,7 +91,6 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             // --- GENERATE CONFORMER ---
             // Add hydrogens for more accurate conformer prediction
             val hydrogenatedRdkitROMol = RDKFuncs.addHs(rdkitMol)
-            rdkitMol.delete()
 
             val embedParams = RDKFuncs.getETKDGv3()
             val conformerId = DistanceGeom.EmbedMolecule(hydrogenatedRdkitROMol, embedParams)
@@ -101,6 +104,31 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 false
             )
 
+            try {
+                val matchVect = Match_Vect()
+                val numHeavyAtoms = rdkitMol.numHeavyAtoms
+
+                for (i in 0 until numHeavyAtoms) {
+                    matchVect.add(Int_Pair(i.toInt(), i.toInt()))
+                }
+
+                hydrogenatedRdkitROMol.alignMol(
+                    rdkitMol,
+                    conformerId,
+                    0,
+                    matchVect,
+                )
+
+                val conf3D = hydrogenatedRdkitROMol.getConformer(conformerId)
+                val centroid = conf3D.computeCentroid()
+
+                val trans = Transform3D()
+                trans.SetTranslation(Point3D(-centroid.x, -centroid.y, -centroid.z))
+                conf3D.transformConformer(trans)
+            } catch (_: Exception) {
+            }
+            rdkitMol.delete()
+            
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             val hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
 
