@@ -1,6 +1,11 @@
 package org.liganddraw.app.editor.domain
 
 object MoleculePaneConstants {
+    /**
+     * Atoms color in RGB.
+     * Based on [Jmol CPK color scheme](https://jmol.sourceforge.net/jscolors/#Atoms).
+     * Note: Carbon is modified to a darker shade
+     */
     val CPK_ATOM_COLOR_MAP: Map<String, Triple<Int, Int, Int>> = mapOf(
         "H" to Triple(255, 255, 255),
         "He" to Triple(217, 255, 255),
@@ -113,4 +118,35 @@ object MoleculePaneConstants {
         "Mt" to Triple(235, 0, 38),
     )
     val FALLBACK_ATOM_COLOR = Triple(255, 0, 255)
+
+    /**
+     * Covalent Radii for elements in Ångströms (Å).
+     * Based on Cordero et al. (2008) dataset.
+     * Note: Hydrogen and Helium radii are incremented by .10
+     */
+    val ATOM_COVALENT_RADII_MAP: Map<String, Float> = mapOf(
+        "H" to 0.41f, "He" to 0.38f,
+
+        "Li" to 1.28f, "Be" to 0.96f, "B" to 0.84f, "C" to 0.76f,
+        "N" to 0.71f, "O" to 0.66f, "F" to 0.57f, "Ne" to 0.58f,
+
+        "Na" to 1.66f, "Mg" to 1.41f, "Al" to 1.21f, "Si" to 1.11f,
+        "P" to 1.07f, "S" to 1.05f, "Cl" to 1.02f, "Ar" to 1.06f,
+
+        "K" to 2.03f, "Ca" to 1.76f, "Sc" to 1.70f, "Ti" to 1.60f,
+        "V" to 1.53f, "Cr" to 1.39f, "Mn" to 1.39f, "Fe" to 1.32f,
+        "Co" to 1.26f, "Ni" to 1.24f, "Cu" to 1.32f, "Zn" to 1.22f,
+        "Ga" to 1.22f, "Ge" to 1.20f, "As" to 1.19f, "Se" to 1.20f,
+        "Br" to 1.20f, "Kr" to 1.16f,
+
+        "Rb" to 2.20f, "Sr" to 1.95f, "Pd" to 1.39f, "Ag" to 1.45f,
+        "Cd" to 1.44f, "In" to 1.42f, "Sn" to 1.39f, "Sb" to 1.39f,
+        "Te" to 1.38f, "I" to 1.39f, "Xe" to 1.40f,
+
+        "Cs" to 2.44f, "Ba" to 2.15f, "Pt" to 1.36f, "Au" to 1.36f,
+        "Hg" to 1.32f, "Pb" to 1.46f, "Bi" to 1.48f, "At" to 1.50f
+    )
+
+    const val FALLBACK_COVALENT_RADII = 0.70f
+    const val ATOM_RADIUS_SCALE = .5f
 }

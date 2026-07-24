@@ -39,8 +39,11 @@ import io.github.erkko68.filament.utils.dot
 import io.github.erkko68.filament.utils.normalize
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.Molecule
+import org.liganddraw.app.editor.domain.MoleculePaneConstants.ATOM_COVALENT_RADII_MAP
+import org.liganddraw.app.editor.domain.MoleculePaneConstants.ATOM_RADIUS_SCALE
 import org.liganddraw.app.editor.domain.MoleculePaneConstants.CPK_ATOM_COLOR_MAP
 import org.liganddraw.app.editor.domain.MoleculePaneConstants.FALLBACK_ATOM_COLOR
+import org.liganddraw.app.editor.domain.MoleculePaneConstants.FALLBACK_COVALENT_RADII
 import kotlin.math.PI
 import kotlin.math.acos
 import kotlin.math.pow
@@ -83,6 +86,10 @@ fun ColumnScope.Molecule3DViewer(
             val red = atomColor.first / MAX_COLOR_VALUE
             val green = atomColor.second / MAX_COLOR_VALUE
             val blue = atomColor.third / MAX_COLOR_VALUE
+
+            val atomCovalentRadii =
+                ATOM_COVALENT_RADII_MAP.getOrDefault(atom.symbol, FALLBACK_COVALENT_RADII)
+            val atomRadius = atomCovalentRadii * ATOM_RADIUS_SCALE
             Sphere(
                 material = rememberSolidColorInstance(
                     template = template,
@@ -92,8 +99,7 @@ fun ColumnScope.Molecule3DViewer(
                     reflectance = .5f
                 ),
                 position = Position(atom.x.toFloat(), atom.y.toFloat(), atom.z.toFloat()),
-                // TODO("Radius according to atomic size")
-                radius = .4f
+                radius = atomRadius
             )
         }
 
