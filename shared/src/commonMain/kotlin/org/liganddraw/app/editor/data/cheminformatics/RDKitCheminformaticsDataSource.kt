@@ -104,6 +104,8 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 false
             )
 
+            hydrogenatedRdkitROMol.computeGasteigerCharges()
+
             try {
                 val matchVect = Match_Vect()
                 val numHeavyAtoms = rdkitMol.numHeavyAtoms
@@ -128,7 +130,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             } catch (_: Exception) {
             }
             rdkitMol.delete()
-            
+
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             val hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
 
@@ -219,6 +221,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             symbol = beginAtom.symbol,
             numImplicitHydrogen = beginAtom.numImplicitHs,
             charge = beginAtom.formalCharge,
+            gasteigerCharge = null,
             isLabelReversed = beginAtom.isLabelReversed(conformer),
             isLabelVisible = beginAtom.isLabelVisible(),
         )
@@ -235,6 +238,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 symbol = endAtom.symbol,
                 numImplicitHydrogen = endAtom.numImplicitHs,
                 charge = endAtom.formalCharge,
+                gasteigerCharge = null,
                 isLabelReversed = endAtom.isLabelReversed(conformer),
                 isLabelVisible = endAtom.isLabelVisible(),
             )
@@ -311,6 +315,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             symbol = newAtom.symbol,
             numImplicitHydrogen = newAtom.numImplicitHs,
             charge = newAtom.formalCharge,
+            gasteigerCharge = null,
             isLabelReversed = newAtom.isLabelReversed(conformer),
             isLabelVisible = newAtom.isLabelVisible(),
         )

@@ -1,12 +1,19 @@
 package org.liganddraw.app.editor.presentation.molecule_pane.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
@@ -37,6 +44,11 @@ import io.github.erkko68.filament.utils.Quaternion
 import io.github.erkko68.filament.utils.cross
 import io.github.erkko68.filament.utils.dot
 import io.github.erkko68.filament.utils.normalize
+import liganddraw.shared.generated.resources.Res
+import liganddraw.shared.generated.resources.ball_and_stick
+import liganddraw.shared.generated.resources.ball_and_stick_epm
+import org.jetbrains.compose.resources.vectorResource
+import org.liganddraw.app.core.presentation.IconWithTooltip
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculePaneConstants.ATOM_VAN_DER_WAALS_RADII_MAP
@@ -56,8 +68,11 @@ const val MAX_COLOR_VALUE = 255f
 fun ColumnScope.Molecule3DViewer(
     conformer: Molecule,
     iblBytes: ByteArray,
-    solidColorMaterialBytes: ByteArray
+    solidColorMaterialBytes: ByteArray,
+    epmMaterialBytes: ByteArray
 ) {
+    var showEPMSurface by remember { mutableStateOf(false) }
+
     val engine = rememberFilamentEngine()
 
     // Black background
@@ -213,22 +228,44 @@ fun ColumnScope.Molecule3DViewer(
                 )
             }
         }
-    }
 
-    FilamentView(
-        modifier = Modifier
-            .padding(top = 8.dp, bottom = 8.dp, end = 8.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .weight(1f).fillMaxSize()
-            .orbitGestures(orbit),
-        cameraState = cameraState,
-        postProcessing = PostProcessing(
-            antiAliasing = AntiAliasing(),
-            bloom = Bloom(),
-            ambientOcclusion = AmbientOcclusion()
-        ),
-        scene = scene
-    )
+        EPMMoleculeSurface(conformer.atoms, epmMaterialBytes, showEPMSurface)
+    }
+    Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+        FilamentView(
+            modifier = Modifier.fillMaxSize().orbitGestures(orbit),
+            cameraState = cameraState,
+            postProcessing = PostProcessing(
+                antiAliasing = AntiAliasing(),
+                bloom = Bloom(),
+                ambientOcclusion = AmbientOcclusion()
+            ),
+            scene = scene
+        )
+
+        val moleculeViewOptions = listOf(
+            Triple(Res.drawable.ball_and_stick, "Hide charge distribution surface", false),
+            Triple(Res.drawable.ball_and_stick_epm, "Show charge distribution surface", true)
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)) {
+            moleculeViewOptions.forEachIndexed { index, (icon, label, isEPM) ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = moleculeViewOptions.size
+                    ),
+                    onClick = { showEPMSurface = isEPM },
+                    selected = showEPMSurface == isEPM,
+                    label = {
+                        IconWithTooltip(
+                            icon = vectorResource(icon),
+                            text = label,
+                        )
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable

@@ -19,8 +19,15 @@ class MoleculePaneViewModel(private val cheminformaticsDataSource: Cheminformati
     init {
         viewModelScope.launch {
             val iblBytes = Res.readBytes("files/lightroom_ibl.ktx")
-            val materialBytes = Res.readBytes("files/lit_color.filamat")
-            _state.update { it.copy(iblBytes = iblBytes, solidColorMaterialBytes = materialBytes) }
+            val solidMaterialBytes = Res.readBytes("files/lit_color.filamat")
+            val epmMaterialBytes = Res.readBytes("files/epm.filamat")
+            _state.update {
+                it.copy(
+                    iblBytes = iblBytes,
+                    solidColorMaterialBytes = solidMaterialBytes,
+                    epmMaterialBytes = epmMaterialBytes
+                )
+            }
         }
     }
 

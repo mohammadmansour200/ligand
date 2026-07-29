@@ -147,4 +147,5 @@ object MoleculePaneConstants {
     )
     const val FALLBACK_ATOM_VAN_DER_WAALS_RADII: Float = 2.00f
     const val BALL_STICK_RADII_SCALE = .25f
+    const val SURFACE_RADII_SCALE = .5f
 }

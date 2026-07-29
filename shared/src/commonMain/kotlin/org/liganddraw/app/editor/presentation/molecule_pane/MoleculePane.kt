@@ -35,7 +35,8 @@ fun MoleculePane(state: MoleculePaneState) {
             Molecule3DViewer(
                 conformer = state.conformer,
                 iblBytes = state.iblBytes,
-                solidColorMaterialBytes = state.solidColorMaterialBytes
+                solidColorMaterialBytes = state.solidColorMaterialBytes,
+                epmMaterialBytes = state.epmMaterialBytes
             )
             MoleculePropertiesTable(state.properties)
         }

@@ -9,5 +9,6 @@ data class MoleculePaneState(
     val conformer: Molecule? = null,
     val properties: MoleculeProperties? = null,
     val iblBytes: ByteArray = byteArrayOf(),
-    val solidColorMaterialBytes: ByteArray = byteArrayOf()
+    val solidColorMaterialBytes: ByteArray = byteArrayOf(),
+    val epmMaterialBytes: ByteArray = byteArrayOf()
 )

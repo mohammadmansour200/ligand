@@ -81,6 +81,13 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
         val atomPosition = conformer.getAtomPos(i)
         val atom = this.getAtomWithIdx(i)
 
+        val gasteigerCharge =
+            try {
+                atom.getProp("_GasteigerCharge").toFloatOrNull()
+            } catch (_: Exception) {
+                null
+            }
+
         atoms.add(
             Atom(
                 x = atomPosition.x,
@@ -89,6 +96,7 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
                 symbol = atom.symbol,
                 numImplicitHydrogen = atom.numImplicitHs,
                 charge = atom.formalCharge,
+                gasteigerCharge = gasteigerCharge,
                 isLabelReversed = if (includeDepictionMetadata) atom.isLabelReversed(conformer) else false,
                 isLabelVisible = if (includeDepictionMetadata) atom.isLabelVisible() else false,
             )

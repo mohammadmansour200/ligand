@@ -4,6 +4,7 @@ data class Atom(
     val x: Double,
     val y: Double,
     val z: Double,
+    val gasteigerCharge: Float?,
     val symbol: String,
     val numImplicitHydrogen: Long,
     val charge: Int,
