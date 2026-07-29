@@ -120,33 +120,31 @@ object MoleculePaneConstants {
     val FALLBACK_ATOM_COLOR = Triple(255, 0, 255)
 
     /**
-     * Covalent Radii for elements in Ångströms (Å).
-     * Based on Cordero et al. (2008) dataset.
-     * Note: Hydrogen and Helium radii are incremented by .10
+     * Van der Waals Radii for elements in Ångströms (Å).
+     * Based on Bondi (1964) / Alvarez (2013) standard compilations.
      */
-    val ATOM_COVALENT_RADII_MAP: Map<String, Float> = mapOf(
-        "H" to 0.41f, "He" to 0.38f,
+    val ATOM_VAN_DER_WAALS_RADII_MAP: Map<String, Float> = mapOf(
+        "H" to 1.20f, "He" to 1.40f,
 
-        "Li" to 1.28f, "Be" to 0.96f, "B" to 0.84f, "C" to 0.76f,
-        "N" to 0.71f, "O" to 0.66f, "F" to 0.57f, "Ne" to 0.58f,
+        "Li" to 1.82f, "Be" to 1.53f, "B" to 1.92f, "C" to 1.70f,
+        "N" to 1.55f, "O" to 1.52f, "F" to 1.47f, "Ne" to 1.54f,
 
-        "Na" to 1.66f, "Mg" to 1.41f, "Al" to 1.21f, "Si" to 1.11f,
-        "P" to 1.07f, "S" to 1.05f, "Cl" to 1.02f, "Ar" to 1.06f,
+        "Na" to 2.27f, "Mg" to 1.73f, "Al" to 1.84f, "Si" to 2.10f,
+        "P" to 1.80f, "S" to 1.80f, "Cl" to 1.75f, "Ar" to 1.88f,
 
-        "K" to 2.03f, "Ca" to 1.76f, "Sc" to 1.70f, "Ti" to 1.60f,
-        "V" to 1.53f, "Cr" to 1.39f, "Mn" to 1.39f, "Fe" to 1.32f,
-        "Co" to 1.26f, "Ni" to 1.24f, "Cu" to 1.32f, "Zn" to 1.22f,
-        "Ga" to 1.22f, "Ge" to 1.20f, "As" to 1.19f, "Se" to 1.20f,
-        "Br" to 1.20f, "Kr" to 1.16f,
+        "K" to 2.75f, "Ca" to 2.31f, "Sc" to 2.11f, "Ti" to 2.00f,
+        "V" to 1.90f, "Cr" to 1.85f, "Mn" to 1.79f, "Fe" to 1.87f,
+        "Co" to 1.63f, "Ni" to 1.63f, "Cu" to 1.40f, "Zn" to 1.39f,
+        "Ga" to 1.87f, "Ge" to 2.11f, "As" to 1.85f, "Se" to 1.90f,
+        "Br" to 1.85f, "Kr" to 2.02f,
 
-        "Rb" to 2.20f, "Sr" to 1.95f, "Pd" to 1.39f, "Ag" to 1.45f,
-        "Cd" to 1.44f, "In" to 1.42f, "Sn" to 1.39f, "Sb" to 1.39f,
-        "Te" to 1.38f, "I" to 1.39f, "Xe" to 1.40f,
+        "Rb" to 3.03f, "Sr" to 2.50f, "Pd" to 1.63f, "Ag" to 1.72f,
+        "Cd" to 1.62f, "In" to 1.93f, "Sn" to 2.17f, "Sb" to 2.06f,
+        "Te" to 2.06f, "I" to 1.98f, "Xe" to 2.16f,
 
-        "Cs" to 2.44f, "Ba" to 2.15f, "Pt" to 1.36f, "Au" to 1.36f,
-        "Hg" to 1.32f, "Pb" to 1.46f, "Bi" to 1.48f, "At" to 1.50f
+        "Cs" to 3.43f, "Ba" to 2.68f, "Pt" to 1.75f, "Au" to 1.66f,
+        "Hg" to 1.70f, "Pb" to 2.02f, "Bi" to 2.07f, "At" to 2.02f
     )
-
-    const val FALLBACK_COVALENT_RADII = 0.70f
-    const val ATOM_RADIUS_SCALE = .5f
+    const val FALLBACK_ATOM_VAN_DER_WAALS_RADII: Float = 2.00f
+    const val BALL_STICK_RADII_SCALE = .25f
 }
