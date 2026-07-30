@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.lerp
-import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -55,6 +54,7 @@ import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.getSymbolStyle
 import org.liganddraw.app.editor.presentation.utils.labelRect
 import org.liganddraw.app.editor.presentation.utils.offsetPx
+import org.liganddraw.app.editor.presentation.utils.shortenBondToRectBoundary
 import org.liganddraw.app.editor.presentation.utils.toLabel
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -162,54 +162,52 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             scale(canvasScale, pivot = Offset.Zero) {
                 state.molecules.fastForEachIndexed { moleculeIndex, mol ->
                     // --- DRAW BONDS ---
-                    // To apply clipRect only on bonds not atom symbols
-                    drawContext.canvas.save()
                     mol.bonds.forEach { bond ->
                         val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
                         val endAtom = mol.atoms[bond.endAtomIndex.toInt()]
 
-                        val beginAtomOffset = beginAtom.offsetPx()
-                        val endAtomOffset = endAtom.offsetPx()
+                        var beginAtomOffset = beginAtom.offsetPx()
+                        var endAtomOffset = endAtom.offsetPx()
 
-                        // clipRect to hide bond overlapping with atom symbol
                         if (beginAtom.isLabelVisible) {
-                            val beginLabelRect =
-                                labelRect(
-                                    symbolDimensions = getSymbolLabelDimensions(
-                                        beginAtom.symbol,
-                                        state.symbolLabelDimensionsCache
-                                    ),
-                                    hydrogenDimensions = getHydrogenLabelDimensions(
-                                        beginAtom.numImplicitHydrogen,
-                                        state.hydrogenLabelDimensionsCache
-                                    ),
-                                    isReversed = beginAtom.isLabelReversed,
-                                    atomOffset = beginAtomOffset
-                                )
-
-                            drawContext.canvas.clipRect(
-                                rect = beginLabelRect,
-                                clipOp = ClipOp.Difference
+                            val beginAtomLabelRect = labelRect(
+                                symbolDimensions = getSymbolLabelDimensions(
+                                    beginAtom.symbol,
+                                    state.symbolLabelDimensionsCache
+                                ),
+                                hydrogenDimensions = getHydrogenLabelDimensions(
+                                    beginAtom.numImplicitHydrogen,
+                                    state.hydrogenLabelDimensionsCache
+                                ),
+                                isReversed = beginAtom.isLabelReversed,
+                                atomOffset = beginAtomOffset
+                            )
+                            beginAtomOffset = shortenBondToRectBoundary(
+                                endAtomOffset,
+                                beginAtomOffset,
+                                beginAtomLabelRect
                             )
                         }
+
                         if (endAtom.isLabelVisible) {
-                            val endLabelRect =
-                                labelRect(
-                                    symbolDimensions = getSymbolLabelDimensions(
-                                        endAtom.symbol,
-                                        state.symbolLabelDimensionsCache
-                                    ),
-                                    hydrogenDimensions = getHydrogenLabelDimensions(
-                                        endAtom.numImplicitHydrogen,
-                                        state.hydrogenLabelDimensionsCache
-                                    ),
-                                    isReversed = endAtom.isLabelReversed,
-                                    atomOffset = endAtomOffset
-                                )
-                            drawContext.canvas.clipRect(
-                                rect = endLabelRect,
-                                clipOp = ClipOp.Difference
+                            val endAtomLabelRect = labelRect(
+                                symbolDimensions = getSymbolLabelDimensions(
+                                    endAtom.symbol,
+                                    state.symbolLabelDimensionsCache
+                                ),
+                                hydrogenDimensions = getHydrogenLabelDimensions(
+                                    endAtom.numImplicitHydrogen,
+                                    state.hydrogenLabelDimensionsCache
+                                ),
+                                isReversed = endAtom.isLabelReversed,
+                                atomOffset = endAtomOffset
                             )
+                            endAtomOffset =
+                                shortenBondToRectBoundary(
+                                    beginAtomOffset,
+                                    endAtomOffset,
+                                    endAtomLabelRect
+                                )
                         }
 
                         when (bond) {
@@ -276,7 +274,6 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         }
 
                     }
-                    drawContext.canvas.restore()
 
                     // --- DRAW ATOM SYMBOL ---
                     mol.atoms.fastForEachIndexed { atomIndex, atom ->
