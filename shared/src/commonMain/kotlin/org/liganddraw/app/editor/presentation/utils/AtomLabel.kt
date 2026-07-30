@@ -2,32 +2,38 @@ package org.liganddraw.app.editor.presentation.utils
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.center
 import org.liganddraw.app.editor.domain.Atom
-import org.liganddraw.app.editor.presentation.drawing_pane.components.subscriptStyle
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.HYDROGEN_COUNT_FONT_SIZE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.SYMBOL_FONT_SIZE
 
-fun Atom.toLabel(): AnnotatedString {
+fun Atom.toLabel(density: Density): AnnotatedString {
     return buildAnnotatedString {
         if (numImplicitHydrogen == 0L) append(symbol)
         else {
             if (isLabelReversed) {
-                appendHydrogens(numImplicitHydrogen)
+                appendHydrogens(density, numImplicitHydrogen)
                 append(symbol)
             } else {
                 append(symbol)
-                appendHydrogens(numImplicitHydrogen)
+                appendHydrogens(density, numImplicitHydrogen)
             }
         }
     }
 }
 
-private fun AnnotatedString.Builder.appendHydrogens(count: Long) {
+private fun AnnotatedString.Builder.appendHydrogens(density: Density, count: Long) {
     append("H")
     if (count > 1L) {
-        pushStyle(subscriptStyle)
+        pushStyle(getHydrogenCountStyle(density))
         append(count.toString())
         pop()
     }
@@ -66,3 +72,11 @@ fun getSymbolLabelDimensions(symbol: String, dimensionsCache: Map<String, IntSiz
 fun getHydrogenLabelDimensions(hydrogenCount: Long, dimensionsCache: Map<Long, IntSize>): IntSize {
     return dimensionsCache[hydrogenCount] ?: IntSize.Zero
 }
+
+fun getSymbolStyle(density: Density, color: Color): TextStyle =
+    TextStyle(fontSize = with(density) { SYMBOL_FONT_SIZE.toSp() }, color = color)
+
+fun getHydrogenCountStyle(density: Density): SpanStyle = SpanStyle(
+    fontSize = with(density) { HYDROGEN_COUNT_FONT_SIZE.toSp() },
+    baselineShift = BaselineShift.Subscript
+)

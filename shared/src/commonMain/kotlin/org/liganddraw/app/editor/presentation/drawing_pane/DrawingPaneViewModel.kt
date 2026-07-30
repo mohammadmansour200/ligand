@@ -1,6 +1,5 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
@@ -13,10 +12,10 @@ import org.RDKit.Bond
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
 import org.liganddraw.app.editor.domain.Tool
-import org.liganddraw.app.editor.presentation.drawing_pane.components.scaleFactor
 import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.labelRect
+import org.liganddraw.app.editor.presentation.utils.offsetPx
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
@@ -133,9 +132,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private fun findAtomByPosition(x: Float, y: Float): Pair<Int, Int>? {
         _state.value.molecules.fastForEachIndexed { molIndex, molecule ->
             molecule.atoms.fastForEachIndexed { atomIndex, atom ->
-                val atomX = (atom.x * scaleFactor).toFloat()
-                val atomY = -(atom.y * scaleFactor).toFloat()
-
                 val rect = labelRect(
                     symbolDimensions = getSymbolLabelDimensions(
                         atom.symbol,
@@ -145,7 +141,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                         atom.numImplicitHydrogen, _state.value.hydrogenLabelDimensionsCache
                     ),
                     isReversed = atom.isLabelReversed,
-                    atomOffset = Offset(atomX, atomY)
+                    atomOffset = atom.offsetPx()
                 )
 
                 if (x in rect.left..rect.right && y in rect.top..rect.bottom) {

@@ -31,46 +31,42 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.util.fastForEachIndexed
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.DoubleBondAlignment
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LINES_SPACING
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_STROKE_WIDTH
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CENTERED_DOUBLE_BOND_LINES_SPACING
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_CORNER_RADIUS
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_STROKE_WIDTH
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneAction
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
+import org.liganddraw.app.editor.presentation.utils.getHydrogenCountStyle
 import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
+import org.liganddraw.app.editor.presentation.utils.getSymbolStyle
 import org.liganddraw.app.editor.presentation.utils.labelRect
+import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.toLabel
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-// TODO(refactor)
-const val scaleFactor = 40f
-const val strokeWidth = 2f
-const val bondSpacing = 6f
-const val centeredDoubleBondSpacing = 3f
-val symbolFontSize = 1.2.em
-val subscriptFontSize = .85.em
-val getSymbolStyle =
-    { color: Color -> TextStyle(fontSize = symbolFontSize, color = color) }
-val subscriptStyle =
-    SpanStyle(fontSize = subscriptFontSize, baselineShift = BaselineShift.Subscript)
-val highlightStroke = Stroke(width = 2f)
-val highlightCornerRadius = CornerRadius(x = 2f, y = 2f)
+val highlightStroke = Stroke(HIGHLIGHT_STROKE_WIDTH)
+val highlightCornerRadius = CornerRadius(HIGHLIGHT_CORNER_RADIUS, HIGHLIGHT_CORNER_RADIUS)
 
 @Composable
 fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) {
+    val density = LocalDensity.current
+
     val textMeasurer = rememberTextMeasurer()
     val color = MaterialTheme.colorScheme.inverseSurface
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -88,7 +84,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 if (!uniqueSymbols.containsKey(symbol)) {
                     val measuredSymbol = textMeasurer.measure(
                         text = symbol,
-                        style = getSymbolStyle(Color.Unspecified)
+                        style = getSymbolStyle(density, Color.Unspecified)
                     )
 
                     uniqueSymbols[symbol] = measuredSymbol.size
@@ -100,7 +96,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         append("H")
                         if (hydrogenCount > 1) {
                             pushStyle(
-                                subscriptStyle
+                                getHydrogenCountStyle(density)
                             )
                             append(hydrogenCount.toString())
                             pop()
@@ -108,7 +104,10 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     }
 
                     val measuredHydrogenLabel =
-                        textMeasurer.measure(hydrogenLabel, getSymbolStyle(Color.Unspecified))
+                        textMeasurer.measure(
+                            hydrogenLabel,
+                            getSymbolStyle(density, Color.Unspecified)
+                        )
 
                     uniqueHydrogenCounts[hydrogenCount] = measuredHydrogenLabel.size
                 }
@@ -169,15 +168,8 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
                         val endAtom = mol.atoms[bond.endAtomIndex.toInt()]
 
-                        val beginAtomXPositionPx =
-                            ((beginAtom.x * scaleFactor)).toFloat()
-                        val beginAtomYPositionPx =
-                            -((beginAtom.y * scaleFactor)).toFloat()
-                        val beginAtomOffset = Offset(beginAtomXPositionPx, beginAtomYPositionPx)
-
-                        val endAtomXPositionPx = ((endAtom.x * scaleFactor)).toFloat()
-                        val endAtomYPositionPx = -((endAtom.y * scaleFactor)).toFloat()
-                        val endAtomOffset = Offset(endAtomXPositionPx, endAtomYPositionPx)
+                        val beginAtomOffset = beginAtom.offsetPx()
+                        val endAtomOffset = endAtom.offsetPx()
 
                         // clipRect to hide bond overlapping with atom symbol
                         if (beginAtom.isLabelVisible) {
@@ -225,7 +217,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                 when (bond.direction) {
                                     BondDir.NONE -> drawLine(
                                         color = color,
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = BOND_STROKE_WIDTH,
                                         start = beginAtomOffset,
                                         end = endAtomOffset
                                     )
@@ -233,14 +225,14 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     BondDir.BEGINWEDGE -> drawWedgeBond(
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = BOND_STROKE_WIDTH,
                                         color = color
                                     )
 
                                     BondDir.BEGINDASH -> drawDashBond(
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = BOND_STROKE_WIDTH,
                                         color = color
                                     )
                                 }
@@ -249,14 +241,14 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                             is Bond.Hydrogen -> drawHydrogenBond(
                                 start = beginAtomOffset,
                                 end = endAtomOffset,
-                                strokeWidth = strokeWidth,
+                                strokeWidth = BOND_STROKE_WIDTH,
                                 color = color
                             )
 
                             is Bond.Triple -> drawTripleBond(
                                 start = beginAtomOffset,
                                 end = endAtomOffset,
-                                strokeWidth = strokeWidth,
+                                strokeWidth = BOND_STROKE_WIDTH,
                                 color = color
                             )
 
@@ -265,7 +257,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     drawCenteredDoubleBond(
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = BOND_STROKE_WIDTH,
                                         color = color
                                     ) else {
                                     val side =
@@ -273,9 +265,9 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     drawAsymmetricDoubleBond(
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = BOND_STROKE_WIDTH,
                                         color = color,
-                                        offset = bondSpacing * side
+                                        spacing = BOND_LINES_SPACING * side
                                     )
                                 }
                             }
@@ -290,10 +282,6 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     mol.atoms.fastForEachIndexed { atomIndex, atom ->
                         val atomId = Pair(moleculeIndex, atomIndex)
 
-                        val atomXPositionPx = ((atom.x * scaleFactor)).toFloat()
-                        val atomYPositionPx = -((atom.y * scaleFactor)).toFloat()
-                        val atomOffset = Offset(atomXPositionPx, atomYPositionPx)
-
                         val labelRect =
                             labelRect(
                                 symbolDimensions = getSymbolLabelDimensions(
@@ -304,7 +292,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
                                 ),
                                 isReversed = atom.isLabelReversed,
-                                atomOffset = atomOffset
+                                atomOffset = atom.offsetPx()
                             )
 
                         if (state.hoveredAtomId == atomId) drawRoundRect(
@@ -318,9 +306,9 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         if (atom.isLabelVisible)
                             drawText(
                                 textMeasurer = textMeasurer,
-                                text = atom.toLabel(),
+                                text = atom.toLabel(density),
                                 topLeft = labelRect.topLeft,
-                                style = getSymbolStyle(color),
+                                style = getSymbolStyle(density, color),
                                 size = labelRect.size
                             )
                     }
@@ -388,7 +376,7 @@ fun DrawScope.drawAsymmetricDoubleBond(
     end: Offset,
     strokeWidth: Float,
     color: Color,
-    offset: Float = bondSpacing
+    spacing: Float = BOND_LINES_SPACING
 ) {
     drawLine(
         color = color,
@@ -400,7 +388,7 @@ fun DrawScope.drawAsymmetricDoubleBond(
     val (sideStart, sideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = offset,
+        offsetDistance = spacing,
         lerpStart = 0.1f,
         lerpEnd = 0.9f
     )
@@ -417,11 +405,12 @@ fun DrawScope.drawCenteredDoubleBond(
     end: Offset,
     strokeWidth: Float,
     color: Color,
+    spacing: Float = CENTERED_DOUBLE_BOND_LINES_SPACING
 ) {
     val (positiveSideStart, positiveSideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = centeredDoubleBondSpacing,
+        offsetDistance = spacing,
         lerpStart = -0.05f,
         lerpEnd = 1.05f
     )
@@ -435,7 +424,7 @@ fun DrawScope.drawCenteredDoubleBond(
     val (negativeSideStart, negativeSideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = -centeredDoubleBondSpacing,
+        offsetDistance = -spacing,
         lerpStart = -0.05f,
         lerpEnd = 1.05f
     )
@@ -452,6 +441,7 @@ fun DrawScope.drawTripleBond(
     end: Offset,
     strokeWidth: Float,
     color: Color,
+    spacing: Float = BOND_LINES_SPACING
 ) {
     drawLine(
         color = color,
@@ -463,7 +453,7 @@ fun DrawScope.drawTripleBond(
     val (positiveSideStart, positiveSideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = bondSpacing,
+        offsetDistance = spacing
     )
     drawLine(
         color = color,
@@ -475,7 +465,7 @@ fun DrawScope.drawTripleBond(
     val (negativeSideStart, negativeSideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = -bondSpacing,
+        offsetDistance = -spacing
     )
     drawLine(
         color = color,
