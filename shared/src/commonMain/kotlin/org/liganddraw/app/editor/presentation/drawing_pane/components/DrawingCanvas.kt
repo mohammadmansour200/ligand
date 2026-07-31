@@ -18,12 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -40,6 +42,7 @@ import androidx.compose.ui.util.fastForEachIndexed
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.DoubleBondAlignment
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LINES_SPACING
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_STROKE_WIDTH
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.CENTERED_DOUBLE_BOND_LINES_SPACING
@@ -56,9 +59,11 @@ import org.liganddraw.app.editor.presentation.utils.labelRect
 import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.shortenBondToRectBoundary
 import org.liganddraw.app.editor.presentation.utils.toLabel
+import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 val highlightStroke = Stroke(HIGHLIGHT_STROKE_WIDTH)
 val highlightCornerRadius = CornerRadius(HIGHLIGHT_CORNER_RADIUS, HIGHLIGHT_CORNER_RADIUS)
@@ -162,7 +167,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             scale(canvasScale, pivot = Offset.Zero) {
                 state.molecules.fastForEachIndexed { moleculeIndex, mol ->
                     // --- DRAW BONDS ---
-                    mol.bonds.forEach { bond ->
+                    mol.bonds.fastForEachIndexed { bondIndex, bond ->
                         val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
                         val endAtom = mol.atoms[bond.endAtomIndex.toInt()]
 
@@ -210,6 +215,10 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                 )
                         }
 
+                        val bondId = Pair(moleculeIndex, bondIndex)
+                        if (state.hoveredBondId == bondId) {
+                            drawBondHighlightRect(endAtomOffset, beginAtomOffset, primaryColor)
+                        }
                         when (bond) {
                             is Bond.Single -> {
                                 when (bond.direction) {
@@ -312,6 +321,36 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 }
             }
         }
+    }
+}
+
+private fun DrawScope.drawBondHighlightRect(
+    endAtomOffset: Offset,
+    beginAtomOffset: Offset,
+    color: Color
+) {
+    val dx = endAtomOffset.x - beginAtomOffset.x
+    val dy = endAtomOffset.y - beginAtomOffset.y
+    val bondLength = sqrt(dx * dx + dy * dy)
+    val angleDegrees = atan2(dy, dx) * (180f / PI.toFloat())
+
+    val rectHeight = BOND_HIT_TOLERANCE
+    val midpoint = Offset(
+        x = (beginAtomOffset.x + endAtomOffset.x) / 2f,
+        y = (beginAtomOffset.y + endAtomOffset.y) / 2f
+    )
+
+    rotate(degrees = angleDegrees, pivot = midpoint) {
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(
+                x = midpoint.x - bondLength / 2f,
+                y = midpoint.y - rectHeight / 2f
+            ),
+            size = Size(width = bondLength, height = rectHeight),
+            style = highlightStroke,
+            cornerRadius = highlightCornerRadius
+        )
     }
 }
 

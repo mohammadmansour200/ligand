@@ -1,5 +1,6 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
@@ -11,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.RDKit.Bond
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
@@ -20,6 +22,8 @@ import kotlin.io.path.absolutePathString
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.writeText
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 class DrawingPaneViewModel(private val cheminformaticsDataSource: CheminformaticsDataSource) :
     ViewModel() {
@@ -121,11 +125,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun handlePointerMove(x: Float, y: Float) {
-        // TODO(Handle bond hit)
         val hitAtomId = findAtomByPosition(x, y)
+        val hitBondId = if (hitAtomId == null) findBondByPosition(x, y) else null
 
-        if (state.value.hoveredAtomId != hitAtomId) {
-            _state.update { it.copy(hoveredAtomId = hitAtomId) }
+        if (state.value.hoveredAtomId != hitAtomId || state.value.hoveredBondId != hitBondId) {
+            _state.update { it.copy(hoveredAtomId = hitAtomId, hoveredBondId = hitBondId) }
         }
     }
 
@@ -150,6 +154,52 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             }
         }
         return null
+    }
+
+    private fun findBondByPosition(
+        x: Float,
+        y: Float,
+    ): Pair<Int, Int>? {
+        _state.value.molecules.fastForEachIndexed { molIndex, molecule ->
+            molecule.bonds.fastForEachIndexed { bondIndex, bond ->
+                val beginAtom = molecule.atoms[bond.beginAtomIndex.toInt()]
+                val endAtom = molecule.atoms[bond.endAtomIndex.toInt()]
+
+                if (isBondHit(
+                        x, y, beginAtom.offsetPx(), endAtom.offsetPx(), BOND_HIT_TOLERANCE
+                    )
+                ) {
+                    return Pair(molIndex, bondIndex)
+                }
+            }
+        }
+        return null
+    }
+
+    private fun isBondHit(
+        px: Float, py: Float,
+        a: Offset, b: Offset,
+        width: Float
+    ): Boolean {
+        val dx = b.x - a.x
+        val dy = b.y - a.y
+        val bondLength = sqrt(dx.pow(2) + dy.pow(2))
+        if (bondLength == 0f) return false
+
+        // unit vector along the bond
+        val ux = dx / bondLength
+        val uy = dy / bondLength
+
+        // vector from a to the point
+        val vx = px - a.x
+        val vy = py - a.y
+
+        // distance along the bond axis (how far "down the line" the point projects)
+        val along = vx * ux + vy * uy
+        // distance perpendicular to the bond axis
+        val across = vx * -uy + vy * ux
+
+        return along in 0f..bondLength && across in -width / 2f..width / 2f
     }
 
     private fun addBond(
