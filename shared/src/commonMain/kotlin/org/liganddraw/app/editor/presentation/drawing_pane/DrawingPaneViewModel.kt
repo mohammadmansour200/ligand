@@ -84,12 +84,22 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun handlePointerPress(x: Float, y: Float) {
-        // TODO(Handle null hit)
-        // TODO(Handle bond hit)
-        val hitAtomId = findAtomByPosition(x, y) ?: return
-        val moleculeIdx = hitAtomId.first
-        val atomIdx = hitAtomId.second
+        val hitAtomId = findAtomByPosition(x, y)
+        if (hitAtomId != null) {
+            handleAtomPress(hitAtomId.first, hitAtomId.second)
+            return
+        }
 
+        val hitBondId = findBondByPosition(x, y)
+        if (hitBondId != null) {
+            handleBondPress(hitBondId.first, hitBondId.second)
+            return
+        }
+
+        // TODO(Handle null hit)
+    }
+
+    private fun handleAtomPress(moleculeIdx: Int, atomIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
             is Tool.SingleBond -> addBond(
                 moleculeIdx,
@@ -120,6 +130,26 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 )
             }
 
+            else -> {}
+        }
+    }
+
+    private fun handleBondPress(moleculeIdx: Int, bondIdx: Int) {
+        when (val currentTool = _state.value.selectedTool) {
+            is Tool.Select -> {}
+            is Tool.SingleBond -> {
+                // TODO: cycle bond order (single -> double -> triple)
+            }
+
+            is Tool.WedgeBond -> {
+                // TODO: set bond dir to BEGINWEDGE, or toggle/flip existing wedge
+            }
+
+            is Tool.HashedWedgeBond -> {
+                // TODO: set bond dir to BEGINDASH
+            }
+
+            is Tool.Element -> {}
             else -> {}
         }
     }
