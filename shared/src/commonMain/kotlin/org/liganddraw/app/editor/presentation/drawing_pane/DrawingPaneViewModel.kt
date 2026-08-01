@@ -5,6 +5,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.extension
+import io.github.vinceglb.filekit.readString
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -32,7 +36,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     fun onAction(action: DrawingPaneAction) {
         when (action) {
-            is DrawingPaneAction.OnFilePick -> parseFile(action.content, action.extension)
+            is DrawingPaneAction.OnFilePick -> parseFile(action.file)
             is DrawingPaneAction.OnCacheLabelDimensions -> cacheLabelDimensions(
                 action.uniqueSymbols,
                 action.uniqueHydrogenCounts
@@ -44,8 +48,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
     }
 
-    private fun parseFile(content: String, extension: String) {
-        viewModelScope.launch {
+    private fun parseFile(file: PlatformFile) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = file.readString()
+            val extension = file.extension
+
             // Create temporary file
             val tempFile = createTempFile()
             tempFile.writeText(content)
