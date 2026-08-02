@@ -18,12 +18,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
@@ -48,6 +51,7 @@ import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_STROKE_WIDTH
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.CENTERED_DOUBLE_BOND_LINES_SPACING
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_CORNER_RADIUS
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_STROKE_WIDTH
+import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneAction
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
@@ -73,8 +77,10 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     val density = LocalDensity.current
 
     val textMeasurer = rememberTextMeasurer()
-    val color = MaterialTheme.colorScheme.inverseSurface
-    val primaryColor = MaterialTheme.colorScheme.primary
+    val textColor = MaterialTheme.colorScheme.inverseSurface
+
+    val highlightColor = MaterialTheme.colorScheme.secondary
+    val selectionColor = MaterialTheme.colorScheme.secondary.copy(alpha = .8f)
     val background = MaterialTheme.colorScheme.outlineVariant
 
     var canvasScale by remember { mutableFloatStateOf(1f) }
@@ -166,6 +172,49 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
         translate(canvasOffset.x, canvasOffset.y) {
             scale(canvasScale, pivot = Offset.Zero) {
                 state.molecules.fastForEachIndexed { moleculeIndex, mol ->
+                    if (state.selectedMoleculeIndex == moleculeIndex) {
+                        drawMoleculeHighlightRect(mol, highlightColor)
+                    }
+
+                    // --- DRAW ATOM SYMBOL ---
+                    mol.atoms.fastForEachIndexed { atomIndex, atom ->
+                        val atomId = Pair(moleculeIndex, atomIndex)
+
+                        val labelRect =
+                            labelRect(
+                                symbolDimensions = getSymbolLabelDimensions(
+                                    atom.symbol,
+                                    state.symbolLabelDimensionsCache
+                                ),
+                                hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
+                                    atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
+                                ),
+                                isReversed = atom.isLabelReversed,
+                                atomOffset = atom.offsetPx()
+                            )
+
+                        if (state.hoveredAtomId == atomId) drawAtomHighlightRect(
+                            labelRect,
+                            highlightColor,
+                            highlightStroke,
+                        )
+
+                        if (state.selectedMoleculeIndex == moleculeIndex) drawAtomHighlightRect(
+                            labelRect,
+                            selectionColor,
+                            Fill,
+                        )
+
+                        if (atom.isLabelVisible)
+                            drawText(
+                                textMeasurer = textMeasurer,
+                                text = atom.toLabel(density),
+                                topLeft = labelRect.topLeft,
+                                style = getSymbolStyle(density, textColor),
+                                size = labelRect.size
+                            )
+                    }
+
                     // --- DRAW BONDS ---
                     mol.bonds.fastForEachIndexed { bondIndex, bond ->
                         val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
@@ -216,14 +265,25 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         }
 
                         val bondId = Pair(moleculeIndex, bondIndex)
-                        if (state.hoveredBondId == bondId) {
-                            drawBondHighlightRect(endAtomOffset, beginAtomOffset, primaryColor)
-                        }
+                        if (state.hoveredBondId == bondId) drawBondHighlightRect(
+                            endAtomOffset,
+                            beginAtomOffset,
+                            highlightColor,
+                            highlightStroke
+                        )
+
+                        if (state.selectedMoleculeIndex == moleculeIndex) drawBondHighlightRect(
+                            endAtomOffset,
+                            beginAtomOffset,
+                            selectionColor,
+                            Fill
+                        )
+
                         when (bond) {
                             is Bond.Single -> {
                                 when (bond.direction) {
                                     BondDir.NONE -> drawLine(
-                                        color = color,
+                                        color = textColor,
                                         strokeWidth = BOND_STROKE_WIDTH,
                                         start = beginAtomOffset,
                                         end = endAtomOffset
@@ -233,14 +293,14 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
                                         strokeWidth = BOND_STROKE_WIDTH,
-                                        color = color
+                                        color = textColor
                                     )
 
                                     BondDir.BEGINDASH -> drawDashBond(
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
                                         strokeWidth = BOND_STROKE_WIDTH,
-                                        color = color
+                                        color = textColor
                                     )
                                 }
                             }
@@ -249,14 +309,14 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                 start = beginAtomOffset,
                                 end = endAtomOffset,
                                 strokeWidth = BOND_STROKE_WIDTH,
-                                color = color
+                                color = textColor
                             )
 
                             is Bond.Triple -> drawTripleBond(
                                 start = beginAtomOffset,
                                 end = endAtomOffset,
                                 strokeWidth = BOND_STROKE_WIDTH,
-                                color = color
+                                color = textColor
                             )
 
                             is Bond.Double -> {
@@ -265,7 +325,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
                                         strokeWidth = BOND_STROKE_WIDTH,
-                                        color = color
+                                        color = textColor
                                     ) else {
                                     val side =
                                         if (bond.alignment == DoubleBondAlignment.POSITIVE) 1f else -1f
@@ -273,7 +333,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                         start = beginAtomOffset,
                                         end = endAtomOffset,
                                         strokeWidth = BOND_STROKE_WIDTH,
-                                        color = color,
+                                        color = textColor,
                                         spacing = BOND_LINES_SPACING * side
                                     )
                                 }
@@ -283,51 +343,74 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         }
 
                     }
-
-                    // --- DRAW ATOM SYMBOL ---
-                    mol.atoms.fastForEachIndexed { atomIndex, atom ->
-                        val atomId = Pair(moleculeIndex, atomIndex)
-
-                        val labelRect =
-                            labelRect(
-                                symbolDimensions = getSymbolLabelDimensions(
-                                    atom.symbol,
-                                    state.symbolLabelDimensionsCache
-                                ),
-                                hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
-                                    atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
-                                ),
-                                isReversed = atom.isLabelReversed,
-                                atomOffset = atom.offsetPx()
-                            )
-
-                        if (state.hoveredAtomId == atomId) drawRoundRect(
-                            color = primaryColor,
-                            topLeft = labelRect.topLeft,
-                            size = labelRect.size,
-                            style = highlightStroke,
-                            cornerRadius = highlightCornerRadius
-                        )
-
-                        if (atom.isLabelVisible)
-                            drawText(
-                                textMeasurer = textMeasurer,
-                                text = atom.toLabel(density),
-                                topLeft = labelRect.topLeft,
-                                style = getSymbolStyle(density, color),
-                                size = labelRect.size
-                            )
-                    }
                 }
             }
         }
     }
 }
 
+private fun DrawScope.drawAtomHighlightRect(
+    rect: Rect,
+    color: Color,
+    style: DrawStyle,
+    horizontalPaddingPx: Float = 4f
+) {
+    val paddedTopLeft = Offset(rect.left - horizontalPaddingPx, rect.top)
+    val paddedBottomRight = Offset(rect.right + horizontalPaddingPx, rect.bottom)
+
+    val highlightRect = Rect(paddedTopLeft, paddedBottomRight)
+    drawRoundRect(
+        color = color,
+        topLeft = highlightRect.topLeft,
+        size = highlightRect.size,
+        style = style,
+        cornerRadius = highlightCornerRadius
+    )
+}
+
+private fun DrawScope.drawMoleculeHighlightRect(
+    molecule: Molecule,
+    color: Color,
+    paddingPx: Float = 16f
+) {
+    val atoms = molecule.atoms
+    if (atoms.isEmpty()) return
+
+    var minX = Float.MAX_VALUE
+    var minY = Float.MAX_VALUE
+    var maxX = -Float.MAX_VALUE
+    var maxY = -Float.MAX_VALUE
+
+    for (atom in atoms) {
+        val atomOffsetPx = atom.offsetPx()
+        val x = atomOffsetPx.x
+        val y = atomOffsetPx.y
+        if (x < minX) minX = x
+        if (y < minY) minY = y
+        if (x > maxX) maxX = x
+        if (y > maxY) maxY = y
+    }
+
+    // Apply padding by expanding the bounding box outward
+    val paddedTopLeft = Offset(minX - paddingPx, minY - paddingPx)
+    val paddedBottomRight = Offset(maxX + paddingPx, maxY + paddingPx)
+
+    val highlightRect = Rect(paddedTopLeft, paddedBottomRight)
+
+    drawRoundRect(
+        color = color,
+        topLeft = highlightRect.topLeft,
+        size = highlightRect.size,
+        style = highlightStroke,
+        cornerRadius = highlightCornerRadius
+    )
+}
+
 private fun DrawScope.drawBondHighlightRect(
     endAtomOffset: Offset,
     beginAtomOffset: Offset,
-    color: Color
+    color: Color,
+    style: DrawStyle
 ) {
     val dx = endAtomOffset.x - beginAtomOffset.x
     val dy = endAtomOffset.y - beginAtomOffset.y
@@ -348,7 +431,7 @@ private fun DrawScope.drawBondHighlightRect(
                 y = midpoint.y - rectHeight / 2f
             ),
             size = Size(width = bondLength, height = rectHeight),
-            style = highlightStroke,
+            style = style,
             cornerRadius = highlightCornerRadius
         )
     }

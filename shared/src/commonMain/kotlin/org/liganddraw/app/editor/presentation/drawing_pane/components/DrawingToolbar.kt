@@ -29,8 +29,8 @@ import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.arrow_drop_down
 import liganddraw.shared.generated.resources.hashed_wedge_bond
 import liganddraw.shared.generated.resources.pan_tool
-import liganddraw.shared.generated.resources.selection_tool
 import liganddraw.shared.generated.resources.single_bond
+import liganddraw.shared.generated.resources.structure_select_tool
 import liganddraw.shared.generated.resources.wedge_bond
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.vectorResource
@@ -53,10 +53,10 @@ fun DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
         )
 
         ToolbarButton(
-            checked = selectedTool == Tool.Select,
-            onClick = { onSelectTool(Tool.Select) },
-            icon = Res.drawable.selection_tool,
-            tooltipText = "Rectangle Selection"
+            checked = selectedTool == Tool.StructureSelect,
+            onClick = { onSelectTool(Tool.StructureSelect) },
+            icon = Res.drawable.structure_select_tool,
+            tooltipText = "Structure Selection"
         )
         SingleBondToolGroup(selectedTool, onSelectTool = { onSelectTool(it) })
     }

@@ -104,10 +104,12 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
 
         // TODO(Handle null hit)
+        _state.update { it.copy(selectedMoleculeIndex = null) }
     }
 
     private fun handleAtomPress(moleculeIdx: Int, atomIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
+            is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
             is Tool.SingleBond -> addBond(
                 moleculeIdx,
                 atomIdx,
@@ -143,7 +145,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleBondPress(moleculeIdx: Int, bondIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
-            is Tool.Select -> {}
+            is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
             is Tool.SingleBond -> {
                 // TODO: cycle bond order (single -> double -> triple)
             }
@@ -277,5 +279,9 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 _state.update { it.copy(molecules = editedMolecules) }
             }
         }
+    }
+
+    private fun handleStructureSelect(moleculeIdx: Int) {
+        _state.update { it.copy(selectedMoleculeIndex = moleculeIdx) }
     }
 }
