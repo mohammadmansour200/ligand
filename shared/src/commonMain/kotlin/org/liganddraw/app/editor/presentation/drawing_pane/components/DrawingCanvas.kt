@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -138,13 +138,17 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             .fillMaxSize()
             .clip(RoundedCornerShape(10.dp))
             .background(background)
-            .transformable(state = rememberTransformableState { zoomChange, offsetChange, _ ->
-                canvasScale *= zoomChange
-                when (state.selectedTool) {
-                    Tool.Pan -> canvasOffset += offsetChange
-                    else -> {}
+            .transformable(
+                state = rememberTransformableState { centroid, zoomChange, offsetChange, _ ->
+                    val anchoredOffset = centroid - (centroid - canvasOffset) * zoomChange
+
+                    canvasOffset = when (state.selectedTool) {
+                        Tool.Pan -> anchoredOffset + offsetChange
+                        else -> anchoredOffset
+                    }
+                    canvasScale *= zoomChange
                 }
-            }).pointerInput(state.selectedTool) {
+            ).pointerInput(state.selectedTool) {
                 if (state.selectedTool == Tool.Pan) return@pointerInput
                 awaitPointerEventScope {
                     while (true) {
@@ -169,180 +173,181 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 }
             }
     ) {
-        translate(canvasOffset.x, canvasOffset.y) {
-            scale(canvasScale, pivot = Offset.Zero) {
-                state.molecules.fastForEachIndexed { moleculeIndex, mol ->
-                    if (state.selectedMoleculeIndex == moleculeIndex) {
-                        drawMoleculeHighlightRect(mol, highlightColor)
-                    }
+        withTransform({
+            translate(left = canvasOffset.x, top = canvasOffset.y)
+            scale(scale = canvasScale, pivot = Offset.Zero)
+        }) {
+            state.molecules.fastForEachIndexed { moleculeIndex, mol ->
+                if (state.selectedMoleculeIndex == moleculeIndex) {
+                    drawMoleculeHighlightRect(mol, highlightColor)
+                }
 
-                    // --- DRAW ATOM SYMBOL ---
-                    mol.atoms.fastForEachIndexed { atomIndex, atom ->
-                        val atomId = Pair(moleculeIndex, atomIndex)
+                // --- DRAW ATOM SYMBOL ---
+                mol.atoms.fastForEachIndexed { atomIndex, atom ->
+                    val atomId = Pair(moleculeIndex, atomIndex)
 
-                        val labelRect =
-                            labelRect(
-                                symbolDimensions = getSymbolLabelDimensions(
-                                    atom.symbol,
-                                    state.symbolLabelDimensionsCache
-                                ),
-                                hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
-                                    atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
-                                ),
-                                isReversed = atom.isLabelReversed,
-                                atomOffset = atom.offsetPx()
-                            )
-
-                        if (state.hoveredAtomId == atomId) drawAtomHighlightRect(
-                            labelRect,
-                            highlightColor,
-                            highlightStroke,
+                    val labelRect =
+                        labelRect(
+                            symbolDimensions = getSymbolLabelDimensions(
+                                atom.symbol,
+                                state.symbolLabelDimensionsCache
+                            ),
+                            hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
+                                atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
+                            ),
+                            isReversed = atom.isLabelReversed,
+                            atomOffset = atom.offsetPx()
                         )
 
-                        if (state.selectedMoleculeIndex == moleculeIndex) drawAtomHighlightRect(
-                            labelRect,
-                            selectionColor,
-                            Fill,
-                        )
+                    if (state.hoveredAtomId == atomId) drawAtomHighlightRect(
+                        labelRect,
+                        highlightColor,
+                        highlightStroke,
+                    )
 
-                        if (atom.isLabelVisible)
-                            drawText(
-                                textMeasurer = textMeasurer,
-                                text = atom.toLabel(density),
-                                topLeft = labelRect.topLeft,
-                                style = getSymbolStyle(density, textColor),
-                                size = labelRect.size
-                            )
+                    if (state.selectedMoleculeIndex == moleculeIndex) drawAtomHighlightRect(
+                        labelRect,
+                        selectionColor,
+                        Fill,
+                    )
+
+                    if (atom.isLabelVisible)
+                        drawText(
+                            textMeasurer = textMeasurer,
+                            text = atom.toLabel(density),
+                            topLeft = labelRect.topLeft,
+                            style = getSymbolStyle(density, textColor),
+                            size = labelRect.size
+                        )
+                }
+
+                // --- DRAW BONDS ---
+                mol.bonds.fastForEachIndexed { bondIndex, bond ->
+                    val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
+                    val endAtom = mol.atoms[bond.endAtomIndex.toInt()]
+
+                    var beginAtomOffset = beginAtom.offsetPx()
+                    var endAtomOffset = endAtom.offsetPx()
+
+                    if (beginAtom.isLabelVisible) {
+                        val beginAtomLabelRect = labelRect(
+                            symbolDimensions = getSymbolLabelDimensions(
+                                beginAtom.symbol,
+                                state.symbolLabelDimensionsCache
+                            ),
+                            hydrogenDimensions = getHydrogenLabelDimensions(
+                                beginAtom.numImplicitHydrogen,
+                                state.hydrogenLabelDimensionsCache
+                            ),
+                            isReversed = beginAtom.isLabelReversed,
+                            atomOffset = beginAtomOffset
+                        )
+                        beginAtomOffset = shortenBondToRectBoundary(
+                            endAtomOffset,
+                            beginAtomOffset,
+                            beginAtomLabelRect
+                        )
                     }
 
-                    // --- DRAW BONDS ---
-                    mol.bonds.fastForEachIndexed { bondIndex, bond ->
-                        val beginAtom = mol.atoms[bond.beginAtomIndex.toInt()]
-                        val endAtom = mol.atoms[bond.endAtomIndex.toInt()]
-
-                        var beginAtomOffset = beginAtom.offsetPx()
-                        var endAtomOffset = endAtom.offsetPx()
-
-                        if (beginAtom.isLabelVisible) {
-                            val beginAtomLabelRect = labelRect(
-                                symbolDimensions = getSymbolLabelDimensions(
-                                    beginAtom.symbol,
-                                    state.symbolLabelDimensionsCache
-                                ),
-                                hydrogenDimensions = getHydrogenLabelDimensions(
-                                    beginAtom.numImplicitHydrogen,
-                                    state.hydrogenLabelDimensionsCache
-                                ),
-                                isReversed = beginAtom.isLabelReversed,
-                                atomOffset = beginAtomOffset
-                            )
-                            beginAtomOffset = shortenBondToRectBoundary(
-                                endAtomOffset,
+                    if (endAtom.isLabelVisible) {
+                        val endAtomLabelRect = labelRect(
+                            symbolDimensions = getSymbolLabelDimensions(
+                                endAtom.symbol,
+                                state.symbolLabelDimensionsCache
+                            ),
+                            hydrogenDimensions = getHydrogenLabelDimensions(
+                                endAtom.numImplicitHydrogen,
+                                state.hydrogenLabelDimensionsCache
+                            ),
+                            isReversed = endAtom.isLabelReversed,
+                            atomOffset = endAtomOffset
+                        )
+                        endAtomOffset =
+                            shortenBondToRectBoundary(
                                 beginAtomOffset,
-                                beginAtomLabelRect
+                                endAtomOffset,
+                                endAtomLabelRect
                             )
-                        }
-
-                        if (endAtom.isLabelVisible) {
-                            val endAtomLabelRect = labelRect(
-                                symbolDimensions = getSymbolLabelDimensions(
-                                    endAtom.symbol,
-                                    state.symbolLabelDimensionsCache
-                                ),
-                                hydrogenDimensions = getHydrogenLabelDimensions(
-                                    endAtom.numImplicitHydrogen,
-                                    state.hydrogenLabelDimensionsCache
-                                ),
-                                isReversed = endAtom.isLabelReversed,
-                                atomOffset = endAtomOffset
-                            )
-                            endAtomOffset =
-                                shortenBondToRectBoundary(
-                                    beginAtomOffset,
-                                    endAtomOffset,
-                                    endAtomLabelRect
-                                )
-                        }
-
-                        val bondId = Pair(moleculeIndex, bondIndex)
-                        if (state.hoveredBondId == bondId) drawBondHighlightRect(
-                            endAtomOffset,
-                            beginAtomOffset,
-                            highlightColor,
-                            highlightStroke
-                        )
-
-                        if (state.selectedMoleculeIndex == moleculeIndex) drawBondHighlightRect(
-                            endAtomOffset,
-                            beginAtomOffset,
-                            selectionColor,
-                            Fill
-                        )
-
-                        when (bond) {
-                            is Bond.Single -> {
-                                when (bond.direction) {
-                                    BondDir.NONE -> drawLine(
-                                        color = textColor,
-                                        strokeWidth = BOND_STROKE_WIDTH,
-                                        start = beginAtomOffset,
-                                        end = endAtomOffset
-                                    )
-
-                                    BondDir.BEGINWEDGE -> drawWedgeBond(
-                                        start = beginAtomOffset,
-                                        end = endAtomOffset,
-                                        strokeWidth = BOND_STROKE_WIDTH,
-                                        color = textColor
-                                    )
-
-                                    BondDir.BEGINDASH -> drawDashBond(
-                                        start = beginAtomOffset,
-                                        end = endAtomOffset,
-                                        strokeWidth = BOND_STROKE_WIDTH,
-                                        color = textColor
-                                    )
-                                }
-                            }
-
-                            is Bond.Hydrogen -> drawHydrogenBond(
-                                start = beginAtomOffset,
-                                end = endAtomOffset,
-                                strokeWidth = BOND_STROKE_WIDTH,
-                                color = textColor
-                            )
-
-                            is Bond.Triple -> drawTripleBond(
-                                start = beginAtomOffset,
-                                end = endAtomOffset,
-                                strokeWidth = BOND_STROKE_WIDTH,
-                                color = textColor
-                            )
-
-                            is Bond.Double -> {
-                                if (bond.alignment == DoubleBondAlignment.CENTERED)
-                                    drawCenteredDoubleBond(
-                                        start = beginAtomOffset,
-                                        end = endAtomOffset,
-                                        strokeWidth = BOND_STROKE_WIDTH,
-                                        color = textColor
-                                    ) else {
-                                    val side =
-                                        if (bond.alignment == DoubleBondAlignment.POSITIVE) 1f else -1f
-                                    drawAsymmetricDoubleBond(
-                                        start = beginAtomOffset,
-                                        end = endAtomOffset,
-                                        strokeWidth = BOND_STROKE_WIDTH,
-                                        color = textColor,
-                                        spacing = BOND_LINES_SPACING * side
-                                    )
-                                }
-                            }
-
-                            is Bond.Ionic -> {}
-                        }
-
                     }
+
+                    val bondId = Pair(moleculeIndex, bondIndex)
+                    if (state.hoveredBondId == bondId) drawBondHighlightRect(
+                        endAtomOffset,
+                        beginAtomOffset,
+                        highlightColor,
+                        highlightStroke
+                    )
+
+                    if (state.selectedMoleculeIndex == moleculeIndex) drawBondHighlightRect(
+                        endAtomOffset,
+                        beginAtomOffset,
+                        selectionColor,
+                        Fill
+                    )
+
+                    when (bond) {
+                        is Bond.Single -> {
+                            when (bond.direction) {
+                                BondDir.NONE -> drawLine(
+                                    color = textColor,
+                                    strokeWidth = BOND_STROKE_WIDTH,
+                                    start = beginAtomOffset,
+                                    end = endAtomOffset
+                                )
+
+                                BondDir.BEGINWEDGE -> drawWedgeBond(
+                                    start = beginAtomOffset,
+                                    end = endAtomOffset,
+                                    strokeWidth = BOND_STROKE_WIDTH,
+                                    color = textColor
+                                )
+
+                                BondDir.BEGINDASH -> drawDashBond(
+                                    start = beginAtomOffset,
+                                    end = endAtomOffset,
+                                    strokeWidth = BOND_STROKE_WIDTH,
+                                    color = textColor
+                                )
+                            }
+                        }
+
+                        is Bond.Hydrogen -> drawHydrogenBond(
+                            start = beginAtomOffset,
+                            end = endAtomOffset,
+                            strokeWidth = BOND_STROKE_WIDTH,
+                            color = textColor
+                        )
+
+                        is Bond.Triple -> drawTripleBond(
+                            start = beginAtomOffset,
+                            end = endAtomOffset,
+                            strokeWidth = BOND_STROKE_WIDTH,
+                            color = textColor
+                        )
+
+                        is Bond.Double -> {
+                            if (bond.alignment == DoubleBondAlignment.CENTERED)
+                                drawCenteredDoubleBond(
+                                    start = beginAtomOffset,
+                                    end = endAtomOffset,
+                                    strokeWidth = BOND_STROKE_WIDTH,
+                                    color = textColor
+                                ) else {
+                                val side =
+                                    if (bond.alignment == DoubleBondAlignment.POSITIVE) 1f else -1f
+                                drawAsymmetricDoubleBond(
+                                    start = beginAtomOffset,
+                                    end = endAtomOffset,
+                                    strokeWidth = BOND_STROKE_WIDTH,
+                                    color = textColor,
+                                    spacing = BOND_LINES_SPACING * side
+                                )
+                            }
+                        }
+
+                        is Bond.Ionic -> {}
+                    }
+
                 }
             }
         }
