@@ -14,6 +14,7 @@ import org.RDKit.ROMol
 import org.RDKit.RWMol
 import org.RDKit.SDMolSupplier
 import org.RDKit.Transform3D
+import org.liganddraw.app.core.domain.ChemistryError
 import org.liganddraw.app.core.domain.DataError
 import org.liganddraw.app.core.domain.Result
 import org.liganddraw.app.core.domain.utils.safeValueOf
@@ -30,7 +31,7 @@ import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculeProperties
 
 class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
-    override suspend fun molFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError.Local> =
+    override suspend fun molFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError> =
         withContext(
             Dispatchers.Default
         ) {
@@ -47,11 +48,11 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 return@withContext Result.Success(listOf(molecule))
             } catch (e: Exception) {
                 println(e.message)
-                return@withContext Result.Error(DataError.Local.FILE_CORRUPTED)
+                return@withContext Result.Error(DataError.FileCorrupted)
             }
         }
 
-    override suspend fun sdfFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError.Local> =
+    override suspend fun sdfFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError> =
         withContext(
             Dispatchers.Default
         ) {
@@ -77,11 +78,11 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 return@withContext Result.Success(molecules)
             } catch (e: Exception) {
                 println(e.message)
-                return@withContext Result.Error(DataError.Local.FILE_CORRUPTED)
+                return@withContext Result.Error(DataError.FileCorrupted)
             }
         }
 
-    override suspend fun generate3DConformer(molecule: Molecule): Result<Molecule, DataError.Local> =
+    override suspend fun generate3DConformer(molecule: Molecule): Result<Molecule, ChemistryError> =
         withContext(
             Dispatchers.Default
         ) {
@@ -142,7 +143,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             return@withContext Result.Success(molecule)
         }
 
-    override suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, DataError.Local> =
+    override suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, ChemistryError> =
         withContext(Dispatchers.Default) {
             // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
             val rdkitMol = molecule.toRWMol()
@@ -172,7 +173,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         beginAtomIdx: Long,
         type: BondType,
         dir: org.RDKit.Bond.BondDir
-    ): Result<Molecule, DataError.Local> = withContext(Dispatchers.Default) {
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val rdkitRWMol = molecule.toRWMol()
         val template = ROMol(rdkitRWMol)
@@ -286,7 +287,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         molecule: Molecule,
         atomIdx: Long,
         newAtomSymbol: String,
-    ): Result<Molecule, DataError.Local> = withContext(Dispatchers.Default) {
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val rdkitRWMol = molecule.toRWMol()
 
