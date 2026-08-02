@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,43 +31,72 @@ fun ElementPalette(
     onAtomSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val atoms = listOf("H", "O", "N", "C", "Cl")
+    val topAtoms = listOf("H", "O", "N", "C", "S")
+    val bottomAtoms = listOf("P", "F", "Cl", "Br", "I")
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(end = 4.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .padding(end = 8.dp)
+                .heightIn(max = 280.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .verticalScroll(rememberScrollState())
                 .padding(vertical = 8.dp, horizontal = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            atoms.forEach { atom ->
-                val isSelected = atom == selectedAtom
+            topAtoms.forEach { atom ->
+                ElementItem(
+                    atom = atom,
+                    isSelected = atom == selectedAtom,
+                    onSelect = { onAtomSelected(atom) }
+                )
+            }
 
-                val backgroundColor =
-                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                val textColor =
-                    if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+            HorizontalDivider(
+                modifier = Modifier
+                    .width(24.dp)
+                    .padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
 
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(backgroundColor)
-                        .clickable { onAtomSelected(atom) }
-                ) {
-                    Text(
-                        text = atom,
-                        color = textColor,
-                        fontSize = 20.sp,
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
-                    )
-                }
+            bottomAtoms.forEach { atom ->
+                ElementItem(
+                    atom = atom,
+                    isSelected = atom == selectedAtom,
+                    onSelect = { onAtomSelected(atom) }
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ElementItem(
+    atom: String,
+    isSelected: Boolean,
+    onSelect: (String) -> Unit
+) {
+    val backgroundColor =
+        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val textColor =
+        if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .clickable { onSelect(atom) }
+    ) {
+        Text(
+            text = atom,
+            color = textColor,
+            fontSize = 20.sp,
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
+        )
     }
 }
