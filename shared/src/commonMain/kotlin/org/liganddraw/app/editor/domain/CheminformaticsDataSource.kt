@@ -67,4 +67,17 @@ interface CheminformaticsDataSource {
         atomIdx: Long,
         newAtomSymbol: String
     ): Result<Molecule, ChemistryError>
+
+    /**
+     * Creates a new molecule from a SMILES string at a specified canvas coordinate.
+     * @param smiles The SMILES representation of the molecule (e.g., "CC" for ethane, "c1ccccc1" for benzene).
+     * @param x The target x-coordinate in angstroms.
+     * @param y The target  y-coordinate in angstroms.
+     * @return [Molecule]
+     */
+    suspend fun createMoleculeFromSmiles(
+        smiles: String,
+        x: Double,
+        y: Double
+    ): Molecule
 }

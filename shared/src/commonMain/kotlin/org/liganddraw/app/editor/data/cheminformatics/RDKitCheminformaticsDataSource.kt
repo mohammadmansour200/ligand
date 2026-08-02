@@ -326,4 +326,35 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
         return@withContext Result.Success(Molecule(atoms, molecule.bonds))
     }
+
+    override suspend fun createMoleculeFromSmiles(
+        smiles: String,
+        x: Double,
+        y: Double
+    ): Molecule = withContext(Dispatchers.Default) {
+        // --- CONVERT SMILES INTO RDKIT MOLECULE ---
+        val mol = RWMol.MolFromSmiles(smiles)
+        try {
+            // --- COMPUTE COORDINATES ---
+            mol.compute2DCoords()
+
+            val conformer = mol.conformer
+
+            // --- PLACE MOLECULE AT CENTER OF X, Y coordinates ---
+            // offsets to place molecule center at target (x, y)
+            val centroid = conformer.computeCentroid()
+            val deltaX = x - centroid.x
+            val deltaY = y - centroid.y
+
+            val transform = Transform3D()
+            transform.SetTranslation(Point3D(deltaX, deltaY, 0.0))
+            conformer.transformConformer(transform)
+
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            return@withContext mol.toMolecule()
+        } finally {
+            // --- CLEANUP ---
+            mol.delete()
+        }
+    }
 }

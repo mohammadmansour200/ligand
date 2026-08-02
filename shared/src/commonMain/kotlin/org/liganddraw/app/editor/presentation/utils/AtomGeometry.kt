@@ -13,3 +13,13 @@ fun Atom.offsetPx(scaleFactor: Float = SCALE_FACTOR): Offset =
         x = (x * scaleFactor).toFloat(),
         y = -(y * scaleFactor).toFloat()
     )
+
+
+/**
+ * Converts screen-space Pixels into Angstrom coordinates as a pair of Pair.first which is X, Pair.second which is Y
+ */
+fun Offset.toPositionAngstrom(scaleFactor: Float = SCALE_FACTOR): Pair<Double, Double> =
+    Pair(
+        (x / scaleFactor).toDouble(),
+        (-(y / scaleFactor)).toDouble()
+    )

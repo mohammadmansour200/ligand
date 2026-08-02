@@ -22,6 +22,7 @@ import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.labelRect
 import org.liganddraw.app.editor.presentation.utils.offsetPx
+import org.liganddraw.app.editor.presentation.utils.toPositionAngstrom
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
@@ -104,7 +105,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
 
         // TODO(Handle null hit)
-        _state.update { it.copy(selectedMoleculeIndex = null) }
+        handleNullHit(x, y)
     }
 
     private fun handleAtomPress(moleculeIdx: Int, atomIdx: Int) {
@@ -159,6 +160,25 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             }
 
             is Tool.Element -> {}
+            else -> {}
+        }
+    }
+
+    private fun handleNullHit(x: Float, y: Float) {
+        if (_state.value.selectedMoleculeIndex != null) _state.update {
+            it.copy(
+                selectedMoleculeIndex = null
+            )
+        }
+
+        val angstromPosition = Offset(x, y).toPositionAngstrom()
+        when (val currentTool = _state.value.selectedTool) {
+            is Tool.Element -> handleCreateMoleculeFromSmiles(
+                currentTool.symbol,
+                angstromPosition.first,
+                angstromPosition.second
+            )
+
             else -> {}
         }
     }
@@ -283,5 +303,23 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleStructureSelect(moleculeIdx: Int) {
         _state.update { it.copy(selectedMoleculeIndex = moleculeIdx) }
+    }
+
+    private fun handleCreateMoleculeFromSmiles(
+        smiles: String,
+        xAngstrom: Double,
+        yAngstrom: Double
+    ) {
+        viewModelScope.launch {
+            val mol = cheminformaticsDataSource.createMoleculeFromSmiles(
+                smiles,
+                xAngstrom,
+                yAngstrom,
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules.add(mol)
+            _state.update { it.copy(molecules = editedMolecules) }
+        }
     }
 }
