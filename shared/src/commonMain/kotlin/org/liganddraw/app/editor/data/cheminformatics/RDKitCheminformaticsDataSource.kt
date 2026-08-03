@@ -334,7 +334,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
         val templateMol = RWMol.MolFromSmiles(templateSmiles)
         val rdkitRWMol = molecule.toRWMol()
-        val depictionTemplateMol = ROMol(rdkitRWMol)
+        val depictionTemplateMol = RWMol(rdkitRWMol)
 
         try {
             val targetAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
@@ -363,6 +363,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                     neighborBond.bondDir
 
                 rdkitRWMol.removeAtom(targetAtomIdx)
+                depictionTemplateMol.removeAtom(targetAtomIdx)
             }
 
             rdkitRWMol.generateDepictionMatching2DStructure(depictionTemplateMol)
