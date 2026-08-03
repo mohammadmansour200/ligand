@@ -2,6 +2,8 @@ package org.liganddraw.app.editor.data.cheminformatics
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.RDKit.Atom
+import org.RDKit.Bond
 import org.RDKit.Bond.BondType
 import org.RDKit.DistanceGeom
 import org.RDKit.ForceField
@@ -17,15 +19,8 @@ import org.RDKit.Transform3D
 import org.liganddraw.app.core.domain.ChemistryError
 import org.liganddraw.app.core.domain.DataError
 import org.liganddraw.app.core.domain.Result
-import org.liganddraw.app.core.domain.utils.safeValueOf
-import org.liganddraw.app.editor.data.mappers.doubleBondAlignment
-import org.liganddraw.app.editor.data.mappers.isLabelReversed
-import org.liganddraw.app.editor.data.mappers.isLabelVisible
 import org.liganddraw.app.editor.data.mappers.toMolecule
 import org.liganddraw.app.editor.data.mappers.toRWMol
-import org.liganddraw.app.editor.domain.Atom
-import org.liganddraw.app.editor.domain.Bond
-import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculeProperties
@@ -35,112 +30,108 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         withContext(
             Dispatchers.Default
         ) {
+            // --- READ .mol FILE ---
+            val mol =
+                RWMol.MolFromMolFile(absolutePath, true) // Sanitize is set to true
             try {
-                // --- READ .mol FILE ---
-                val mol =
-                    RWMol.MolFromMolFile(absolutePath, true) // Sanitize is set to true
-
                 // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
                 val molecule = mol.toMolecule()
-
-                // --- CLEANUP ---
-                mol.delete()
                 return@withContext Result.Success(listOf(molecule))
             } catch (e: Exception) {
                 println(e.message)
                 return@withContext Result.Error(DataError.FileCorrupted)
+            } finally {
+                // --- CLEANUP ---
+                mol.delete()
             }
         }
 
     override suspend fun sdfFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError> =
-        withContext(
-            Dispatchers.Default
-        ) {
+        withContext(Dispatchers.Default) {
+            val supplier = SDMolSupplier(absolutePath, true) // Sanitize is set to true
             try {
-                val supplier = SDMolSupplier(absolutePath, true) // Sanitize is set to true
                 val molecules = mutableListOf<Molecule>()
-
                 // --- ITERATE MOLECULES FOUND IN SDF FILE ---
                 while (!supplier.atEnd()) {
-                    val roMol = supplier.next() ?: continue
-                    val rwMol = RWMol(roMol)
-
-                    // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
-                    val molecule = rwMol.toMolecule()
-
-                    // Cleanup
-                    roMol.delete()
-                    rwMol.delete()
-                    molecules.add(molecule)
+                    var roMol: ROMol? = null
+                    var rwMol: RWMol? = null
+                    try {
+                        roMol = supplier.next() ?: continue
+                        rwMol = RWMol(roMol)
+                        // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+                        molecules.add(rwMol.toMolecule())
+                    } catch (_: Exception) {
+                    } finally {
+                        rwMol?.delete()
+                        roMol?.delete()
+                    }
                 }
-                // Cleanup
-                supplier.delete()
                 return@withContext Result.Success(molecules)
             } catch (e: Exception) {
                 println(e.message)
                 return@withContext Result.Error(DataError.FileCorrupted)
+            } finally {
+                // --- CLEANUP ---
+                supplier.delete()
             }
         }
 
     override suspend fun generate3DConformer(molecule: Molecule): Result<Molecule, ChemistryError> =
-        withContext(
-            Dispatchers.Default
-        ) {
+        withContext(Dispatchers.Default) {
             // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
             val rdkitMol: ROMol = molecule.toRWMol()
-
-            // --- GENERATE CONFORMER ---
-            // Add hydrogens for more accurate conformer prediction
             val hydrogenatedRdkitROMol = RDKFuncs.addHs(rdkitMol)
-
             val embedParams = RDKFuncs.getETKDGv3()
-            val conformerId = DistanceGeom.EmbedMolecule(hydrogenatedRdkitROMol, embedParams)
 
-            ForceField.MMFFOptimizeMolecule(
-                hydrogenatedRdkitROMol,
-                "MMFF94",
-                1000,
-                10.0,
-                conformerId,
-                false
-            )
-
-            hydrogenatedRdkitROMol.computeGasteigerCharges()
+            var matchVect: Match_Vect? = null
+            var centroid: Point3D? = null
+            var transform: Transform3D? = null
+            var point3D: Point3D? = null
+            var hydrogenatedRdkitRWMol: RWMol? = null
 
             try {
-                val matchVect = Match_Vect()
-                val numHeavyAtoms = rdkitMol.numHeavyAtoms
+                val conformerId = DistanceGeom.EmbedMolecule(hydrogenatedRdkitROMol, embedParams)
+                ForceField.MMFFOptimizeMolecule(
+                    hydrogenatedRdkitROMol,
+                    "MMFF94",
+                    1000,
+                    10.0,
+                    conformerId,
+                    false
+                )
+                hydrogenatedRdkitROMol.computeGasteigerCharges()
 
-                for (i in 0 until numHeavyAtoms) {
-                    matchVect.add(Int_Pair(i.toInt(), i.toInt()))
+                try {
+                    matchVect = Match_Vect()
+                    val numHeavyAtoms = rdkitMol.numHeavyAtoms
+                    for (i in 0 until numHeavyAtoms) {
+                        matchVect.add(Int_Pair(i.toInt(), i.toInt()))
+                    }
+                    hydrogenatedRdkitROMol.alignMol(rdkitMol, conformerId, 0, matchVect)
+
+                    val conf3D = hydrogenatedRdkitROMol.getConformer(conformerId)
+                    centroid = conf3D.computeCentroid()
+                    transform = Transform3D()
+                    point3D = Point3D(-centroid.x, -centroid.y, -centroid.z)
+                    transform.SetTranslation(point3D)
+                    conf3D.transformConformer(transform)
+                } catch (_: Exception) {
                 }
 
-                hydrogenatedRdkitROMol.alignMol(
-                    rdkitMol,
-                    conformerId,
-                    0,
-                    matchVect,
-                )
-
-                val conf3D = hydrogenatedRdkitROMol.getConformer(conformerId)
-                val centroid = conf3D.computeCentroid()
-
-                val trans = Transform3D()
-                trans.SetTranslation(Point3D(-centroid.x, -centroid.y, -centroid.z))
-                conf3D.transformConformer(trans)
-            } catch (_: Exception) {
+                // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+                hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
+                val resultMolecule = hydrogenatedRdkitRWMol.toMolecule(false)
+                return@withContext Result.Success(resultMolecule)
+            } finally {
+                matchVect?.delete()
+                transform?.delete()
+                centroid?.delete()
+                point3D?.delete()
+                hydrogenatedRdkitRWMol?.delete()
+                hydrogenatedRdkitROMol.delete()
+                rdkitMol.delete()
+                embedParams.delete()
             }
-            rdkitMol.delete()
-
-            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
-            val hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
-
-            // Cleanup
-            hydrogenatedRdkitROMol.delete()
-
-            val molecule = hydrogenatedRdkitRWMol.toMolecule(false)
-
-            return@withContext Result.Success(molecule)
         }
 
     override suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, ChemistryError> =
@@ -148,139 +139,65 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
             val rdkitMol = molecule.toRWMol()
 
-            // --- CALCULATE PROPERTIES ---
-            val logp = RDKFuncs.calcMolLogP(rdkitMol)
-            val hba = RDKFuncs.calcNumHBA(rdkitMol)
-            val hbd = RDKFuncs.calcNumHBD(rdkitMol)
-            val mwt = RDKFuncs.calcAMW(rdkitMol)
-            val rotatable = RDKFuncs.calcNumRotatableBonds(rdkitMol)
+            try {
+                // --- CALCULATE PROPERTIES ---
+                val logp = RDKFuncs.calcMolLogP(rdkitMol)
+                val hba = RDKFuncs.calcNumHBA(rdkitMol)
+                val hbd = RDKFuncs.calcNumHBD(rdkitMol)
+                val mwt = RDKFuncs.calcAMW(rdkitMol)
+                val rotatable = RDKFuncs.calcNumRotatableBonds(rdkitMol)
 
-            // --- CLEANUP ---
-            rdkitMol.delete()
-            return@withContext Result.Success(
-                MoleculeProperties(
-                    logp = logp,
-                    molecularWeight = mwt,
-                    hydrogenBondAcceptors = hba,
-                    hydrogenBondDonors = hbd,
-                    rotatableBonds = rotatable
+                return@withContext Result.Success(
+                    MoleculeProperties(
+                        logp = logp,
+                        molecularWeight = mwt,
+                        hydrogenBondAcceptors = hba,
+                        hydrogenBondDonors = hbd,
+                        rotatableBonds = rotatable
+                    )
                 )
-            )
+            } finally {
+                // --- CLEANUP ---
+                rdkitMol.delete()
+            }
         }
 
     override suspend fun attachBondToAtom(
         molecule: Molecule,
         targetAtomIdx: Long,
         type: BondType,
-        dir: org.RDKit.Bond.BondDir
+        dir: Bond.BondDir
     ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val rdkitRWMol = molecule.toRWMol()
         val template = ROMol(rdkitRWMol)
 
-        // --- ADD END ATOM IN RDKIT MOLECULE ---
-        val endAtomIdx = rdkitRWMol.addAtom(org.RDKit.Atom("C"))
-
-        // --- ADD BOND IN RDKIT MOLECULE ---
-        rdkitRWMol.addBond(targetAtomIdx, endAtomIdx, type)
-        // Maintains accurate bond angles
-        rdkitRWMol.generateDepictionMatching2DStructure(template)
-        template.delete()
-
         try {
-            rdkitRWMol.sanitizeMol()
-        } catch (e: Exception) {
-            // TODO(Handle valence error)
-            println(e)
-        }
+            // --- ADD END ATOM IN RDKIT MOLECULE ---
+            val endAtomIdx = rdkitRWMol.addAtom(Atom("C"))
 
-        val addedBond = rdkitRWMol.getBondBetweenAtoms(targetAtomIdx, endAtomIdx)
-        addedBond.bondDir = dir
+            // --- ADD BOND IN RDKIT MOLECULE ---
+            rdkitRWMol.addBond(targetAtomIdx, endAtomIdx, type)
+            rdkitRWMol.getBondBetweenAtoms(targetAtomIdx, endAtomIdx)?.bondDir = dir
 
-        val conformer = rdkitRWMol.conformer
-        val atoms = molecule.atoms.toMutableList()
-        val bonds = molecule.bonds.toMutableList()
+            // Maintains accurate bond angles
+            rdkitRWMol.generateDepictionMatching2DStructure(template)
 
-        val beginAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
-        // --- UPDATE UI BEGIN ATOM DOUBLE BONDS ---
-        for (i in 0 until beginAtom.bonds.size()) {
-            val currentBond = beginAtom.bonds[i.toInt()]
-            if (currentBond.bondType == BondType.DOUBLE)
-                bonds[currentBond.idx.toInt()] = Bond.Double(
-                    beginAtomIndex = currentBond.beginAtomIdx,
-                    endAtomIndex = currentBond.endAtomIdx,
-                    alignment = currentBond.doubleBondAlignment(conformer)
-                )
-        }
-
-        // --- UPDATE UI BEGIN ATOM ---
-        val beginAtomPosition = conformer.getAtomPos(targetAtomIdx)
-        atoms[targetAtomIdx.toInt()] = Atom(
-            x = beginAtomPosition.x,
-            y = beginAtomPosition.y,
-            z = beginAtomPosition.z,
-            symbol = beginAtom.symbol,
-            numImplicitHydrogen = beginAtom.numImplicitHs,
-            charge = beginAtom.formalCharge,
-            gasteigerCharge = null,
-            isLabelReversed = beginAtom.isLabelReversed(conformer),
-            isLabelVisible = beginAtom.isLabelVisible(),
-        )
-
-        // --- ADD UI END ATOM ---
-        val endAtomPosition = conformer.getAtomPos(endAtomIdx)
-        val endAtom = rdkitRWMol.getAtomWithIdx(endAtomIdx)
-
-        atoms.add(
-            Atom(
-                x = endAtomPosition.x,
-                y = endAtomPosition.y,
-                z = endAtomPosition.z,
-                symbol = endAtom.symbol,
-                numImplicitHydrogen = endAtom.numImplicitHs,
-                charge = endAtom.formalCharge,
-                gasteigerCharge = null,
-                isLabelReversed = endAtom.isLabelReversed(conformer),
-                isLabelVisible = endAtom.isLabelVisible(),
-            )
-        )
-
-        // --- ADD UI BOND ---
-        bonds.add(
-            when (type) {
-                BondType.DOUBLE ->
-                    Bond.Double(
-                        beginAtomIndex = addedBond.beginAtomIdx,
-                        endAtomIndex = addedBond.endAtomIdx,
-                        alignment = addedBond.doubleBondAlignment(conformer)
-                    )
-
-                BondType.TRIPLE -> Bond.Triple(
-                    beginAtomIndex = addedBond.beginAtomIdx,
-                    endAtomIndex = addedBond.endAtomIdx
-                )
-
-                BondType.IONIC -> Bond.Ionic(
-                    beginAtomIndex = addedBond.beginAtomIdx,
-                    endAtomIndex = addedBond.endAtomIdx
-                )
-
-                BondType.HYDROGEN -> Bond.Hydrogen(
-                    beginAtomIndex = addedBond.beginAtomIdx,
-                    endAtomIndex = addedBond.endAtomIdx
-                )
-
-                else -> Bond.Single(
-                    beginAtomIndex = addedBond.beginAtomIdx,
-                    endAtomIndex = addedBond.endAtomIdx,
-                    direction = safeValueOf<BondDir>(dir.name, BondDir.NONE)
-                )
+            try {
+                rdkitRWMol.sanitizeMol()
+            } catch (e: Exception) {
+                // TODO(Handle valence error)
+                println(e)
             }
-        )
-        // --- CLEANUP ---
-        rdkitRWMol.delete()
 
-        return@withContext Result.Success(Molecule(atoms, bonds))
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            val molecule = rdkitRWMol.toMolecule()
+            return@withContext Result.Success(molecule)
+        } finally {
+            // --- CLEANUP ---
+            template.delete()
+            rdkitRWMol.delete()
+        }
     }
 
     override suspend fun replaceAtomWithAtom(
@@ -292,39 +209,27 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         val rdkitRWMol = molecule.toRWMol()
 
         val periodicTable = PeriodicTable.getTable()
-        val newAtomAtomicNumber = periodicTable.getAtomicNumber(newAtomSymbol)
-
-        // --- EDIT ATOM IN RDKit MOLECULE ---
-        rdkitRWMol.getAtomWithIdx(targetAtomIdx).atomicNum = newAtomAtomicNumber
-
         try {
-            rdkitRWMol.sanitizeMol()
-        } catch (e: Exception) {
-            // TODO(Handle valence error)
-            println(e)
+            val newAtomAtomicNumber = periodicTable.getAtomicNumber(newAtomSymbol)
+
+            // --- EDIT ATOM IN RDKit MOLECULE ---
+            rdkitRWMol.getAtomWithIdx(targetAtomIdx).atomicNum = newAtomAtomicNumber
+
+            try {
+                rdkitRWMol.sanitizeMol()
+            } catch (e: Exception) {
+                // TODO(Handle valence error)
+                println(e)
+            }
+
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            val molecule = rdkitRWMol.toMolecule()
+            return@withContext Result.Success(molecule)
+        } finally {
+            // --- CLEANUP ---
+            rdkitRWMol.delete()
+            periodicTable.delete()
         }
-
-        // --- EDIT ATOM IN UI MOLECULE ---
-        val conformer = rdkitRWMol.conformer
-        val newAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
-        val newAtomPosition = conformer.getAtomPos(targetAtomIdx)
-        val atoms = molecule.atoms.toMutableList()
-        atoms[targetAtomIdx.toInt()] = Atom(
-            x = newAtomPosition.x,
-            y = newAtomPosition.y,
-            z = newAtomPosition.z,
-            symbol = newAtom.symbol,
-            numImplicitHydrogen = newAtom.numImplicitHs,
-            charge = newAtom.formalCharge,
-            gasteigerCharge = null,
-            isLabelReversed = newAtom.isLabelReversed(conformer),
-            isLabelVisible = newAtom.isLabelVisible(),
-        )
-
-        // --- CLEANUP ---
-        rdkitRWMol.delete()
-
-        return@withContext Result.Success(Molecule(atoms, molecule.bonds))
     }
 
     override suspend fun replaceAtomWithTemplate(
@@ -477,6 +382,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     ): Molecule = withContext(Dispatchers.Default) {
         // --- CONVERT SMILES INTO RDKIT MOLECULE ---
         val mol = RWMol.MolFromSmiles(smiles)
+
+        val transform = Transform3D()
+        var point3D: Point3D? = null
         try {
             // --- COMPUTE COORDINATES ---
             mol.compute2DCoords()
@@ -489,14 +397,16 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             val deltaX = x - centroid.x
             val deltaY = y - centroid.y
 
-            val transform = Transform3D()
-            transform.SetTranslation(Point3D(deltaX, deltaY, 0.0))
+            point3D = Point3D(deltaX, deltaY, 0.0)
+            transform.SetTranslation(point3D)
             conformer.transformConformer(transform)
 
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             return@withContext mol.toMolecule()
         } finally {
             // --- CLEANUP ---
+            transform.delete()
+            point3D?.delete()
             mol.delete()
         }
     }
