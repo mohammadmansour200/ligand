@@ -11,4 +11,12 @@ object DrawingPaneConstants {
     const val HIGHLIGHT_STROKE_WIDTH = 2f
     const val HIGHLIGHT_CORNER_RADIUS = 8f
     const val BOND_HIT_TOLERANCE = 20f
+    const val BENZENE = "c1ccccc1"
+    const val NAPHTHALENE = "c1ccc2ccccc2c1"
+    const val CYCLOPROPANE = "C1CC1"
+    const val CYCLOBUTANE = "C1CCC1"
+    const val CYCLOPENTANE = "C1CCCC1"
+    const val CYCLOHEXANE = "C1CCCCC1"
+    const val CYCLOHEPTANE = "C1CCCCCC1"
+    const val CYCLOOCTANE = "C1CCCCCCC1"
 }

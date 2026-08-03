@@ -44,6 +44,13 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.vectorResource
 import org.liganddraw.app.core.presentation.IconWithTooltip
 import org.liganddraw.app.core.presentation.modifier.onRightClick
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BENZENE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOBUTANE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOHEPTANE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOHEXANE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOOCTANE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOPENTANE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOPROPANE
 import org.liganddraw.app.editor.domain.Tool
 
 @Composable
@@ -68,8 +75,8 @@ fun DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
         )
         SingleBondToolGroup(selectedTool, onSelectTool = { onSelectTool(it) })
         ToolbarButton(
-            checked = selectedTool == Tool.Benzene,
-            onClick = { onSelectTool(Tool.Benzene) },
+            checked = selectedTool == Tool.Template(BENZENE),
+            onClick = { onSelectTool(Tool.Template(BENZENE)) },
             icon = Res.drawable.benzene_tool,
             tooltipText = "Benzene"
         )
@@ -179,12 +186,12 @@ private fun SingleBondToolGroup(selectedTool: Tool, onSelectTool: (Tool) -> Unit
 }
 
 val cycloAlkaneOptions = listOf(
-    Triple(Tool.CycloHexane, Res.drawable.cyclohexane_tool, "Cyclohexane"),
-    Triple(Tool.CycloPropane, Res.drawable.cyclopropane_tool, "Cyclopropane"),
-    Triple(Tool.CycloButane, Res.drawable.cyclobutane_tool, "Cyclobutane"),
-    Triple(Tool.CycloPentane, Res.drawable.cyclopentane_tool, "Cyclopentane"),
-    Triple(Tool.CycloHeptane, Res.drawable.cycloheptane_tool, "Cycloheptane"),
-    Triple(Tool.CycloOctane, Res.drawable.cyclooctane_tool, "Cyclooctane"),
+    Triple(Tool.Template(CYCLOHEXANE), Res.drawable.cyclohexane_tool, "Cyclohexane"),
+    Triple(Tool.Template(CYCLOPROPANE), Res.drawable.cyclopropane_tool, "Cyclopropane"),
+    Triple(Tool.Template(CYCLOBUTANE), Res.drawable.cyclobutane_tool, "Cyclobutane"),
+    Triple(Tool.Template(CYCLOPENTANE), Res.drawable.cyclopentane_tool, "Cyclopentane"),
+    Triple(Tool.Template(CYCLOHEPTANE), Res.drawable.cycloheptane_tool, "Cycloheptane"),
+    Triple(Tool.Template(CYCLOOCTANE), Res.drawable.cyclooctane_tool, "Cyclooctane"),
 )
 
 @Composable

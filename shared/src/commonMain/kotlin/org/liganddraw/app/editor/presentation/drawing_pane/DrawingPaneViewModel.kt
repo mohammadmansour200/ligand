@@ -178,44 +178,8 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 angstromPosition.second
             )
 
-            is Tool.Benzene -> handleCreateMoleculeFromSmiles(
-                "c1ccccc1",
-                angstromPosition.first,
-                angstromPosition.second
-            )
-
-            is Tool.CycloButane -> handleCreateMoleculeFromSmiles(
-                "C1CCC1",
-                angstromPosition.first,
-                angstromPosition.second
-            )
-
-            is Tool.CycloHeptane -> handleCreateMoleculeFromSmiles(
-                "C1CCCCCC1",
-                angstromPosition.first,
-                angstromPosition.second
-            )
-
-            is Tool.CycloHexane -> handleCreateMoleculeFromSmiles(
-                "C1CCCCC1",
-                angstromPosition.first,
-                angstromPosition.second
-            )
-
-            is Tool.CycloOctane -> handleCreateMoleculeFromSmiles(
-                "C1CCCCCCC1",
-                angstromPosition.first,
-                angstromPosition.second
-            )
-
-            is Tool.CycloPentane -> handleCreateMoleculeFromSmiles(
-                "C1CCCC1",
-                angstromPosition.first,
-                angstromPosition.second
-            )
-
-            is Tool.CycloPropane -> handleCreateMoleculeFromSmiles(
-                "C1CC1",
+            is Tool.Template -> handleCreateMoleculeFromSmiles(
+                currentTool.smiles,
                 angstromPosition.first,
                 angstromPosition.second
             )
