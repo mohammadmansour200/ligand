@@ -110,20 +110,20 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private fun handleAtomPress(moleculeIdx: Int, atomIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
             is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
-            is Tool.SingleBond -> addBond(
+            is Tool.SingleBond -> handleAttachBondToAtom(
                 moleculeIdx,
                 atomIdx,
                 Bond.BondType.SINGLE
             )
 
-            is Tool.WedgeBond -> addBond(
+            is Tool.WedgeBond -> handleAttachBondToAtom(
                 moleculeIdx,
                 atomIdx,
                 Bond.BondType.SINGLE,
                 Bond.BondDir.BEGINWEDGE
             )
 
-            is Tool.HashedWedgeBond -> addBond(
+            is Tool.HashedWedgeBond -> handleAttachBondToAtom(
                 moleculeIdx,
                 atomIdx,
                 Bond.BondType.SINGLE,
@@ -132,7 +132,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
             is Tool.Element -> {
                 val selectedSymbol = currentTool.symbol
-                replaceAtomWithAtom(
+                handleReplaceAtomWithAtom(
                     moleculeIdx,
                     atomIdx,
                     selectedSymbol
@@ -141,7 +141,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
             is Tool.Template -> {
                 val smiles = currentTool.smiles
-                replaceAtomWithTemplate(
+                handleReplaceAtomWithTemplate(
                     moleculeIdx,
                     atomIdx,
                     smiles
@@ -275,17 +275,17 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         return along in 0f..bondLength && across in -width / 2f..width / 2f
     }
 
-    private fun addBond(
+    private fun handleAttachBondToAtom(
         moleculeIdx: Int,
-        atomIdx: Int,
+        targetAtomIdx: Int,
         type: Bond.BondType,
         dir: Bond.BondDir = Bond.BondDir.NONE
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.addBond(
+            cheminformaticsDataSource.attachBondToAtom(
                 molecule,
-                atomIdx.toLong(),
+                targetAtomIdx.toLong(),
                 type,
                 dir
             ).onSuccess { mol ->
@@ -296,16 +296,16 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
     }
 
-    private fun replaceAtomWithAtom(
+    private fun handleReplaceAtomWithAtom(
         moleculeIdx: Int,
-        atomIdx: Int,
+        targetAtomIdx: Int,
         newAtomSymbol: String
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
             cheminformaticsDataSource.replaceAtomWithAtom(
                 molecule,
-                atomIdx.toLong(),
+                targetAtomIdx.toLong(),
                 newAtomSymbol,
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
@@ -315,7 +315,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
     }
 
-    private fun replaceAtomWithTemplate(
+    private fun handleReplaceAtomWithTemplate(
         moleculeIdx: Int,
         targetAtomIdx: Int,
         templateSmiles: String

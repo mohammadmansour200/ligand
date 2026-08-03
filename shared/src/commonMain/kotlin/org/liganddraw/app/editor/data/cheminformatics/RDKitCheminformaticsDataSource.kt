@@ -168,9 +168,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             )
         }
 
-    override suspend fun addBond(
+    override suspend fun attachBondToAtom(
         molecule: Molecule,
-        beginAtomIdx: Long,
+        targetAtomIdx: Long,
         type: BondType,
         dir: org.RDKit.Bond.BondDir
     ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
@@ -182,7 +182,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         val endAtomIdx = rdkitRWMol.addAtom(org.RDKit.Atom("C"))
 
         // --- ADD BOND IN RDKIT MOLECULE ---
-        rdkitRWMol.addBond(beginAtomIdx, endAtomIdx, type)
+        rdkitRWMol.addBond(targetAtomIdx, endAtomIdx, type)
         // Maintains accurate bond angles
         rdkitRWMol.generateDepictionMatching2DStructure(template)
         template.delete()
@@ -194,14 +194,14 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             println(e)
         }
 
-        val addedBond = rdkitRWMol.getBondBetweenAtoms(beginAtomIdx, endAtomIdx)
+        val addedBond = rdkitRWMol.getBondBetweenAtoms(targetAtomIdx, endAtomIdx)
         addedBond.bondDir = dir
 
         val conformer = rdkitRWMol.conformer
         val atoms = molecule.atoms.toMutableList()
         val bonds = molecule.bonds.toMutableList()
 
-        val beginAtom = rdkitRWMol.getAtomWithIdx(beginAtomIdx)
+        val beginAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
         // --- UPDATE UI BEGIN ATOM DOUBLE BONDS ---
         for (i in 0 until beginAtom.bonds.size()) {
             val currentBond = beginAtom.bonds[i.toInt()]
@@ -214,8 +214,8 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         }
 
         // --- UPDATE UI BEGIN ATOM ---
-        val beginAtomPosition = conformer.getAtomPos(beginAtomIdx)
-        atoms[beginAtomIdx.toInt()] = Atom(
+        val beginAtomPosition = conformer.getAtomPos(targetAtomIdx)
+        atoms[targetAtomIdx.toInt()] = Atom(
             x = beginAtomPosition.x,
             y = beginAtomPosition.y,
             z = beginAtomPosition.z,
@@ -285,7 +285,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
     override suspend fun replaceAtomWithAtom(
         molecule: Molecule,
-        atomIdx: Long,
+        targetAtomIdx: Long,
         newAtomSymbol: String,
     ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
@@ -295,7 +295,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         val newAtomAtomicNumber = periodicTable.getAtomicNumber(newAtomSymbol)
 
         // --- EDIT ATOM IN RDKit MOLECULE ---
-        rdkitRWMol.getAtomWithIdx(atomIdx).atomicNum = newAtomAtomicNumber
+        rdkitRWMol.getAtomWithIdx(targetAtomIdx).atomicNum = newAtomAtomicNumber
 
         try {
             rdkitRWMol.sanitizeMol()
@@ -306,10 +306,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
         // --- EDIT ATOM IN UI MOLECULE ---
         val conformer = rdkitRWMol.conformer
-        val newAtom = rdkitRWMol.getAtomWithIdx(atomIdx)
-        val newAtomPosition = conformer.getAtomPos(atomIdx)
+        val newAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
+        val newAtomPosition = conformer.getAtomPos(targetAtomIdx)
         val atoms = molecule.atoms.toMutableList()
-        atoms[atomIdx.toInt()] = Atom(
+        atoms[targetAtomIdx.toInt()] = Atom(
             x = newAtomPosition.x,
             y = newAtomPosition.y,
             z = newAtomPosition.z,

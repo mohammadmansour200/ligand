@@ -40,17 +40,17 @@ interface CheminformaticsDataSource {
     suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, ChemistryError>
 
     /**
-     * Adds a new chemical bond starting from a specified atom in the molecule.
+     * Attaches a bond to an atom in the molecule.
      * @param [molecule] The target [Molecule] to modify.
-     * @param [beginAtomIdx] The zero-based index of the starting atom for the bond.
+     * @param [targetAtomIdx] The zero-based index of the starting atom for the bond.
      * @param [type] The bond type to create (e.g., SINGLE, DOUBLE, TRIPLE).
      * @param [dir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE).
      * Defaults to [Bond.BondDir.NONE].
      * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
      */
-    suspend fun addBond(
+    suspend fun attachBondToAtom(
         molecule: Molecule,
-        beginAtomIdx: Long,
+        targetAtomIdx: Long,
         type: Bond.BondType,
         dir: Bond.BondDir = Bond.BondDir.NONE
     ): Result<Molecule, ChemistryError>
@@ -58,13 +58,13 @@ interface CheminformaticsDataSource {
     /**
      * Replaces an existing atom in the molecule with a new atom.
      * @param molecule The target [Molecule] to modify.
-     * @param atomIdx The zero-based index of the atom to be replaced.
+     * @param targetAtomIdx The zero-based index of the atom to be replaced.
      * @param newAtomSymbol The standard chemical element symbol for the replacement atom (e.g., "C", "N", "O", "Cl").
      * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
      */
     suspend fun replaceAtomWithAtom(
         molecule: Molecule,
-        atomIdx: Long,
+        targetAtomIdx: Long,
         newAtomSymbol: String
     ): Result<Molecule, ChemistryError>
 
