@@ -104,7 +104,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             return
         }
 
-        // TODO(Handle null hit)
         handleNullHit(x, y)
     }
 
@@ -175,6 +174,12 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         when (val currentTool = _state.value.selectedTool) {
             is Tool.Element -> handleCreateMoleculeFromSmiles(
                 currentTool.symbol,
+                angstromPosition.first,
+                angstromPosition.second
+            )
+
+            is Tool.Benzene -> handleCreateMoleculeFromSmiles(
+                "c1ccccc1",
                 angstromPosition.first,
                 angstromPosition.second
             )

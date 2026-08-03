@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.arrow_drop_down
+import liganddraw.shared.generated.resources.benzene_tool
 import liganddraw.shared.generated.resources.hashed_wedge_bond
 import liganddraw.shared.generated.resources.pan_tool
 import liganddraw.shared.generated.resources.single_bond
@@ -59,6 +60,12 @@ fun DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
             tooltipText = "Structure Selection"
         )
         SingleBondToolGroup(selectedTool, onSelectTool = { onSelectTool(it) })
+        ToolbarButton(
+            checked = selectedTool == Tool.Benzene,
+            onClick = { onSelectTool(Tool.Benzene) },
+            icon = Res.drawable.benzene_tool,
+            tooltipText = "Benzene"
+        )
     }
 }
 

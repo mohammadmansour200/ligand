@@ -7,4 +7,5 @@ sealed interface Tool {
     object WedgeBond : Tool
     object HashedWedgeBond : Tool
     data class Element(val symbol: String) : Tool
+    object Benzene : Tool
 }
