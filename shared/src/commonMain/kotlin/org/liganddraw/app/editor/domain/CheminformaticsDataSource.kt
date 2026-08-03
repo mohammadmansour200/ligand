@@ -69,6 +69,19 @@ interface CheminformaticsDataSource {
     ): Result<Molecule, ChemistryError>
 
     /**
+     * Replaces an existing atom in the molecule with a template (e.g. benzene, cyclohexane).
+     * @param molecule The target [Molecule] to modify.
+     * @param targetAtomIdx The zero-based index of the atom to be replaced.
+     * @param templateSmiles The SMILES representation of the molecule (e.g., "CC" for ethane, "c1ccccc1" for benzene).
+     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun replaceAtomWithTemplate(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+        templateSmiles: String
+    ): Result<Molecule, ChemistryError>
+
+    /**
      * Creates a new molecule from a SMILES string at a specified canvas coordinate.
      * @param smiles The SMILES representation of the molecule (e.g., "CC" for ethane, "c1ccccc1" for benzene).
      * @param x The target x-coordinate in angstroms.

@@ -6,8 +6,8 @@ object DrawingPaneConstants {
     const val BOND_STROKE_WIDTH = 2f
     const val BOND_LINES_SPACING = 6f
     const val CENTERED_DOUBLE_BOND_LINES_SPACING = 3f
-    const val SYMBOL_FONT_SIZE = 18f
-    const val HYDROGEN_COUNT_FONT_SIZE = 14f
+    const val SYMBOL_FONT_SIZE = 24f
+    const val HYDROGEN_COUNT_FONT_SIZE = 20f
     const val HIGHLIGHT_STROKE_WIDTH = 2f
     const val HIGHLIGHT_CORNER_RADIUS = 8f
     const val BOND_HIT_TOLERANCE = 20f

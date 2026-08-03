@@ -327,6 +327,55 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         return@withContext Result.Success(Molecule(atoms, molecule.bonds))
     }
 
+    override suspend fun replaceAtomWithTemplate(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+        templateSmiles: String
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+        val templateMol = RWMol.MolFromSmiles(templateSmiles)
+        val rdkitRWMol = molecule.toRWMol()
+        val depictionTemplateMol = ROMol(rdkitRWMol)
+
+        try {
+            val targetAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
+
+            // --- INSERT TEMPLATE MOLECULE INTO MAIN MOLECULE ---
+            rdkitRWMol.insertMol(templateMol)
+
+            // --- BOND TEMPLATE MOLECULE TO ATOM: atom has multiple existing bonds ---
+            val templateAnchorIdx = rdkitRWMol.numAtoms
+            if (targetAtom.bonds.size() > 1) {
+                rdkitRWMol.addBond(targetAtomIdx, templateAnchorIdx, BondType.SINGLE)
+            } else {
+                // --- REPLACE ATOM WITH TEMPLATE MOLECULE: terminal atom ---
+                val neighborBond = targetAtom.bonds[0]
+                val neighborBondOtherAtomIdx = neighborBond.getOtherAtom(targetAtom).idx
+
+                rdkitRWMol.addBond(
+                    neighborBondOtherAtomIdx,
+                    templateAnchorIdx,
+                    neighborBond.bondType
+                )
+                rdkitRWMol.getBondBetweenAtoms(
+                    neighborBondOtherAtomIdx,
+                    templateAnchorIdx
+                )?.bondDir =
+                    neighborBond.bondDir
+
+                rdkitRWMol.removeAtom(targetAtomIdx)
+            }
+
+            rdkitRWMol.generateDepictionMatching2DStructure(depictionTemplateMol)
+            rdkitRWMol.sanitizeMol()
+
+            Result.Success(rdkitRWMol.toMolecule())
+        } finally {
+            templateMol.delete()
+            rdkitRWMol.delete()
+            depictionTemplateMol.delete()
+        }
+    }
+
     override suspend fun createMoleculeFromSmiles(
         smiles: String,
         x: Double,

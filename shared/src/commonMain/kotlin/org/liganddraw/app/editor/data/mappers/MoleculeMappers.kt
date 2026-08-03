@@ -136,16 +136,7 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
                 else -> Bond.Single(
                     beginAtomIndex = bond.beginAtomIdx,
                     endAtomIndex = bond.endAtomIdx,
-                    direction = if (bond.hasProp("_MolFileBondStereo")) {
-                        val rawStereoCode = bond.getProp("_MolFileBondStereo")
-
-                        // Codes can be found at https://discover.3ds.com/sites/default/files/2020-08/biovia_ctfileformats_2020.pdf page 46
-                        when (rawStereoCode) {
-                            "1" -> BondDir.BEGINWEDGE
-                            "6" -> BondDir.BEGINDASH
-                            else -> BondDir.NONE
-                        }
-                    } else BondDir.NONE
+                    direction = safeValueOf<BondDir>(bond.bondDir.name, BondDir.NONE)
                 )
             }
         )

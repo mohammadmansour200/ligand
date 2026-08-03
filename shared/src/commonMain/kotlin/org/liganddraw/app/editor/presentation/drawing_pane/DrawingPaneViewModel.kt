@@ -139,6 +139,15 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 )
             }
 
+            is Tool.Template -> {
+                val smiles = currentTool.smiles
+                replaceAtomWithTemplate(
+                    moleculeIdx,
+                    atomIdx,
+                    smiles
+                )
+            }
+
             else -> {}
         }
     }
@@ -298,6 +307,25 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 molecule,
                 atomIdx.toLong(),
                 newAtomSymbol,
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+                editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun replaceAtomWithTemplate(
+        moleculeIdx: Int,
+        targetAtomIdx: Int,
+        templateSmiles: String
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.replaceAtomWithTemplate(
+                molecule,
+                targetAtomIdx.toLong(),
+                templateSmiles,
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol
