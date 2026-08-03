@@ -8,4 +8,10 @@ sealed interface Tool {
     object HashedWedgeBond : Tool
     data class Element(val symbol: String) : Tool
     object Benzene : Tool
+    object CycloPropane : Tool
+    object CycloButane : Tool
+    object CycloPentane : Tool
+    object CycloHexane : Tool
+    object CycloHeptane : Tool
+    object CycloOctane : Tool
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,12 @@ import androidx.compose.ui.unit.dp
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.arrow_drop_down
 import liganddraw.shared.generated.resources.benzene_tool
+import liganddraw.shared.generated.resources.cyclobutane_tool
+import liganddraw.shared.generated.resources.cycloheptane_tool
+import liganddraw.shared.generated.resources.cyclohexane_tool
+import liganddraw.shared.generated.resources.cyclooctane_tool
+import liganddraw.shared.generated.resources.cyclopentane_tool
+import liganddraw.shared.generated.resources.cyclopropane_tool
 import liganddraw.shared.generated.resources.hashed_wedge_bond
 import liganddraw.shared.generated.resources.pan_tool
 import liganddraw.shared.generated.resources.single_bond
@@ -66,6 +73,7 @@ fun DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
             icon = Res.drawable.benzene_tool,
             tooltipText = "Benzene"
         )
+        CycloAlkaneToolGroup(selectedTool, onSelectTool)
     }
 }
 
@@ -109,7 +117,8 @@ private fun ToolbarButton(
             Icon(
                 imageVector = vectorResource(Res.drawable.arrow_drop_down),
                 contentDescription = "More tools",
-                modifier = Modifier.size(24.dp).align(Alignment.BottomEnd),
+                modifier = Modifier.size(24.dp).align(Alignment.BottomEnd)
+                    .offset(x = 4.dp, y = 4.dp),
                 tint = color
             )
         }
@@ -164,6 +173,55 @@ private fun SingleBondToolGroup(selectedTool: Tool, onSelectTool: (Tool) -> Unit
                     icon = Res.drawable.hashed_wedge_bond,
                     tooltipText = "Hashed Wedge Bond"
                 )
+            }
+        }
+    }
+}
+
+val cycloAlkaneOptions = listOf(
+    Triple(Tool.CycloHexane, Res.drawable.cyclohexane_tool, "Cyclohexane"),
+    Triple(Tool.CycloPropane, Res.drawable.cyclopropane_tool, "Cyclopropane"),
+    Triple(Tool.CycloButane, Res.drawable.cyclobutane_tool, "Cyclobutane"),
+    Triple(Tool.CycloPentane, Res.drawable.cyclopentane_tool, "Cyclopentane"),
+    Triple(Tool.CycloHeptane, Res.drawable.cycloheptane_tool, "Cycloheptane"),
+    Triple(Tool.CycloOctane, Res.drawable.cyclooctane_tool, "Cyclooctane"),
+)
+
+@Composable
+private fun CycloAlkaneToolGroup(
+    selectedTool: Tool,
+    onSelectTool: (Tool) -> Unit
+) {
+    var showDropdownMenu by remember { mutableStateOf(false) }
+
+    var primaryTool by remember { mutableStateOf(cycloAlkaneOptions[0]) }
+
+    Box {
+        ToolbarButton(
+            checked = selectedTool in cycloAlkaneOptions.map { it.first },
+            onClick = { onSelectTool(primaryTool.first) },
+            onLongClick = { showDropdownMenu = true },
+            icon = primaryTool.second,
+            tooltipText = primaryTool.third
+        )
+
+        DropdownMenu(
+            expanded = showDropdownMenu,
+            onDismissRequest = { showDropdownMenu = false }
+        ) {
+            Row {
+                cycloAlkaneOptions.forEach { (tool, iconRes, label) ->
+                    ToolbarButton(
+                        checked = selectedTool == tool,
+                        onClick = {
+                            primaryTool = Triple(tool, iconRes, label)
+                            showDropdownMenu = false
+                            onSelectTool(tool)
+                        },
+                        icon = iconRes,
+                        tooltipText = label
+                    )
+                }
             }
         }
     }
