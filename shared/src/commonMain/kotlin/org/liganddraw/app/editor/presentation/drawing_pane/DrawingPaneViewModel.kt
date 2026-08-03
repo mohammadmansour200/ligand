@@ -132,7 +132,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
             is Tool.Element -> {
                 val selectedSymbol = currentTool.symbol
-                replaceAtom(
+                replaceAtomWithAtom(
                     moleculeIdx,
                     atomIdx,
                     selectedSymbol
@@ -287,17 +287,17 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
     }
 
-    private fun replaceAtom(
+    private fun replaceAtomWithAtom(
         moleculeIdx: Int,
         atomIdx: Int,
-        newSymbol: String
+        newAtomSymbol: String
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.replaceAtom(
+            cheminformaticsDataSource.replaceAtomWithAtom(
                 molecule,
                 atomIdx.toLong(),
-                newSymbol,
+                newAtomSymbol,
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol

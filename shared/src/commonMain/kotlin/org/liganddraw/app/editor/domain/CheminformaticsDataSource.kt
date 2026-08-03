@@ -62,7 +62,7 @@ interface CheminformaticsDataSource {
      * @param newAtomSymbol The standard chemical element symbol for the replacement atom (e.g., "C", "N", "O", "Cl").
      * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
      */
-    suspend fun replaceAtom(
+    suspend fun replaceAtomWithAtom(
         molecule: Molecule,
         atomIdx: Long,
         newAtomSymbol: String

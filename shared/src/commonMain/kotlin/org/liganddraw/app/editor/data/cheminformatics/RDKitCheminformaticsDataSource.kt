@@ -283,7 +283,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         return@withContext Result.Success(Molecule(atoms, bonds))
     }
 
-    override suspend fun replaceAtom(
+    override suspend fun replaceAtomWithAtom(
         molecule: Molecule,
         atomIdx: Long,
         newAtomSymbol: String,
