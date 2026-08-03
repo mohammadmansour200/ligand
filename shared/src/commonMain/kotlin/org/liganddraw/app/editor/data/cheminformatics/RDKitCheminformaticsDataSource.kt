@@ -338,9 +338,21 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
         try {
             val targetAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
-            val templateAnchorIdx = rdkitRWMol.numAtoms
+
+            // --- REPLACE ATOM WITH TEMPLATE: atom has no bonds ---
+            if (targetAtom.bonds.size() == 0L) {
+                val targetAtomPos = rdkitRWMol.conformer.getAtomPos(targetAtomIdx)
+
+                val molecule = createMoleculeFromSmiles(
+                    smiles = templateSmiles,
+                    x = targetAtomPos.x,
+                    y = targetAtomPos.y
+                )
+                return@withContext Result.Success(molecule)
+            }
 
             // --- INSERT TEMPLATE MOLECULE INTO MAIN MOLECULE ---
+            val templateAnchorIdx = rdkitRWMol.numAtoms
             rdkitRWMol.insertMol(templateMol)
 
             // --- BOND TEMPLATE MOLECULE TO ATOM: atom has multiple existing bonds ---
@@ -369,7 +381,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             rdkitRWMol.generateDepictionMatching2DStructure(depictionTemplateMol)
             rdkitRWMol.sanitizeMol()
 
-            Result.Success(rdkitRWMol.toMolecule())
+            return@withContext Result.Success(rdkitRWMol.toMolecule())
         } finally {
             templateMol.delete()
             rdkitRWMol.delete()
