@@ -56,6 +56,19 @@ interface CheminformaticsDataSource {
     ): Result<Molecule, ChemistryError>
 
     /**
+     * Fuses a template (e.g. benzene, cyclohexane) to a bond in the molecule.
+     * @param molecule The target [Molecule] to modify.
+     * @param targetBondIdx The zero-based index of the bond to be fused to.
+     * @param templateSmiles The SMILES representation of the molecule (e.g., "CC" for ethane, "c1ccccc1" for benzene).
+     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun fuseTemplateToBond(
+        molecule: Molecule,
+        targetBondIdx: Long,
+        templateSmiles: String,
+    ): Result<Molecule, ChemistryError>
+
+    /**
      * Replaces an existing atom in the molecule with a new atom.
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The zero-based index of the atom to be replaced.

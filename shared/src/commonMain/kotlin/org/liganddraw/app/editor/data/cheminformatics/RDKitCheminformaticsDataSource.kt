@@ -389,6 +389,87 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         }
     }
 
+    override suspend fun fuseTemplateToBond(
+        molecule: Molecule,
+        targetBondIdx: Long,
+        templateSmiles: String
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+        val templateMol = RWMol.MolFromSmiles(templateSmiles)
+        val rdkitRWMol = molecule.toRWMol()
+        val depictionTemplateMol = ROMol(rdkitRWMol)
+
+        try {
+            // --- TARGET BOND ATOMS ---
+            val targetBond = rdkitRWMol.getBondWithIdx(targetBondIdx)
+            val targetBeginIdx = targetBond.beginAtomIdx
+            val targetEndIdx = targetBond.endAtomIdx
+
+            // --- TEMPLATE BOND ATOMS ---
+            val templateBond = templateMol.getBondWithIdx(0L)
+            val templateBeginIdx = templateBond.beginAtomIdx
+            val templateEndIdx = templateBond.endAtomIdx
+
+            // --- FIND TEMPLATE ATTACHMENT POINTS AND BOND TYPE ---
+            var templateBeginNeighborIdx = -1L
+            var templateBeginBondType = BondType.SINGLE
+            val beginBonds = templateMol.getAtomWithIdx(templateBeginIdx).bonds
+            for (i in 0 until beginBonds.size()) {
+                val bond = beginBonds[i.toInt()]
+                val otherIdx =
+                    if (bond.beginAtomIdx == templateBeginIdx) bond.endAtomIdx else bond.beginAtomIdx
+                if (otherIdx != templateEndIdx) {
+                    templateBeginNeighborIdx = otherIdx
+                    templateBeginBondType = bond.bondType
+                    break
+                }
+            }
+
+            var templateEndNeighborIdx = -1L
+            var templateEndBondType = BondType.SINGLE
+            val endBonds = templateMol.getAtomWithIdx(templateEndIdx).bonds
+            for (i in 0 until endBonds.size()) {
+                val bond = endBonds[i.toInt()]
+                val otherIdx =
+                    if (bond.beginAtomIdx == templateEndIdx) bond.endAtomIdx else bond.beginAtomIdx
+                if (otherIdx != templateBeginIdx) {
+                    templateEndNeighborIdx = otherIdx
+                    templateEndBondType = bond.bondType
+                    break
+                }
+            }
+
+            // --- TRUNCATE TEMPLATE ---
+            val atomsToRemove = listOf(templateBeginIdx, templateEndIdx).sortedDescending()
+            var finalTemplateBeginNeighbor = templateBeginNeighborIdx
+            var finalTemplateEndNeighbor = templateEndNeighborIdx
+
+            for (idx in atomsToRemove) {
+                if (finalTemplateBeginNeighbor > idx) finalTemplateBeginNeighbor--
+                if (finalTemplateEndNeighbor > idx) finalTemplateEndNeighbor--
+                templateMol.removeAtom(idx)
+            }
+
+            // --- INSERT TEMPLATE ---
+            val oldNumAtoms = rdkitRWMol.numAtoms
+            rdkitRWMol.insertMol(templateMol)
+
+            // --- FUSE TEMPLATE TO MAIN MOLECULE ---
+            val combinedTemplateBeginNeighbor = oldNumAtoms + finalTemplateBeginNeighbor
+            rdkitRWMol.addBond(targetBeginIdx, combinedTemplateBeginNeighbor, templateBeginBondType)
+            val combinedTemplateEndNeighbor = oldNumAtoms + finalTemplateEndNeighbor
+            rdkitRWMol.addBond(targetEndIdx, combinedTemplateEndNeighbor, templateEndBondType)
+
+            rdkitRWMol.generateDepictionMatching2DStructure(depictionTemplateMol)
+            rdkitRWMol.sanitizeMol()
+
+            Result.Success(rdkitRWMol.toMolecule())
+        } finally {
+            templateMol.delete()
+            rdkitRWMol.delete()
+            depictionTemplateMol.delete()
+        }
+    }
+
     override suspend fun createMoleculeFromSmiles(
         smiles: String,
         x: Double,

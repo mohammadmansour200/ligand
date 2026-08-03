@@ -167,7 +167,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 // TODO: set bond dir to BEGINDASH
             }
 
-            is Tool.Element -> {}
+            is Tool.Template -> {
+                val smiles = currentTool.smiles
+                handleFuseTemplateToBond(moleculeIdx, bondIdx, smiles)
+            }
+
             else -> {}
         }
     }
@@ -325,6 +329,25 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             cheminformaticsDataSource.replaceAtomWithTemplate(
                 molecule,
                 targetAtomIdx.toLong(),
+                templateSmiles,
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+                editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun handleFuseTemplateToBond(
+        moleculeIdx: Int,
+        targetBondIdx: Int,
+        templateSmiles: String
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.fuseTemplateToBond(
+                molecule,
+                targetBondIdx.toLong(),
                 templateSmiles,
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
