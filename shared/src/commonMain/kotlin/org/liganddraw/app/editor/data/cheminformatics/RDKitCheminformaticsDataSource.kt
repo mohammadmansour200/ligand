@@ -338,12 +338,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
         try {
             val targetAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
+            val templateAnchorIdx = rdkitRWMol.numAtoms
 
             // --- INSERT TEMPLATE MOLECULE INTO MAIN MOLECULE ---
             rdkitRWMol.insertMol(templateMol)
 
             // --- BOND TEMPLATE MOLECULE TO ATOM: atom has multiple existing bonds ---
-            val templateAnchorIdx = rdkitRWMol.numAtoms
             if (targetAtom.bonds.size() > 1) {
                 rdkitRWMol.addBond(targetAtomIdx, templateAnchorIdx, BondType.SINGLE)
             } else {
