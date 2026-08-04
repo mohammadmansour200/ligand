@@ -1,6 +1,6 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -30,18 +30,27 @@ fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) 
             DrawingPaneTopBar(onAction = { onAction(it) })
         },
     ) {
-        Row(modifier = Modifier.fillMaxSize().padding(it)) {
+        Box(modifier = Modifier.fillMaxSize().padding(it)) {
+            DrawingCanvas(state = state, onAction = { action -> onAction(action) })
+
             DrawingToolbar(
                 selectedTool = state.selectedTool,
                 onSelectTool = { tool -> onAction(DrawingPaneAction.OnSelectTool(tool)) }
             )
-            DrawingCanvas(state = state, onAction = { action -> onAction(action) })
+            val selectedElement =
+                if (state.selectedTool is Tool.Element) state.selectedTool.symbol else null
+            ElementPalette(
+                onAtomSelected = { symbol ->
+                    onAction(
+                        DrawingPaneAction.OnSelectTool(
+                            Tool.Element(
+                                symbol
+                            )
+                        )
+                    )
+                },
+                selectedAtom = selectedElement
+            )
         }
-        val selectedElement =
-            if (state.selectedTool is Tool.Element) state.selectedTool.symbol else null
-        ElementPalette(
-            onAtomSelected = { symbol -> onAction(DrawingPaneAction.OnSelectTool(Tool.Element(symbol))) },
-            selectedAtom = selectedElement
-        )
     }
 }

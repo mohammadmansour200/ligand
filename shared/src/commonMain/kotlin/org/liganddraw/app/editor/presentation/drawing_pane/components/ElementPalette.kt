@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun ElementPalette(
+fun BoxScope.ElementPalette(
     selectedAtom: String?,
     onAtomSelected: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -34,41 +34,39 @@ fun ElementPalette(
     val topAtoms = listOf("H", "O", "N", "C", "S")
     val bottomAtoms = listOf("P", "F", "Cl", "Br", "I")
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 8.dp)
-                .heightIn(max = 280.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = 8.dp, horizontal = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            topAtoms.forEach { atom ->
-                ElementItem(
-                    atom = atom,
-                    isSelected = atom == selectedAtom,
-                    onSelect = { onAtomSelected(atom) }
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .width(24.dp)
-                    .padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant
+    Column(
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .padding(end = 8.dp)
+            .heightIn(max = 280.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        topAtoms.forEach { atom ->
+            ElementItem(
+                atom = atom,
+                isSelected = atom == selectedAtom,
+                onSelect = { onAtomSelected(atom) }
             )
+        }
 
-            bottomAtoms.forEach { atom ->
-                ElementItem(
-                    atom = atom,
-                    isSelected = atom == selectedAtom,
-                    onSelect = { onAtomSelected(atom) }
-                )
-            }
+        HorizontalDivider(
+            modifier = Modifier
+                .width(24.dp)
+                .padding(vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        bottomAtoms.forEach { atom ->
+            ElementItem(
+                atom = atom,
+                isSelected = atom == selectedAtom,
+                onSelect = { onAtomSelected(atom) }
+            )
         }
     }
 }

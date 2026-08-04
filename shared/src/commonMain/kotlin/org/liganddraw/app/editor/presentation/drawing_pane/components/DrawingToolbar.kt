@@ -2,19 +2,23 @@ package org.liganddraw.app.editor.presentation.drawing_pane.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowHeightSizeClass
+import androidx.window.core.layout.WindowWidthSizeClass
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.arrow_drop_down
 import liganddraw.shared.generated.resources.benzene_tool
@@ -54,12 +60,8 @@ import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOPROPANE
 import org.liganddraw.app.editor.domain.Tool
 
 @Composable
-fun DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
+fun BoxScope.DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
+    DrawingToolbarLayout {
         ToolbarButton(
             checked = selectedTool == Tool.Pan,
             onClick = { onSelectTool(Tool.Pan) },
@@ -81,6 +83,49 @@ fun DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
             tooltipText = "Benzene"
         )
         CycloAlkaneToolGroup(selectedTool, onSelectTool)
+    }
+}
+
+@Composable
+private fun BoxScope.DrawingToolbarLayout(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+
+    val showAsColumn = windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT ||
+            windowSizeClass.windowHeightSizeClass == WindowHeightSizeClass.COMPACT
+
+    if (showAsColumn) {
+        // --- EXPANDED / MEDIUM / LANDSCAPE: Vertical Column on the left ---
+        Column(
+            modifier = modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 8.dp, top = 8.dp, bottom = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            content()
+        }
+    } else {
+        // --- COMPACT PORTRAIT: Horizontal Row at the bottom ---
+        Row(
+            modifier = modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .horizontalScroll(rememberScrollState())
+                .padding(vertical = 4.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
+        }
     }
 }
 
