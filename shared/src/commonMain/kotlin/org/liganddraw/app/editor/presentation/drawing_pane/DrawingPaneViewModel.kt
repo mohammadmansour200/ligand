@@ -155,9 +155,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private fun handleBondPress(moleculeIdx: Int, bondIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
             is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
-            is Tool.SingleBond -> {
-                // TODO: cycle bond order (single -> double -> triple)
-            }
+            is Tool.SingleBond -> handleCycleBondType(moleculeIdx, bondIdx)
 
             is Tool.WedgeBond -> {
                 // TODO: set bond dir to BEGINWEDGE, or toggle/flip existing wedge
@@ -292,6 +290,23 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 targetAtomIdx.toLong(),
                 type,
                 dir
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+                editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun handleCycleBondType(
+        moleculeIdx: Int,
+        targetAtomIdx: Int,
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.cycleBondType(
+                molecule,
+                targetAtomIdx.toLong(),
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol

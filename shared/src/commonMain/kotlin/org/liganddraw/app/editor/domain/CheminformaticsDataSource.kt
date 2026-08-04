@@ -106,4 +106,16 @@ interface CheminformaticsDataSource {
         x: Double,
         y: Double
     ): Molecule
+
+    /**
+     * Cycles the bond type of the specified bond through single, double, and triple,
+     * wrapping back to single after triple (single -> double -> triple -> single).
+     * @param molecule The target [Molecule] to modify.
+     * @param targetBondIdx The zero-based index of the bond whose type should be cycled.
+     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun cycleBondType(
+        molecule: Molecule,
+        targetBondIdx: Long
+    ): Result<Molecule, ChemistryError>
 }

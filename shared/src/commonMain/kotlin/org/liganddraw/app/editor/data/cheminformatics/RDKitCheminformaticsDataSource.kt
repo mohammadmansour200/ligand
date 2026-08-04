@@ -410,4 +410,31 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             mol.delete()
         }
     }
+
+    override suspend fun cycleBondType(
+        molecule: Molecule,
+        targetBondIdx: Long
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+        val mol = molecule.toRWMol()
+        try {
+            val bond = mol.getBondWithIdx(targetBondIdx)
+            val nextType = when (bond.bondType) {
+                BondType.SINGLE -> BondType.DOUBLE
+                BondType.DOUBLE -> BondType.TRIPLE
+                else -> BondType.SINGLE
+            }
+            bond.bondType = nextType
+            
+            try {
+                mol.sanitizeMol()
+            } catch (_: Exception) {
+                // TODO: Handle valence error
+            }
+
+            val molecule = mol.toMolecule()
+            return@withContext Result.Success(molecule)
+        } finally {
+            mol.delete()
+        }
+    }
 }
