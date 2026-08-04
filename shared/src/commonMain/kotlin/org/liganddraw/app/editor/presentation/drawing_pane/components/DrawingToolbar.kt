@@ -8,16 +8,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,16 +39,23 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.arrow_drop_down
 import liganddraw.shared.generated.resources.benzene_tool
+import liganddraw.shared.generated.resources.chain_tool
 import liganddraw.shared.generated.resources.cyclobutane_tool
 import liganddraw.shared.generated.resources.cycloheptane_tool
 import liganddraw.shared.generated.resources.cyclohexane_tool
 import liganddraw.shared.generated.resources.cyclooctane_tool
 import liganddraw.shared.generated.resources.cyclopentane_tool
 import liganddraw.shared.generated.resources.cyclopropane_tool
+import liganddraw.shared.generated.resources.double_bond_tool
+import liganddraw.shared.generated.resources.eraser_tool
 import liganddraw.shared.generated.resources.hashed_wedge_bond
+import liganddraw.shared.generated.resources.hydrogen_bond_tool
+import liganddraw.shared.generated.resources.minus_tool
 import liganddraw.shared.generated.resources.pan_tool
+import liganddraw.shared.generated.resources.plus_tool
 import liganddraw.shared.generated.resources.single_bond
 import liganddraw.shared.generated.resources.structure_select_tool
+import liganddraw.shared.generated.resources.triple_bond_tool
 import liganddraw.shared.generated.resources.wedge_bond
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.vectorResource
@@ -58,53 +69,135 @@ import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOOCTANE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOPENTANE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.CYCLOPROPANE
 import org.liganddraw.app.editor.domain.Tool
+import org.liganddraw.app.editor.presentation.drawing_pane.modifier.fadingEdges
 
 @Composable
 fun BoxScope.DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
-    DrawingToolbarLayout {
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+
+    val isColumn = windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT ||
+            windowSizeClass.windowHeightSizeClass == WindowHeightSizeClass.COMPACT
+
+    DrawingToolbarLayout(isColumn = isColumn) {
         ToolbarButton(
             checked = selectedTool == Tool.Pan,
             onClick = { onSelectTool(Tool.Pan) },
             icon = Res.drawable.pan_tool,
             tooltipText = "Pan"
         )
-
         ToolbarButton(
             checked = selectedTool == Tool.StructureSelect,
             onClick = { onSelectTool(Tool.StructureSelect) },
             icon = Res.drawable.structure_select_tool,
             tooltipText = "Structure Selection"
         )
-        SingleBondToolGroup(selectedTool, onSelectTool = { onSelectTool(it) })
+        ToolbarButton(
+            checked = selectedTool == Tool.Erase,
+            onClick = { onSelectTool(Tool.Erase) },
+            icon = Res.drawable.eraser_tool,
+            tooltipText = "Erase"
+        )
+
+        ToolbarSeparator(isColumn = isColumn)
+
+        ToolbarButton(
+            checked = selectedTool == Tool.Plus,
+            onClick = { onSelectTool(Tool.Plus) },
+            icon = Res.drawable.plus_tool,
+            tooltipText = "Increase Charge"
+        )
+        ToolbarButton(
+            checked = selectedTool == Tool.Minus,
+            onClick = { onSelectTool(Tool.Minus) },
+            icon = Res.drawable.minus_tool,
+            tooltipText = "Decrease Charge"
+        )
+
+        ToolbarSeparator(isColumn = isColumn)
+
+        SingleBondToolGroup(
+            selectedTool = selectedTool,
+            onSelectTool = { onSelectTool(it) }
+        )
+        ToolbarButton(
+            checked = selectedTool == Tool.DoubleBond,
+            onClick = { onSelectTool(Tool.DoubleBond) },
+            icon = Res.drawable.double_bond_tool,
+            tooltipText = "Double Bond"
+        )
+        ToolbarButton(
+            checked = selectedTool == Tool.TripleBond,
+            onClick = { onSelectTool(Tool.TripleBond) },
+            icon = Res.drawable.triple_bond_tool,
+            tooltipText = "Triple Bond"
+        )
+        ToolbarButton(
+            checked = selectedTool == Tool.HydrogenBond,
+            onClick = { onSelectTool(Tool.HydrogenBond) },
+            icon = Res.drawable.hydrogen_bond_tool,
+            tooltipText = "Hydrogen Bond"
+        )
+        ToolbarButton(
+            checked = selectedTool == Tool.Chain,
+            onClick = { onSelectTool(Tool.Chain) },
+            icon = Res.drawable.chain_tool,
+            tooltipText = "Chain"
+        )
+
+        ToolbarSeparator(isColumn = isColumn)
+
         ToolbarButton(
             checked = selectedTool == Tool.Template(BENZENE),
             onClick = { onSelectTool(Tool.Template(BENZENE)) },
             icon = Res.drawable.benzene_tool,
             tooltipText = "Benzene"
         )
-        CycloAlkaneToolGroup(selectedTool, onSelectTool)
+        CycloAlkaneToolGroup(
+            selectedTool = selectedTool,
+            onSelectTool = onSelectTool
+        )
+    }
+}
+
+@Composable
+fun ToolbarSeparator(
+    modifier: Modifier = Modifier,
+    isColumn: Boolean = false,
+) {
+    if (isColumn) {
+        HorizontalDivider(
+            modifier = modifier
+                .width(24.dp)
+                .padding(vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    } else {
+        VerticalDivider(
+            modifier = modifier
+                .height(24.dp)
+                .padding(horizontal = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 
 @Composable
 private fun BoxScope.DrawingToolbarLayout(
     modifier: Modifier = Modifier,
+    isColumn: Boolean,
     content: @Composable () -> Unit
 ) {
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-
-    val showAsColumn = windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT ||
-            windowSizeClass.windowHeightSizeClass == WindowHeightSizeClass.COMPACT
-
-    if (showAsColumn) {
-        // --- EXPANDED / MEDIUM / LANDSCAPE: Vertical Column on the left ---
+    val background = MaterialTheme.colorScheme.surfaceContainerLow
+    val scrollState = rememberScrollState()
+    if (isColumn) {
         Column(
             modifier = modifier
                 .align(Alignment.CenterStart)
                 .padding(start = 8.dp, top = 8.dp, bottom = 8.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .verticalScroll(rememberScrollState())
+                .background(background)
+                .fadingEdges(scrollState = scrollState, isVertical = true, edgeColor = background)
+                .verticalScroll(scrollState)
                 .padding(vertical = 8.dp, horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -112,14 +205,14 @@ private fun BoxScope.DrawingToolbarLayout(
             content()
         }
     } else {
-        // --- COMPACT PORTRAIT: Horizontal Row at the bottom ---
         Row(
             modifier = modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .horizontalScroll(rememberScrollState())
+                .background(background)
+                .fadingEdges(scrollState = scrollState, isVertical = false, edgeColor = background)
+                .horizontalScroll(scrollState)
                 .padding(vertical = 4.dp, horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
