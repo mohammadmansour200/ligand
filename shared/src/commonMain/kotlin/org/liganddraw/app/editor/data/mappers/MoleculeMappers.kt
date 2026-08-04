@@ -66,7 +66,7 @@ fun Molecule.toRWMol(): RWMol {
 
 /**Converts RDKit molecule to UI molecule - DOESN'T HANDLE CLEANUP and should invoke mol.delete()*/
 fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
-    this.Kekulize()
+    this.Kekulize(false, false)
 
     // Generate 2d conformer if none available
     if (this.numConformers == 0L) {

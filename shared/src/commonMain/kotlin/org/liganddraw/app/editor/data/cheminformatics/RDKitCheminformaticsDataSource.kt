@@ -381,25 +381,18 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     ): Result<List<Molecule>, ChemistryError> = withContext(Dispatchers.Default) {
         val mol = molecule.toRWMol()
         try {
+            mol.Kekulize(true, false)
+
             val bond = mol.getBondWithIdx(targetBondIdx)
             mol.removeBond(bond.beginAtomIdx, bond.endAtomIdx)
 
-            // --- MOVE FRAGMENTS INTO INDIVIDUAL MOLECULES ---
-            val fragments = RDKFuncs.getMolFrags(mol, true)
+            try {
+                mol.sanitizeMol()
+            } catch (e: Exception) {
 
-            val molecules = mutableListOf<Molecule>()
-            for (i in 0 until fragments.size()) {
-                val fragment = fragments[i.toInt()]
-                val writableFragment = RWMol(fragment)
-                try {
-                    molecules.add(writableFragment.toMolecule())
-                } finally {
-                    writableFragment.delete()
-                    fragment.delete()
-                }
             }
 
-            return@withContext Result.Success(molecules)
+            Result.Success(mol.splitIntoFragmentMolecules())
         } finally {
             mol.delete()
         }
@@ -409,30 +402,38 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         molecule: Molecule,
         targetAtomIdx: Long,
     ): Result<List<Molecule>, ChemistryError> = withContext(Dispatchers.Default) {
-        // --- CONVERT SMILES INTO RDKIT MOLECULE ---
         val mol = molecule.toRWMol()
         try {
+            mol.Kekulize(true, false)
+
             mol.removeAtom(targetAtomIdx)
 
-            // --- MOVE FRAGMENTS INTO INDIVIDUAL MOLECULES ---
-            val fragments = RDKFuncs.getMolFrags(mol, true)
+            try {
+                mol.sanitizeMol()
+            } catch (e: Exception) {
 
-            val molecules = mutableListOf<Molecule>()
-            for (i in 0 until fragments.size()) {
-                val fragment = fragments[i.toInt()]
-                val writableFragment = RWMol(fragment)
-                try {
-                    molecules.add(writableFragment.toMolecule())
-                } finally {
-                    writableFragment.delete()
-                    fragment.delete()
-                }
             }
 
-            return@withContext Result.Success(molecules)
+            Result.Success(mol.splitIntoFragmentMolecules())
         } finally {
             mol.delete()
         }
+    }
+
+    private fun RWMol.splitIntoFragmentMolecules(): List<Molecule> {
+        val fragments = RDKFuncs.getMolFrags(this, false)
+        val molecules = mutableListOf<Molecule>()
+        for (i in 0 until fragments.size()) {
+            val fragment = fragments[i.toInt()]
+            val writableFragment = RWMol(fragment)
+            try {
+                molecules.add(writableFragment.toMolecule())
+            } finally {
+                writableFragment.delete()
+                fragment.delete()
+            }
+        }
+        return molecules
     }
 
     override suspend fun createMoleculeFromSmiles(
@@ -477,6 +478,8 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
         val mol = molecule.toRWMol()
         try {
+            mol.Kekulize(true, false)
+
             val bond = mol.getBondWithIdx(targetBondIdx)
             val nextType = when (bond.bondType) {
                 BondType.SINGLE -> BondType.DOUBLE
