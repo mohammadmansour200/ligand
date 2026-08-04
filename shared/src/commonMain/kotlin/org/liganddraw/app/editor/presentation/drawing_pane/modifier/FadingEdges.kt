@@ -14,7 +14,7 @@ fun Modifier.fadingEdges(
     scrollState: ScrollState,
     isVertical: Boolean,
     edgeColor: Color,
-    length: Dp = 18.dp
+    length: Dp = 22.dp
 ): Modifier = this.drawWithContent {
     drawContent()
 

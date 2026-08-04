@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.liganddraw.app.editor.presentation.drawing_pane.modifier.fadingEdges
 
 @Composable
 fun BoxScope.ElementPalette(
@@ -34,14 +35,21 @@ fun BoxScope.ElementPalette(
     val topAtoms = listOf("H", "O", "N", "C", "S")
     val bottomAtoms = listOf("P", "F", "Cl", "Br", "I")
 
+    val scrollState = rememberScrollState()
+    val background = MaterialTheme.colorScheme.surfaceContainerLow
     Column(
-        modifier = Modifier
+        modifier = modifier
             .align(Alignment.CenterEnd)
             .padding(end = 8.dp)
-            .heightIn(max = 280.dp)
+            .heightIn(max = 260.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .verticalScroll(rememberScrollState())
+            .background(background)
+            .fadingEdges(
+                scrollState = scrollState,
+                isVertical = true,
+                edgeColor = background,
+            )
+            .verticalScroll(scrollState)
             .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
