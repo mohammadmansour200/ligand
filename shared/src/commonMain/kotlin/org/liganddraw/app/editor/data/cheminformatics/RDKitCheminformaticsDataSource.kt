@@ -375,6 +375,66 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         }
     }
 
+    override suspend fun eraseBond(
+        molecule: Molecule,
+        targetBondIdx: Long,
+    ): Result<List<Molecule>, ChemistryError> = withContext(Dispatchers.Default) {
+        val mol = molecule.toRWMol()
+        try {
+            val bond = mol.getBondWithIdx(targetBondIdx)
+            mol.removeBond(bond.beginAtomIdx, bond.endAtomIdx)
+
+            // --- MOVE FRAGMENTS INTO INDIVIDUAL MOLECULES ---
+            val fragments = RDKFuncs.getMolFrags(mol, true)
+
+            val molecules = mutableListOf<Molecule>()
+            for (i in 0 until fragments.size()) {
+                val fragment = fragments[i.toInt()]
+                val writableFragment = RWMol(fragment)
+                try {
+                    molecules.add(writableFragment.toMolecule())
+                } finally {
+                    writableFragment.delete()
+                    fragment.delete()
+                }
+            }
+
+            return@withContext Result.Success(molecules)
+        } finally {
+            mol.delete()
+        }
+    }
+
+    override suspend fun eraseAtom(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+    ): Result<List<Molecule>, ChemistryError> = withContext(Dispatchers.Default) {
+        // --- CONVERT SMILES INTO RDKIT MOLECULE ---
+        val mol = molecule.toRWMol()
+        try {
+            mol.removeAtom(targetAtomIdx)
+
+            // --- MOVE FRAGMENTS INTO INDIVIDUAL MOLECULES ---
+            val fragments = RDKFuncs.getMolFrags(mol, true)
+
+            val molecules = mutableListOf<Molecule>()
+            for (i in 0 until fragments.size()) {
+                val fragment = fragments[i.toInt()]
+                val writableFragment = RWMol(fragment)
+                try {
+                    molecules.add(writableFragment.toMolecule())
+                } finally {
+                    writableFragment.delete()
+                    fragment.delete()
+                }
+            }
+
+            return@withContext Result.Success(molecules)
+        } finally {
+            mol.delete()
+        }
+    }
+
     override suspend fun createMoleculeFromSmiles(
         smiles: String,
         x: Double,
@@ -424,7 +484,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 else -> BondType.SINGLE
             }
             bond.bondType = nextType
-            
+
             try {
                 mol.sanitizeMol()
             } catch (_: Exception) {

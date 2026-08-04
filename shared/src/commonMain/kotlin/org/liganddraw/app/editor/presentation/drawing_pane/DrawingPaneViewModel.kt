@@ -110,6 +110,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private fun handleAtomPress(moleculeIdx: Int, atomIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
             is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
+            is Tool.Erase -> handleEraseAtom(moleculeIdx, atomIdx)
             is Tool.SingleBond -> handleAttachBondToAtom(
                 moleculeIdx,
                 atomIdx,
@@ -155,6 +156,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private fun handleBondPress(moleculeIdx: Int, bondIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
             is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
+            is Tool.Erase -> handleEraseBond(moleculeIdx, bondIdx)
             is Tool.SingleBond -> handleCycleBondType(moleculeIdx, bondIdx)
 
             is Tool.WedgeBond -> {
@@ -310,6 +312,56 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun handleEraseBond(
+        moleculeIdx: Int,
+        targetBondIdx: Int,
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.eraseBond(
+                molecule,
+                targetBondIdx.toLong(),
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+
+                if (mol.isEmpty()) editedMolecules.removeAt(moleculeIdx)
+                else {
+                    editedMolecules[moleculeIdx] = mol[0]
+                    if (mol.size > 1) {
+                        editedMolecules.addAll(moleculeIdx + 1, mol.drop(1))
+                    }
+                }
+
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun handleEraseAtom(
+        moleculeIdx: Int,
+        targetAtomIdx: Int,
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.eraseAtom(
+                molecule,
+                targetAtomIdx.toLong(),
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+
+                if (mol.isEmpty()) editedMolecules.removeAt(moleculeIdx)
+                else {
+                    editedMolecules[moleculeIdx] = mol[0]
+                    if (mol.size > 1) {
+                        editedMolecules.addAll(moleculeIdx + 1, mol.drop(1))
+                    }
+                }
+
                 _state.update { it.copy(molecules = editedMolecules) }
             }
         }

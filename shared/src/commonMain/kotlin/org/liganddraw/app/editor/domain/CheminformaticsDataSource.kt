@@ -69,6 +69,32 @@ interface CheminformaticsDataSource {
     ): Result<Molecule, ChemistryError>
 
     /**
+     * Erases a bond between two atoms.
+     * If removing the bond disconnects the molecular graph, the result will contain one
+     * [Molecule] per resulting fragment. If it does not, the result will contain a single [Molecule].
+     * @param molecule The target [Molecule] to modify.
+     * @param targetBondIdx The bond to be erased.
+     * @return [Result] with the resulting fragment(s) as a list of [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun eraseBond(
+        molecule: Molecule,
+        targetBondIdx: Long,
+    ): Result<List<Molecule>, ChemistryError>
+
+    /**
+     * Erases an atom.
+     * If removing the atom disconnects the molecular graph, the result will contain one
+     * [Molecule] per resulting fragment. If it does not, the result will contain a single [Molecule].
+     * @param molecule The target [Molecule] to modify.
+     * @param targetAtomIdx The atom to be erased.
+     * @return [Result] with the resulting fragment(s) as a list of [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun eraseAtom(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+    ): Result<List<Molecule>, ChemistryError>
+
+    /**
      * Replaces an existing atom in the molecule with a new atom.
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The zero-based index of the atom to be replaced.
