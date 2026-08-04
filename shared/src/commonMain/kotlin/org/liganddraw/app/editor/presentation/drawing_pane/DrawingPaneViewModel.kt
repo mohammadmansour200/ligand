@@ -300,13 +300,13 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleCycleBondType(
         moleculeIdx: Int,
-        targetAtomIdx: Int,
+        targetBondIdx: Int,
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
             cheminformaticsDataSource.cycleBondType(
                 molecule,
-                targetAtomIdx.toLong(),
+                targetBondIdx.toLong(),
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol
