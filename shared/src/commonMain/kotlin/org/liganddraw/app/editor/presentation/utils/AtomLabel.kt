@@ -8,6 +8,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.center
@@ -29,6 +30,25 @@ fun Atom.toLabel(density: Density): AnnotatedString {
         }
     }
 }
+
+fun Atom.toChargeLabel(baseStyle: TextStyle): AnnotatedString {
+    val magnitude = kotlin.math.abs(charge)
+    val symbol = if (charge > 0) "⊕" else "⊖"
+
+    return buildAnnotatedString {
+        if (magnitude != 1) {
+            withStyle(
+                SpanStyle(fontSize = baseStyle.fontSize * .8f)
+            ) {
+                append(magnitude.toString())
+            }
+        }
+        withStyle(SpanStyle(fontSize = baseStyle.fontSize)) {
+            append(symbol)
+        }
+    }
+}
+
 
 private fun AnnotatedString.Builder.appendHydrogens(density: Density, count: Long) {
     append("H")

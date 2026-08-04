@@ -22,6 +22,8 @@ import org.liganddraw.app.core.domain.Result
 import org.liganddraw.app.editor.data.mappers.toMolecule
 import org.liganddraw.app.editor.data.mappers.toRWMol
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.MAX_FORMAL_CHARGE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.MIN_FORMAL_CHARGE
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculeProperties
 
@@ -516,6 +518,38 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             // --- SET NEW BOND TYPE AND DIRECTION ---
             bond.bondType = type
             mol.getBondBetweenAtoms(bond.beginAtomIdx, bond.endAtomIdx)?.bondDir = dir
+
+            try {
+                mol.sanitizeMol()
+            } catch (e: Exception) {
+                // TODO(Handle valence error)
+                println(e)
+            }
+
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            val molecule = mol.toMolecule()
+            return@withContext Result.Success(molecule)
+        } finally {
+            // --- CLEANUP ---
+            mol.delete()
+        }
+    }
+
+    override suspend fun changeFormalCharge(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+        delta: Int
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+        // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+        val mol = molecule.toRWMol()
+
+        try {
+            val atom = mol.getAtomWithIdx(targetAtomIdx)
+
+            // --- SET NEW FORMAL CHARGE ---
+            val newCharge = (atom.formalCharge + delta)
+                .coerceIn(MIN_FORMAL_CHARGE, MAX_FORMAL_CHARGE)
+            atom.formalCharge = newCharge
 
             try {
                 mol.sanitizeMol()

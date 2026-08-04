@@ -159,4 +159,17 @@ interface CheminformaticsDataSource {
         type: Bond.BondType,
         dir: Bond.BondDir = Bond.BondDir.NONE
     ): Result<Molecule, ChemistryError>
+
+    /**
+     * Changes atom formal charge.
+     * @param molecule The target [Molecule] to modify.
+     * @param targetAtomIdx The zero-based index of the atom.
+     * @param delta Either +1 to increase charge, or -1 to decrease charge
+     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun changeFormalCharge(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+        delta: Int,
+    ): Result<Molecule, ChemistryError>
 }

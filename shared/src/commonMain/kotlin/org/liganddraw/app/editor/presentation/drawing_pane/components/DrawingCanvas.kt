@@ -36,6 +36,9 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -62,6 +65,7 @@ import org.liganddraw.app.editor.presentation.utils.getSymbolStyle
 import org.liganddraw.app.editor.presentation.utils.labelRect
 import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.shortenBondToRectBoundary
+import org.liganddraw.app.editor.presentation.utils.toChargeLabel
 import org.liganddraw.app.editor.presentation.utils.toLabel
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -86,6 +90,8 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     var canvasScale by remember { mutableFloatStateOf(1f) }
     var canvasOffset by remember { mutableStateOf(Offset.Zero) }
 
+    val symbolStyle = getSymbolStyle(density, textColor)
+
     LaunchedEffect(state.molecules) {
         val uniqueSymbols = mutableMapOf<String, IntSize>()
         val uniqueHydrogenCounts = mutableMapOf<Long, IntSize>()
@@ -95,7 +101,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 if (!uniqueSymbols.containsKey(symbol)) {
                     val measuredSymbol = textMeasurer.measure(
                         text = symbol,
-                        style = getSymbolStyle(density, Color.Unspecified)
+                        style = symbolStyle
                     )
 
                     uniqueSymbols[symbol] = measuredSymbol.size
@@ -117,7 +123,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     val measuredHydrogenLabel =
                         textMeasurer.measure(
                             hydrogenLabel,
-                            getSymbolStyle(density, Color.Unspecified)
+                            symbolStyle
                         )
 
                     uniqueHydrogenCounts[hydrogenCount] = measuredHydrogenLabel.size
@@ -211,12 +217,21 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         Fill,
                     )
 
+                    if (atom.charge != 0) {
+                        drawChargeText(
+                            textMeasurer = textMeasurer,
+                            labelRect = labelRect,
+                            text = atom.toChargeLabel(symbolStyle),
+                            style = symbolStyle
+                        )
+                    }
+
                     if (atom.isLabelVisible)
                         drawText(
                             textMeasurer = textMeasurer,
                             text = atom.toLabel(density),
                             topLeft = labelRect.topLeft,
-                            style = getSymbolStyle(density, textColor),
+                            style = symbolStyle,
                             size = labelRect.size
                         )
                 }
@@ -352,6 +367,23 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             }
         }
     }
+}
+
+private fun DrawScope.drawChargeText(
+    textMeasurer: TextMeasurer,
+    labelRect: Rect,
+    text: AnnotatedString,
+    style: TextStyle
+) {
+    val x = labelRect.right
+    val y = labelRect.center.y - labelRect.height
+    val offset = Offset(x, y)
+    drawText(
+        textMeasurer = textMeasurer,
+        text = text,
+        topLeft = offset,
+        style = style,
+    )
 }
 
 private fun DrawScope.drawAtomHighlightRect(

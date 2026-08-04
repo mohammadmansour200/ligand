@@ -167,6 +167,8 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 )
             }
 
+            is Tool.Plus -> handleChangeFormalCharge(moleculeIdx, atomIdx, +1)
+            is Tool.Minus -> handleChangeFormalCharge(moleculeIdx, atomIdx, -1)
             else -> {}
         }
     }
@@ -361,6 +363,25 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun handleChangeFormalCharge(
+        moleculeIdx: Int,
+        targetAtomIdx: Int,
+        delta: Int,
+    ) {
+        viewModelScope.launch {
+            cheminformaticsDataSource.changeFormalCharge(
+                molecule = _state.value.molecules[moleculeIdx],
+                targetAtomIdx = targetAtomIdx.toLong(),
+                delta = delta,
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList().apply {
+                    this[moleculeIdx] = mol
+                }
                 _state.update { it.copy(molecules = editedMolecules) }
             }
         }
