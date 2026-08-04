@@ -144,4 +144,19 @@ interface CheminformaticsDataSource {
         molecule: Molecule,
         targetBondIdx: Long
     ): Result<Molecule, ChemistryError>
+
+    /**
+     * Changes the bond type and direction of the specified bond
+     * @param molecule The target [Molecule] to modify.
+     * @param targetBondIdx The zero-based index of the bond whose type should be cycled.
+     * @param [type] The bond type to create (e.g., SINGLE, DOUBLE, TRIPLE).
+     * @param [dir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE).
+     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     */
+    suspend fun setBondType(
+        molecule: Molecule,
+        targetBondIdx: Long,
+        type: Bond.BondType,
+        dir: Bond.BondDir = Bond.BondDir.NONE
+    ): Result<Molecule, ChemistryError>
 }

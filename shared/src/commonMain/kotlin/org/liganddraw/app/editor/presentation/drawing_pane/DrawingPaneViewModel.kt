@@ -177,13 +177,23 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             is Tool.Erase -> handleEraseBond(moleculeIdx, bondIdx)
             is Tool.SingleBond -> handleCycleBondType(moleculeIdx, bondIdx)
 
-            is Tool.WedgeBond -> {
-                // TODO: set bond dir to BEGINWEDGE, or toggle/flip existing wedge
-            }
+            is Tool.WedgeBond -> handleSetBondType(
+                moleculeIdx,
+                bondIdx,
+                Bond.BondType.SINGLE,
+                Bond.BondDir.BEGINWEDGE
+            )
 
-            is Tool.HashedWedgeBond -> {
-                // TODO: set bond dir to BEGINDASH
-            }
+            is Tool.HashedWedgeBond -> handleSetBondType(
+                moleculeIdx,
+                bondIdx,
+                Bond.BondType.SINGLE,
+                Bond.BondDir.BEGINDASH
+            )
+
+            is Tool.DoubleBond -> handleSetBondType(moleculeIdx, bondIdx, Bond.BondType.DOUBLE)
+            is Tool.TripleBond -> handleSetBondType(moleculeIdx, bondIdx, Bond.BondType.TRIPLE)
+            is Tool.HydrogenBond -> handleSetBondType(moleculeIdx, bondIdx, Bond.BondType.HYDROGEN)
 
             is Tool.Template -> {
                 val smiles = currentTool.smiles
@@ -327,6 +337,27 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             cheminformaticsDataSource.cycleBondType(
                 molecule,
                 targetBondIdx.toLong(),
+            ).onSuccess { mol ->
+                val editedMolecules = _state.value.molecules.toMutableList()
+                editedMolecules[moleculeIdx] = mol
+                _state.update { it.copy(molecules = editedMolecules) }
+            }
+        }
+    }
+
+    private fun handleSetBondType(
+        moleculeIdx: Int,
+        targetBondIdx: Int,
+        type: Bond.BondType,
+        dir: Bond.BondDir = Bond.BondDir.NONE
+    ) {
+        val molecule = _state.value.molecules[moleculeIdx]
+        viewModelScope.launch {
+            cheminformaticsDataSource.setBondType(
+                molecule,
+                targetBondIdx.toLong(),
+                type,
+                dir
             ).onSuccess { mol ->
                 val editedMolecules = _state.value.molecules.toMutableList()
                 editedMolecules[moleculeIdx] = mol

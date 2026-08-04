@@ -500,4 +500,36 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             mol.delete()
         }
     }
+
+    override suspend fun setBondType(
+        molecule: Molecule,
+        targetBondIdx: Long,
+        type: BondType,
+        dir: Bond.BondDir
+    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+        // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+        val mol = molecule.toRWMol()
+
+        try {
+            val bond = mol.getBondWithIdx(targetBondIdx)
+
+            // --- SET NEW BOND TYPE AND DIRECTION ---
+            bond.bondType = type
+            mol.getBondBetweenAtoms(bond.beginAtomIdx, bond.endAtomIdx)?.bondDir = dir
+
+            try {
+                mol.sanitizeMol()
+            } catch (e: Exception) {
+                // TODO(Handle valence error)
+                println(e)
+            }
+
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            val molecule = mol.toMolecule()
+            return@withContext Result.Success(molecule)
+        } finally {
+            // --- CLEANUP ---
+            mol.delete()
+        }
+    }
 }
