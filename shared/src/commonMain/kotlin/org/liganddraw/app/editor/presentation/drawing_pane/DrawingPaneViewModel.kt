@@ -131,6 +131,24 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 Bond.BondDir.BEGINDASH
             )
 
+            is Tool.DoubleBond -> handleAttachBondToAtom(
+                moleculeIdx,
+                atomIdx,
+                Bond.BondType.DOUBLE
+            )
+
+            is Tool.TripleBond -> handleAttachBondToAtom(
+                moleculeIdx,
+                atomIdx,
+                Bond.BondType.TRIPLE
+            )
+
+            is Tool.HydrogenBond -> handleAttachBondToAtom(
+                moleculeIdx,
+                atomIdx,
+                Bond.BondType.HYDROGEN
+            )
+
             is Tool.Element -> {
                 val selectedSymbol = currentTool.symbol
                 handleReplaceAtomWithAtom(
