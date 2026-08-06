@@ -367,6 +367,8 @@ private fun buildEpmSurface(
 private fun potentialsToUvs(
     potentials: FloatArray,
 ): FloatArray {
+    if (potentials.isEmpty()) return FloatArray(0)
+
     val sortedAbs = potentials.map { abs(it) }.sorted()
     val idx = (sortedAbs.size - 1).coerceIn(0, sortedAbs.size - 1)
     val scale = sortedAbs[idx].coerceAtLeast(1e-4f)

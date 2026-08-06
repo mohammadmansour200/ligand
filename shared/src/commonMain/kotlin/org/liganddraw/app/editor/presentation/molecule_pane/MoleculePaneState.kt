@@ -1,6 +1,7 @@
 package org.liganddraw.app.editor.presentation.molecule_pane
 
 import androidx.compose.runtime.Immutable
+import org.liganddraw.app.core.domain.ChemistryError
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculeProperties
 
@@ -8,6 +9,7 @@ import org.liganddraw.app.editor.domain.MoleculeProperties
 data class MoleculePaneState(
     val conformer: Molecule? = null,
     val properties: MoleculeProperties? = null,
+    val error: ChemistryError? = null,
     val iblBytes: ByteArray = byteArrayOf(),
     val solidColorMaterialBytes: ByteArray = byteArrayOf(),
     val epmMaterialBytes: ByteArray = byteArrayOf()

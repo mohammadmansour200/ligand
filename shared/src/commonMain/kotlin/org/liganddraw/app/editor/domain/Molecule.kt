@@ -10,6 +10,7 @@ data class Atom(
     val charge: Int,
     val isLabelReversed: Boolean,
     val isLabelVisible: Boolean,
+    val hasValenceViolation: Boolean
 )
 
 enum class BondDir {

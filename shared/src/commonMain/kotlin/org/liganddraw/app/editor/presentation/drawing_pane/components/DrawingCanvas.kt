@@ -1,7 +1,9 @@
 package org.liganddraw.app.editor.presentation.drawing_pane.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -76,21 +78,25 @@ import kotlin.math.sqrt
 val highlightStroke = Stroke(HIGHLIGHT_STROKE_WIDTH)
 val highlightCornerRadius = CornerRadius(HIGHLIGHT_CORNER_RADIUS, HIGHLIGHT_CORNER_RADIUS)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) {
     val density = LocalDensity.current
 
     val textMeasurer = rememberTextMeasurer()
-    val textColor = MaterialTheme.colorScheme.inverseSurface
+
+    val structureColor = MaterialTheme.colorScheme.onSurface
+    val structureErrorColor = MaterialTheme.colorScheme.error
 
     val highlightColor = MaterialTheme.colorScheme.secondary
     val selectionColor = MaterialTheme.colorScheme.secondary.copy(alpha = .8f)
-    val background = MaterialTheme.colorScheme.outlineVariant
 
-    var canvasScale by remember { mutableFloatStateOf(1f) }
+    val background = MaterialTheme.colorScheme.surface
+
+    var canvasScale by remember { mutableFloatStateOf(3f) }
     var canvasOffset by remember { mutableStateOf(Offset.Zero) }
 
-    val symbolStyle = getSymbolStyle(density, textColor)
+    val symbolStyle = getSymbolStyle(density, structureColor)
 
     LaunchedEffect(state.molecules) {
         val uniqueSymbols = mutableMapOf<String, IntSize>()
@@ -156,6 +162,26 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 }
             ).pointerInput(state.selectedTool) {
                 if (state.selectedTool == Tool.Pan) return@pointerInput
+                detectTapGestures(
+                    onLongPress = { offset ->
+                        val x = (offset.x - canvasOffset.x) / canvasScale
+                        val y = (offset.y - canvasOffset.y) / canvasScale
+                        onAction(DrawingPaneAction.OnPointerLongPress(x, y))
+                    },
+                    onTap = { offset ->
+                        val x = (offset.x - canvasOffset.x) / canvasScale
+                        val y = (offset.y - canvasOffset.y) / canvasScale
+                        onAction(
+                            DrawingPaneAction.OnPointerPress(
+                                x,
+                                y
+                            )
+                        )
+                    },
+                )
+            }
+            .pointerInput(state.selectedTool) {
+                if (state.selectedTool == Tool.Pan) return@pointerInput
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -167,13 +193,6 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
                         when (event.type) {
                             PointerEventType.Move -> onAction(DrawingPaneAction.OnPointerMove(x, y))
-
-                            PointerEventType.Press -> onAction(
-                                DrawingPaneAction.OnPointerPress(
-                                    x,
-                                    y
-                                )
-                            )
                         }
                     }
                 }
@@ -204,6 +223,13 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                             isReversed = atom.isLabelReversed,
                             atomOffset = atom.offsetPx()
                         )
+
+                    if (atom.hasValenceViolation) drawAtomHighlightRect(
+                        rect = labelRect,
+                        color = structureErrorColor,
+                        alpha = .4f,
+                        style = Fill,
+                    )
 
                     if (state.hoveredAtomId == atomId) drawAtomHighlightRect(
                         labelRect,
@@ -300,11 +326,13 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         Fill
                     )
 
+                    val bondColor =
+                        if (beginAtom.hasValenceViolation || endAtom.hasValenceViolation) structureErrorColor else structureColor
                     when (bond) {
                         is Bond.Single -> {
                             when (bond.direction) {
                                 BondDir.NONE -> drawLine(
-                                    color = textColor,
+                                    color = bondColor,
                                     strokeWidth = BOND_STROKE_WIDTH,
                                     start = beginAtomOffset,
                                     end = endAtomOffset
@@ -314,14 +342,14 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     start = beginAtomOffset,
                                     end = endAtomOffset,
                                     strokeWidth = BOND_STROKE_WIDTH,
-                                    color = textColor
+                                    color = bondColor
                                 )
 
                                 BondDir.BEGINDASH -> drawDashBond(
                                     start = beginAtomOffset,
                                     end = endAtomOffset,
                                     strokeWidth = BOND_STROKE_WIDTH,
-                                    color = textColor
+                                    color = bondColor
                                 )
                             }
                         }
@@ -330,14 +358,14 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                             start = beginAtomOffset,
                             end = endAtomOffset,
                             strokeWidth = BOND_STROKE_WIDTH,
-                            color = textColor
+                            color = bondColor
                         )
 
                         is Bond.Triple -> drawTripleBond(
                             start = beginAtomOffset,
                             end = endAtomOffset,
                             strokeWidth = BOND_STROKE_WIDTH,
-                            color = textColor
+                            color = bondColor
                         )
 
                         is Bond.Double -> {
@@ -346,7 +374,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     start = beginAtomOffset,
                                     end = endAtomOffset,
                                     strokeWidth = BOND_STROKE_WIDTH,
-                                    color = textColor
+                                    color = bondColor
                                 ) else {
                                 val side =
                                     if (bond.alignment == DoubleBondAlignment.POSITIVE) 1f else -1f
@@ -354,7 +382,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     start = beginAtomOffset,
                                     end = endAtomOffset,
                                     strokeWidth = BOND_STROKE_WIDTH,
-                                    color = textColor,
+                                    color = bondColor,
                                     spacing = BOND_LINES_SPACING * side
                                 )
                             }
@@ -390,6 +418,7 @@ private fun DrawScope.drawAtomHighlightRect(
     rect: Rect,
     color: Color,
     style: DrawStyle,
+    alpha: Float = 1f,
     horizontalPaddingPx: Float = 4f
 ) {
     val paddedTopLeft = Offset(rect.left - horizontalPaddingPx, rect.top)
@@ -400,6 +429,7 @@ private fun DrawScope.drawAtomHighlightRect(
         color = color,
         topLeft = highlightRect.topLeft,
         size = highlightRect.size,
+        alpha = alpha,
         style = style,
         cornerRadius = highlightCornerRadius
     )

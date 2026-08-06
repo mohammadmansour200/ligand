@@ -2,6 +2,7 @@ package org.liganddraw.app.editor.presentation.drawing_pane
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.IntSize
+import org.liganddraw.app.editor.domain.Atom
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.Tool
 
@@ -15,5 +16,6 @@ data class DrawingPaneState(
     val hoveredAtomId: Pair<Int, Int>? = null,
     /**Currently hovered bond as a pair of molecule index and bond index*/
     val hoveredBondId: Pair<Int, Int>? = null,
-    val selectedMoleculeIndex: Int? = null
+    val selectedMoleculeIndex: Int? = null,
+    val valenceViolationExplanationAtom: Atom? = null
 )

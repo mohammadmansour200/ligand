@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import liganddraw.shared.generated.resources.Res
+import org.liganddraw.app.core.domain.onError
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
 import org.liganddraw.app.editor.domain.Molecule
@@ -42,7 +43,11 @@ class MoleculePaneViewModel(private val cheminformaticsDataSource: Cheminformati
         viewModelScope.launch {
             cheminformaticsDataSource.generate3DConformer(molecule)
                 .onSuccess { mol ->
-                    _state.update { it.copy(conformer = mol) }
+                    _state.update { it.copy(conformer = mol, error = null) }
+                }.onError { error ->
+                    _state.update {
+                        it.copy(error = error)
+                    }
                 }
         }
     }
@@ -51,7 +56,11 @@ class MoleculePaneViewModel(private val cheminformaticsDataSource: Cheminformati
         viewModelScope.launch {
             cheminformaticsDataSource.calcProperties(molecule)
                 .onSuccess { properties ->
-                    _state.update { it.copy(properties = properties) }
+                    _state.update { it.copy(properties = properties, error = null) }
+                }.onError { error ->
+                    _state.update {
+                        it.copy(error = error)
+                    }
                 }
         }
     }

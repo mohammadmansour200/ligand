@@ -34,4 +34,10 @@ sealed interface DrawingPaneAction {
 
     // TODO(KDoc)
     data class OnPointerPress(val x: Float, val y: Float) : DrawingPaneAction
+
+    // TODO(KDoc)
+    data class OnPointerLongPress(val x: Float, val y: Float) : DrawingPaneAction
+
+    // TODO(KDoc)
+    object OnDismissValenceViolationDialog : DrawingPaneAction
 }

@@ -81,7 +81,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     override suspend fun generate3DConformer(molecule: Molecule): Result<Molecule, ChemistryError> =
         withContext(Dispatchers.Default) {
             // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
-            val rdkitMol: ROMol = molecule.toRWMol()
+            val rdkitMol: ROMol = molecule.toRWMol(sanitize = true)
             val hydrogenatedRdkitROMol = RDKFuncs.addHs(rdkitMol)
             val embedParams = RDKFuncs.getETKDGv3()
 
@@ -124,6 +124,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
                 val resultMolecule = hydrogenatedRdkitRWMol.toMolecule(false)
                 return@withContext Result.Success(resultMolecule)
+            } catch (_: Exception) {
+                return@withContext Result.Error(
+                    ChemistryError.SanitizationFailed
+                )
             } finally {
                 matchVect?.delete()
                 transform?.delete()
@@ -139,7 +143,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     override suspend fun calcProperties(molecule: Molecule): Result<MoleculeProperties, ChemistryError> =
         withContext(Dispatchers.Default) {
             // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
-            val rdkitMol = molecule.toRWMol()
+            val rdkitMol = molecule.toRWMol(sanitize = true)
 
             try {
                 // --- CALCULATE PROPERTIES ---
@@ -158,6 +162,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                         rotatableBonds = rotatable
                     )
                 )
+            } catch (_: Exception) {
+                return@withContext Result.Error(
+                    ChemistryError.SanitizationFailed
+                )
             } finally {
                 // --- CLEANUP ---
                 rdkitMol.delete()
@@ -169,7 +177,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         targetAtomIdx: Long,
         type: BondType,
         dir: Bond.BondDir
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val rdkitRWMol = molecule.toRWMol()
         val template = ROMol(rdkitRWMol)
@@ -187,14 +195,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 rdkitRWMol.sanitizeMol()
-            } catch (e: Exception) {
-                // TODO(Handle valence error)
-                println(e)
+            } catch (_: Exception) {
             }
 
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             val molecule = rdkitRWMol.toMolecule()
-            return@withContext Result.Success(molecule)
+            return@withContext molecule
         } finally {
             // --- CLEANUP ---
             template.delete()
@@ -206,7 +212,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         molecule: Molecule,
         targetAtomIdx: Long,
         newAtomSymbol: String,
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val rdkitRWMol = molecule.toRWMol()
 
@@ -219,14 +225,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 rdkitRWMol.sanitizeMol()
-            } catch (e: Exception) {
-                // TODO(Handle valence error)
-                println(e)
+            } catch (_: Exception) {
             }
 
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             val molecule = rdkitRWMol.toMolecule()
-            return@withContext Result.Success(molecule)
+            return@withContext molecule
         } finally {
             // --- CLEANUP ---
             rdkitRWMol.delete()
@@ -238,7 +242,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         molecule: Molecule,
         targetAtomIdx: Long,
         templateSmiles: String
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         val templateMol = RWMol.MolFromSmiles(templateSmiles)
         val rdkitRWMol = molecule.toRWMol()
         val depictionTemplateMol = RWMol(rdkitRWMol)
@@ -255,7 +259,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                     x = targetAtomPos.x,
                     y = targetAtomPos.y
                 )
-                return@withContext Result.Success(molecule)
+                return@withContext molecule
             }
 
             // --- INSERT TEMPLATE MOLECULE INTO MAIN MOLECULE ---
@@ -286,9 +290,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             }
 
             rdkitRWMol.generateDepictionMatching2DStructure(depictionTemplateMol)
-            rdkitRWMol.sanitizeMol()
+            try {
+                rdkitRWMol.sanitizeMol()
+            } catch (_: Exception) {
+            }
 
-            return@withContext Result.Success(rdkitRWMol.toMolecule())
+            return@withContext rdkitRWMol.toMolecule()
         } finally {
             templateMol.delete()
             rdkitRWMol.delete()
@@ -300,7 +307,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         molecule: Molecule,
         targetBondIdx: Long,
         templateSmiles: String
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         val templateMol = RWMol.MolFromSmiles(templateSmiles)
         val rdkitRWMol = molecule.toRWMol()
         val depictionTemplateMol = ROMol(rdkitRWMol)
@@ -367,9 +374,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             rdkitRWMol.addBond(targetEndIdx, combinedTemplateEndNeighbor, templateEndBondType)
 
             rdkitRWMol.generateDepictionMatching2DStructure(depictionTemplateMol)
-            rdkitRWMol.sanitizeMol()
+            try {
+                rdkitRWMol.sanitizeMol()
+            } catch (_: Exception) {
+            }
 
-            Result.Success(rdkitRWMol.toMolecule())
+            return@withContext rdkitRWMol.toMolecule()
         } finally {
             templateMol.delete()
             rdkitRWMol.delete()
@@ -380,7 +390,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     override suspend fun eraseBond(
         molecule: Molecule,
         targetBondIdx: Long,
-    ): Result<List<Molecule>, ChemistryError> = withContext(Dispatchers.Default) {
+    ): List<Molecule> = withContext(Dispatchers.Default) {
         val mol = molecule.toRWMol()
         try {
             mol.Kekulize(true, false)
@@ -390,11 +400,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 mol.sanitizeMol()
-            } catch (e: Exception) {
-
+            } catch (_: Exception) {
             }
 
-            Result.Success(mol.splitIntoFragmentMolecules())
+            return@withContext mol.splitIntoFragmentMolecules()
         } finally {
             mol.delete()
         }
@@ -403,7 +412,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     override suspend fun eraseAtom(
         molecule: Molecule,
         targetAtomIdx: Long,
-    ): Result<List<Molecule>, ChemistryError> = withContext(Dispatchers.Default) {
+    ): List<Molecule> = withContext(Dispatchers.Default) {
         val mol = molecule.toRWMol()
         try {
             mol.Kekulize(true, false)
@@ -412,11 +421,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 mol.sanitizeMol()
-            } catch (e: Exception) {
-
+            } catch (_: Exception) {
             }
 
-            Result.Success(mol.splitIntoFragmentMolecules())
+            return@withContext mol.splitIntoFragmentMolecules()
         } finally {
             mol.delete()
         }
@@ -477,11 +485,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     override suspend fun cycleBondType(
         molecule: Molecule,
         targetBondIdx: Long
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         val mol = molecule.toRWMol()
         try {
-            mol.Kekulize(true, false)
-
             val bond = mol.getBondWithIdx(targetBondIdx)
             val nextType = when (bond.bondType) {
                 BondType.SINGLE -> BondType.DOUBLE
@@ -493,11 +499,10 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             try {
                 mol.sanitizeMol()
             } catch (_: Exception) {
-                // TODO: Handle valence error
             }
 
             val molecule = mol.toMolecule()
-            return@withContext Result.Success(molecule)
+            return@withContext molecule
         } finally {
             mol.delete()
         }
@@ -508,7 +513,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         targetBondIdx: Long,
         type: BondType,
         dir: Bond.BondDir
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val mol = molecule.toRWMol()
 
@@ -521,14 +526,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 mol.sanitizeMol()
-            } catch (e: Exception) {
-                // TODO(Handle valence error)
-                println(e)
+            } catch (_: Exception) {
             }
 
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             val molecule = mol.toMolecule()
-            return@withContext Result.Success(molecule)
+            return@withContext molecule
         } finally {
             // --- CLEANUP ---
             mol.delete()
@@ -539,7 +542,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         molecule: Molecule,
         targetAtomIdx: Long,
         delta: Int
-    ): Result<Molecule, ChemistryError> = withContext(Dispatchers.Default) {
+    ): Molecule = withContext(Dispatchers.Default) {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val mol = molecule.toRWMol()
 
@@ -553,14 +556,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 mol.sanitizeMol()
-            } catch (e: Exception) {
-                // TODO(Handle valence error)
-                println(e)
+            } catch (_: Exception) {
             }
 
             // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
             val molecule = mol.toMolecule()
-            return@withContext Result.Success(molecule)
+            return@withContext molecule
         } finally {
             // --- CLEANUP ---
             mol.delete()

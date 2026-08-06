@@ -46,6 +46,8 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             is DrawingPaneAction.OnSelectTool -> selectTool(action.tool)
             is DrawingPaneAction.OnPointerMove -> handlePointerMove(action.x, action.y)
             is DrawingPaneAction.OnPointerPress -> handlePointerPress(action.x, action.y)
+            is DrawingPaneAction.OnPointerLongPress -> handlePointerLongPress(action.x, action.y)
+            is DrawingPaneAction.OnDismissValenceViolationDialog -> handleValenceViolationDialogDismiss()
         }
     }
 
@@ -89,6 +91,20 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun selectTool(tool: Tool) {
         _state.update { it.copy(selectedTool = tool) }
+    }
+
+    private fun handlePointerLongPress(x: Float, y: Float) {
+        val hitAtomId = findAtomByPosition(x, y)
+        if (hitAtomId != null) {
+            handleAtomLongPress(hitAtomId.first, hitAtomId.second)
+        }
+    }
+
+    private fun handleAtomLongPress(moleculeIdx: Int, atomIdx: Int) {
+        val atom = _state.value.molecules[moleculeIdx].atoms[atomIdx]
+        if (atom.hasValenceViolation) {
+            _state.update { it.copy(valenceViolationExplanationAtom = atom) }
+        }
     }
 
     private fun handlePointerPress(x: Float, y: Float) {
@@ -317,16 +333,16 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.attachBondToAtom(
+            val mol = cheminformaticsDataSource.attachBondToAtom(
                 molecule,
                 targetAtomIdx.toLong(),
                 type,
                 dir
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
-                editedMolecules[moleculeIdx] = mol
-                _state.update { it.copy(molecules = editedMolecules) }
-            }
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules[moleculeIdx] = mol
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -336,14 +352,14 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.cycleBondType(
+            val mol = cheminformaticsDataSource.cycleBondType(
                 molecule,
                 targetBondIdx.toLong(),
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
-                editedMolecules[moleculeIdx] = mol
-                _state.update { it.copy(molecules = editedMolecules) }
-            }
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules[moleculeIdx] = mol
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -355,16 +371,15 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.setBondType(
+            val mol = cheminformaticsDataSource.setBondType(
                 molecule,
                 targetBondIdx.toLong(),
                 type,
                 dir
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
-                editedMolecules[moleculeIdx] = mol
-                _state.update { it.copy(molecules = editedMolecules) }
-            }
+            )
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules[moleculeIdx] = mol
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -374,16 +389,16 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         delta: Int,
     ) {
         viewModelScope.launch {
-            cheminformaticsDataSource.changeFormalCharge(
+            val mol = cheminformaticsDataSource.changeFormalCharge(
                 molecule = _state.value.molecules[moleculeIdx],
                 targetAtomIdx = targetAtomIdx.toLong(),
                 delta = delta,
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList().apply {
-                    this[moleculeIdx] = mol
-                }
-                _state.update { it.copy(molecules = editedMolecules) }
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList().apply {
+                this[moleculeIdx] = mol
             }
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -393,22 +408,22 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.eraseBond(
+            val mols = cheminformaticsDataSource.eraseBond(
                 molecule,
                 targetBondIdx.toLong(),
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
+            )
 
-                if (mol.isEmpty()) editedMolecules.removeAt(moleculeIdx)
-                else {
-                    editedMolecules[moleculeIdx] = mol[0]
-                    if (mol.size > 1) {
-                        editedMolecules.addAll(moleculeIdx + 1, mol.drop(1))
-                    }
+            val editedMolecules = _state.value.molecules.toMutableList()
+
+            if (mols.isEmpty()) editedMolecules.removeAt(moleculeIdx)
+            else {
+                editedMolecules[moleculeIdx] = mols[0]
+                if (mols.size > 1) {
+                    editedMolecules.addAll(moleculeIdx + 1, mols.drop(1))
                 }
-
-                _state.update { it.copy(molecules = editedMolecules) }
             }
+
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -418,22 +433,22 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.eraseAtom(
+            val mols = cheminformaticsDataSource.eraseAtom(
                 molecule,
                 targetAtomIdx.toLong(),
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
+            )
 
-                if (mol.isEmpty()) editedMolecules.removeAt(moleculeIdx)
-                else {
-                    editedMolecules[moleculeIdx] = mol[0]
-                    if (mol.size > 1) {
-                        editedMolecules.addAll(moleculeIdx + 1, mol.drop(1))
-                    }
+            val editedMolecules = _state.value.molecules.toMutableList()
+
+            if (mols.isEmpty()) editedMolecules.removeAt(moleculeIdx)
+            else {
+                editedMolecules[moleculeIdx] = mols[0]
+                if (mols.size > 1) {
+                    editedMolecules.addAll(moleculeIdx + 1, mols.drop(1))
                 }
-
-                _state.update { it.copy(molecules = editedMolecules) }
             }
+
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -444,15 +459,15 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.replaceAtomWithAtom(
+            val mol = cheminformaticsDataSource.replaceAtomWithAtom(
                 molecule,
                 targetAtomIdx.toLong(),
                 newAtomSymbol,
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
-                editedMolecules[moleculeIdx] = mol
-                _state.update { it.copy(molecules = editedMolecules) }
-            }
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules[moleculeIdx] = mol
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -463,15 +478,15 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.replaceAtomWithTemplate(
+            val mol = cheminformaticsDataSource.replaceAtomWithTemplate(
                 molecule,
                 targetAtomIdx.toLong(),
                 templateSmiles,
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
-                editedMolecules[moleculeIdx] = mol
-                _state.update { it.copy(molecules = editedMolecules) }
-            }
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules[moleculeIdx] = mol
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -482,15 +497,15 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ) {
         val molecule = _state.value.molecules[moleculeIdx]
         viewModelScope.launch {
-            cheminformaticsDataSource.fuseTemplateToBond(
+            val mol = cheminformaticsDataSource.fuseTemplateToBond(
                 molecule,
                 targetBondIdx.toLong(),
                 templateSmiles,
-            ).onSuccess { mol ->
-                val editedMolecules = _state.value.molecules.toMutableList()
-                editedMolecules[moleculeIdx] = mol
-                _state.update { it.copy(molecules = editedMolecules) }
-            }
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules[moleculeIdx] = mol
+            _state.update { it.copy(molecules = editedMolecules) }
         }
     }
 
@@ -514,5 +529,9 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             editedMolecules.add(mol)
             _state.update { it.copy(molecules = editedMolecules) }
         }
+    }
+
+    private fun handleValenceViolationDialogDismiss() {
+        _state.update { it.copy(valenceViolationExplanationAtom = null) }
     }
 }

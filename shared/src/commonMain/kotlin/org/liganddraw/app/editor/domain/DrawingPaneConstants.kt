@@ -19,6 +19,6 @@ object DrawingPaneConstants {
     const val CYCLOHEXANE = "C1CCCCC1"
     const val CYCLOHEPTANE = "C1CCCCCC1"
     const val CYCLOOCTANE = "C1CCCCCCC1"
-    const val MAX_FORMAL_CHARGE = 4
-    const val MIN_FORMAL_CHARGE = -4
+    const val MAX_FORMAL_CHARGE = 1
+    const val MIN_FORMAL_CHARGE = -1
 }

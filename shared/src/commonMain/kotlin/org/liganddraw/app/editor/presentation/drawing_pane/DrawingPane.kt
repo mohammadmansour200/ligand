@@ -15,6 +15,7 @@ import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingCan
 import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingPaneTopBar
 import org.liganddraw.app.editor.presentation.drawing_pane.components.DrawingToolbar
 import org.liganddraw.app.editor.presentation.drawing_pane.components.ElementPalette
+import org.liganddraw.app.editor.presentation.drawing_pane.components.ValenceViolationExplanationDialog
 
 @Composable
 fun DrawingPaneRoot(viewModel: DrawingPaneViewModel = koinViewModel()) {
@@ -51,6 +52,11 @@ fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) 
                 },
                 selectedAtom = selectedElement
             )
+        }
+        state.valenceViolationExplanationAtom?.let { atom ->
+            ValenceViolationExplanationDialog(
+                atom = atom,
+                onDismiss = { onAction(DrawingPaneAction.OnDismissValenceViolationDialog) })
         }
     }
 }

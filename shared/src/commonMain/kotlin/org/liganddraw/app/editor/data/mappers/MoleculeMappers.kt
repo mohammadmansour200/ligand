@@ -11,7 +11,7 @@ import org.liganddraw.app.editor.domain.DoubleBondAlignment
 import org.liganddraw.app.editor.domain.Molecule
 
 /**Converts UI molecule to RDKit molecule - DOESN'T HANDLE CLEANUP and should invoke mol.delete()*/
-fun Molecule.toRWMol(): RWMol {
+fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
     val mol = RWMol()
 
     // --- SET ATOMS ---
@@ -59,7 +59,12 @@ fun Molecule.toRWMol(): RWMol {
         conformer, true
     )
 
-    mol.sanitizeMol()
+    if (sanitize) {
+        try {
+            mol.sanitizeMol()
+        } catch (_: Exception) {
+        }
+    }
 
     return mol
 }
@@ -99,6 +104,7 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
                 gasteigerCharge = gasteigerCharge,
                 isLabelReversed = if (includeDepictionMetadata) atom.isLabelReversed(conformer) else false,
                 isLabelVisible = if (includeDepictionMetadata) atom.isLabelVisible() else false,
+                hasValenceViolation = if (includeDepictionMetadata) atom.hasValenceViolation() else false
             )
         )
     }

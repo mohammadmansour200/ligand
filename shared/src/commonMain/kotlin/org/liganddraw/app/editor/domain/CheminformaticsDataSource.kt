@@ -44,29 +44,28 @@ interface CheminformaticsDataSource {
      * @param [molecule] The target [Molecule] to modify.
      * @param [targetAtomIdx] The zero-based index of the starting atom for the bond.
      * @param [type] The bond type to create (e.g., SINGLE, DOUBLE, TRIPLE).
-     * @param [dir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE).
-     * Defaults to [Bond.BondDir.NONE].
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @param [dir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE). Defaults to [Bond.BondDir.NONE].
+     * @return [Molecule] containing updated molecule
      */
     suspend fun attachBondToAtom(
         molecule: Molecule,
         targetAtomIdx: Long,
         type: Bond.BondType,
         dir: Bond.BondDir = Bond.BondDir.NONE
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 
     /**
      * Fuses a template (e.g. benzene, cyclohexane) to a bond in the molecule.
      * @param molecule The target [Molecule] to modify.
      * @param targetBondIdx The zero-based index of the bond to be fused to.
      * @param templateSmiles The SMILES representation of the molecule (e.g., "CC" for ethane, "c1ccccc1" for benzene).
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @return [Molecule] containing updated molecule
      */
     suspend fun fuseTemplateToBond(
         molecule: Molecule,
         targetBondIdx: Long,
         templateSmiles: String,
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 
     /**
      * Erases a bond between two atoms.
@@ -74,12 +73,12 @@ interface CheminformaticsDataSource {
      * [Molecule] per resulting fragment. If it does not, the result will contain a single [Molecule].
      * @param molecule The target [Molecule] to modify.
      * @param targetBondIdx The bond to be erased.
-     * @return [Result] with the resulting fragment(s) as a list of [Molecule] on success, or a [ChemistryError]
+     * @return Resulting fragment(s) as a list of [Molecule]
      */
     suspend fun eraseBond(
         molecule: Molecule,
         targetBondIdx: Long,
-    ): Result<List<Molecule>, ChemistryError>
+    ): List<Molecule>
 
     /**
      * Erases an atom.
@@ -87,38 +86,38 @@ interface CheminformaticsDataSource {
      * [Molecule] per resulting fragment. If it does not, the result will contain a single [Molecule].
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The atom to be erased.
-     * @return [Result] with the resulting fragment(s) as a list of [Molecule] on success, or a [ChemistryError]
+     * @return Resulting fragment(s) as a list of [Molecule]
      */
     suspend fun eraseAtom(
         molecule: Molecule,
         targetAtomIdx: Long,
-    ): Result<List<Molecule>, ChemistryError>
+    ): List<Molecule>
 
     /**
      * Replaces an existing atom in the molecule with a new atom.
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The zero-based index of the atom to be replaced.
      * @param newAtomSymbol The standard chemical element symbol for the replacement atom (e.g., "C", "N", "O", "Cl").
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @return [Molecule] containing updated molecule
      */
     suspend fun replaceAtomWithAtom(
         molecule: Molecule,
         targetAtomIdx: Long,
         newAtomSymbol: String
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 
     /**
      * Replaces an existing atom in the molecule with a template (e.g. benzene, cyclohexane).
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The zero-based index of the atom to be replaced.
      * @param templateSmiles The SMILES representation of the molecule (e.g., "CC" for ethane, "c1ccccc1" for benzene).
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @return [Molecule] containing updated molecule
      */
     suspend fun replaceAtomWithTemplate(
         molecule: Molecule,
         targetAtomIdx: Long,
         templateSmiles: String
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 
     /**
      * Creates a new molecule from a SMILES string at a specified canvas coordinate.
@@ -138,12 +137,12 @@ interface CheminformaticsDataSource {
      * wrapping back to single after triple (single -> double -> triple -> single).
      * @param molecule The target [Molecule] to modify.
      * @param targetBondIdx The zero-based index of the bond whose type should be cycled.
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @return [Molecule] containing updated molecule
      */
     suspend fun cycleBondType(
         molecule: Molecule,
         targetBondIdx: Long
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 
     /**
      * Changes the bond type and direction of the specified bond
@@ -151,25 +150,25 @@ interface CheminformaticsDataSource {
      * @param targetBondIdx The zero-based index of the bond whose type should be cycled.
      * @param [type] The bond type to create (e.g., SINGLE, DOUBLE, TRIPLE).
      * @param [dir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE).
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @return [Molecule] containing updated molecule
      */
     suspend fun setBondType(
         molecule: Molecule,
         targetBondIdx: Long,
         type: Bond.BondType,
         dir: Bond.BondDir = Bond.BondDir.NONE
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 
     /**
      * Changes atom formal charge.
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The zero-based index of the atom.
      * @param delta Either +1 to increase charge, or -1 to decrease charge
-     * @return [Result] containing updated [Molecule] on success, or a [ChemistryError]
+     * @return [Molecule] containing updated molecule
      */
     suspend fun changeFormalCharge(
         molecule: Molecule,
         targetAtomIdx: Long,
         delta: Int,
-    ): Result<Molecule, ChemistryError>
+    ): Molecule
 }

@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import org.liganddraw.app.editor.presentation.molecule_pane.components.Molecule3DViewer
+import org.liganddraw.app.editor.presentation.molecule_pane.components.MoleculeErrorNotice
 import org.liganddraw.app.editor.presentation.molecule_pane.components.MoleculePropertiesTable
 import org.liganddraw.app.editor.presentation.molecule_pane.components.NoSelectedMoleculeNotice
 
@@ -29,16 +30,18 @@ fun MoleculePane(state: MoleculePaneState) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (state.conformer == null || state.properties == null) {
-            NoSelectedMoleculeNotice()
-        } else {
-            Molecule3DViewer(
-                conformer = state.conformer,
-                iblBytes = state.iblBytes,
-                solidColorMaterialBytes = state.solidColorMaterialBytes,
-                epmMaterialBytes = state.epmMaterialBytes
-            )
-            MoleculePropertiesTable(state.properties)
+        when {
+            state.error != null -> MoleculeErrorNotice()
+            state.conformer == null || state.properties == null -> NoSelectedMoleculeNotice()
+            else -> {
+                Molecule3DViewer(
+                    conformer = state.conformer,
+                    iblBytes = state.iblBytes,
+                    solidColorMaterialBytes = state.solidColorMaterialBytes,
+                    epmMaterialBytes = state.epmMaterialBytes
+                )
+                MoleculePropertiesTable(state.properties)
+            }
         }
     }
 }
