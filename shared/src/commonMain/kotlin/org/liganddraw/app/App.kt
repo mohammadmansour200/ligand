@@ -52,14 +52,14 @@ fun App() {
 
         val moleculePaneViewModel = koinViewModel<MoleculePaneViewModel>()
         // TODO("Calculate properties and generate conformer on molecule selection from canvas")
-        LaunchedEffect(drawingPaneState.molecules) {
-            if (drawingPaneState.molecules.isNotEmpty()) {
+        LaunchedEffect(drawingPaneState.document.molecules) {
+            if (drawingPaneState.document.molecules.isNotEmpty()) {
                 moleculePaneViewModel.onAction(
                     MoleculePaneAction.OnGenerateConformer(
-                        drawingPaneState.molecules.first()
+                        drawingPaneState.document.molecules.first()
                     )
                 )
-                moleculePaneViewModel.onAction(MoleculePaneAction.OnCalcProperties(drawingPaneState.molecules.first()))
+                moleculePaneViewModel.onAction(MoleculePaneAction.OnCalcProperties(drawingPaneState.document.molecules.first()))
                 navigator.navigateTo(SupportingPaneScaffoldRole.Supporting)
             }
         }

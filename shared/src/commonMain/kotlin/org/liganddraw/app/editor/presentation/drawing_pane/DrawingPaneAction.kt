@@ -5,6 +5,12 @@ import io.github.vinceglb.filekit.PlatformFile
 import org.liganddraw.app.editor.domain.Tool
 
 sealed interface DrawingPaneAction {
+    /** Reverts the most recent committed edit, restoring the previous [DrawingDocument] state. No-op if there is nothing to undo. */
+    object OnUndo : DrawingPaneAction
+
+    /** Re-applies the most recently undone edit, restoring the [DrawingDocument] state it produced. No-op if there is nothing to redo, and is cleared whenever a new edit is committed. */
+    object OnRedo : DrawingPaneAction
+
     /**
      * Action triggered when a file is successfully picked by the user.
      * File is parsed using Cheminformatics engine. parsed molecules are then saved in state

@@ -28,7 +28,10 @@ fun DrawingPaneRoot(viewModel: DrawingPaneViewModel = koinViewModel()) {
 fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) {
     Scaffold(
         topBar = {
-            DrawingPaneTopBar(onAction = { onAction(it) })
+            DrawingPaneTopBar(
+                state = state,
+                onAction = { onAction(it) },
+            )
         },
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(it)) {

@@ -104,10 +104,12 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
     val symbolStyle = getSymbolStyle(density, structureColor)
 
-    LaunchedEffect(state.molecules) {
+    val molecules = state.document.molecules
+    
+    LaunchedEffect(molecules) {
         val uniqueSymbols = mutableMapOf<String, IntSize>()
         val uniqueHydrogenCounts = mutableMapOf<Long, IntSize>()
-        state.molecules.forEach { mol ->
+        molecules.forEach { mol ->
             mol.atoms.forEach { atom ->
                 val symbol = atom.symbol
                 if (!uniqueSymbols.containsKey(symbol)) {
@@ -208,7 +210,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             translate(left = canvasOffset.x, top = canvasOffset.y)
             scale(scale = canvasScale, pivot = Offset.Zero)
         }) {
-            state.molecules.fastForEachIndexed { moleculeIndex, mol ->
+            molecules.fastForEachIndexed { moleculeIndex, mol ->
                 if (state.selectedMoleculeIndex == moleculeIndex) {
                     drawMoleculeHighlightRect(mol, highlightColor)
                 }

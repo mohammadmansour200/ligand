@@ -7,8 +7,15 @@ import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.Tool
 
 @Immutable
-data class DrawingPaneState(
+data class DrawingDocument(
     val molecules: List<Molecule> = emptyList(),
+)
+
+@Immutable
+data class DrawingPaneState(
+    val document: DrawingDocument = DrawingDocument(),
+    val canUndo: Boolean = false,
+    val canRedo: Boolean = false,
     val selectedTool: Tool = Tool.Pan,
     val symbolLabelDimensionsCache: Map<String, IntSize> = emptyMap(),
     val hydrogenLabelDimensionsCache: Map<Long, IntSize> = emptyMap(),
@@ -17,5 +24,5 @@ data class DrawingPaneState(
     /**Currently hovered bond as a pair of molecule index and bond index*/
     val hoveredBondId: Pair<Int, Int>? = null,
     val selectedMoleculeIndex: Int? = null,
-    val valenceViolationExplanationAtom: Atom? = null
+    val valenceViolationExplanationAtom: Atom? = null,
 )
