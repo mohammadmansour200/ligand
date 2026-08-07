@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.window.core.layout.WindowSizeClass
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.DoubleBondAlignment
@@ -93,7 +95,11 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
     val background = MaterialTheme.colorScheme.surface
 
-    var canvasScale by remember { mutableFloatStateOf(3f) }
+    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    val isWindowCompact =
+        !windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+
+    var canvasScale by remember { mutableFloatStateOf(if (isWindowCompact) 2.5f else 1f) }
     var canvasOffset by remember { mutableStateOf(Offset.Zero) }
 
     val symbolStyle = getSymbolStyle(density, structureColor)
