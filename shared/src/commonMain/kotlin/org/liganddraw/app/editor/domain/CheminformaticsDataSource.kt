@@ -133,6 +133,19 @@ interface CheminformaticsDataSource {
     ): Molecule
 
     /**
+     * Creates a new molecule from an atom at a specified canvas coordinate.
+     * @param symbol The atom symbol (e.g., "H" for hydrogen, "C" for carbon).
+     * @param x The target x-coordinate in angstroms.
+     * @param y The target  y-coordinate in angstroms.
+     * @return [Molecule]
+     */
+    suspend fun createMoleculeFromAtom(
+        symbol: String,
+        x: Double,
+        y: Double
+    ): Molecule
+
+    /**
      * Cycles the bond type of the specified bond through single, double, and triple,
      * wrapping back to single after triple (single -> double -> triple -> single).
      * @param molecule The target [Molecule] to modify.

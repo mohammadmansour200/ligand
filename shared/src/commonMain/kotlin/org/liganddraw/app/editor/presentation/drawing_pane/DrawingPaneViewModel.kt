@@ -231,7 +231,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
         val angstromPosition = Offset(x, y).toPositionAngstrom()
         when (val currentTool = _state.value.selectedTool) {
-            is Tool.Element -> handleCreateMoleculeFromSmiles(
+            is Tool.Element -> handleCreateMoleculeFromAtom(
                 currentTool.symbol,
                 angstromPosition.first,
                 angstromPosition.second
@@ -521,6 +521,24 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         viewModelScope.launch {
             val mol = cheminformaticsDataSource.createMoleculeFromSmiles(
                 smiles,
+                xAngstrom,
+                yAngstrom,
+            )
+
+            val editedMolecules = _state.value.molecules.toMutableList()
+            editedMolecules.add(mol)
+            _state.update { it.copy(molecules = editedMolecules) }
+        }
+    }
+
+    private fun handleCreateMoleculeFromAtom(
+        symbol: String,
+        xAngstrom: Double,
+        yAngstrom: Double
+    ) {
+        viewModelScope.launch {
+            val mol = cheminformaticsDataSource.createMoleculeFromAtom(
+                symbol,
                 xAngstrom,
                 yAngstrom,
             )

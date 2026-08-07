@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import org.RDKit.Atom
 import org.RDKit.Bond
 import org.RDKit.Bond.BondType
+import org.RDKit.Conformer
 import org.RDKit.DistanceGeom
 import org.RDKit.ForceField
 import org.RDKit.Int_Pair
@@ -478,6 +479,35 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             // --- CLEANUP ---
             transform.delete()
             point3D?.delete()
+            mol.delete()
+        }
+    }
+
+    override suspend fun createMoleculeFromAtom(
+        symbol: String,
+        x: Double,
+        y: Double
+    ): Molecule = withContext(Dispatchers.Default) {
+        // --- CONVERT SMILES INTO RDKIT MOLECULE ---
+        val mol = RWMol()
+
+        try {
+            val conformer = Conformer()
+
+            // --- ADD ATOM ---
+            val atomIdx = mol.addAtom(Atom(symbol))
+            conformer.setAtomPos(atomIdx, Point3D(x, y, 0.0))
+            conformer.is3D = false
+            mol.addConformer(
+                conformer, true
+            )
+
+            mol.sanitizeMol()
+
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            return@withContext mol.toMolecule()
+        } finally {
+            // --- CLEANUP ---
             mol.delete()
         }
     }
