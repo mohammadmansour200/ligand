@@ -23,10 +23,14 @@ import org.liganddraw.app.core.domain.Result
 import org.liganddraw.app.editor.data.mappers.toMolecule
 import org.liganddraw.app.editor.data.mappers.toRWMol
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LENGTH
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.MAX_FORMAL_CHARGE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.MIN_FORMAL_CHARGE
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculeProperties
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
     override suspend fun molFileToMolecule(absolutePath: String): Result<List<Molecule>, DataError> =
@@ -182,8 +186,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
         val rdkitRWMol = molecule.toRWMol()
         val template = ROMol(rdkitRWMol)
-
         try {
+            val targetAtom = rdkitRWMol.getAtomWithIdx(targetAtomIdx)
+            val targetAtomIsTerminal = targetAtom.bonds.size() == 1L
+
+            val targetAtomNeighbors = rdkitRWMol.getAtomNeighbors(targetAtom)
+
             // --- ADD END ATOM IN RDKIT MOLECULE ---
             val endAtomIdx = rdkitRWMol.addAtom(Atom("C"))
 
@@ -191,8 +199,44 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             rdkitRWMol.addBond(targetAtomIdx, endAtomIdx, type)
             rdkitRWMol.getBondBetweenAtoms(targetAtomIdx, endAtomIdx)?.bondDir = dir
 
-            // Maintains accurate bond angles
-            rdkitRWMol.generateDepictionMatching2DStructure(template)
+            val conformer = rdkitRWMol.conformer
+            val targetAtomPosition = conformer.getAtomPos(targetAtomIdx)
+            if (targetAtomIsTerminal) {
+                val parentAtomIdx = targetAtomNeighbors[0].idx
+                val parentAtom = rdkitRWMol.getAtomWithIdx(parentAtomIdx)
+                val parentAtomNeighbors = rdkitRWMol.getAtomNeighbors(parentAtom)
+
+                val parentAtomPosition = conformer.getAtomPos(parentAtomIdx)
+                val existingDir = parentAtomPosition.directionVector(targetAtomPosition)
+
+                val zigzagAngleOffset = Math.toRadians(60.0)
+
+                val grandParentIdx = parentAtomNeighbors[0]?.idx
+                val rotationSign = if (grandParentIdx != null) {
+                    val grandPos = conformer.getAtomPos(grandParentIdx)
+                    val prevDir = grandPos.directionVector(parentAtomPosition)
+                    val cross = prevDir.crossProduct(existingDir)
+                    if (cross.z >= 0) -1.0 else 1.0
+                } else {
+                    val baseAngle = atan2(existingDir.y, existingDir.x)
+                    val angleUp = baseAngle + zigzagAngleOffset
+                    val angleDown = baseAngle - zigzagAngleOffset
+
+                    if (sin(angleUp) >= sin(angleDown)) 1.0 else -1.0
+                }
+
+                val newAngle =
+                    atan2(existingDir.y, existingDir.x) + rotationSign * zigzagAngleOffset
+                val newPos = Point3D(
+                    targetAtomPosition.x + BOND_LENGTH * cos(newAngle),
+                    targetAtomPosition.y + BOND_LENGTH * sin(newAngle),
+                    0.0
+                )
+
+                conformer.setAtomPos(endAtomIdx, newPos)
+            } else {
+                rdkitRWMol.generateDepictionMatching2DStructure(template)
+            }
 
             try {
                 rdkitRWMol.sanitizeMol()
