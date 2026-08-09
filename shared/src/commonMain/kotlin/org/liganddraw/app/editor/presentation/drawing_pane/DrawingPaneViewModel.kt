@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import org.RDKit.Bond
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.ATOM_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LENGTH
 import org.liganddraw.app.editor.domain.Molecule
@@ -572,10 +573,17 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                     isReversed = atom.isLabelReversed,
                     atomOffset = atom.offsetPx()
                 )
-                if (x in rect.left..rect.right && y in rect.top..rect.bottom) return Pair(
-                    moleculeIndex,
-                    atomIndex
-                )
+
+                val isWithinBounds =
+                    x in (rect.left - ATOM_HIT_TOLERANCE)..(rect.right + ATOM_HIT_TOLERANCE) &&
+                            y in (rect.top - ATOM_HIT_TOLERANCE)..(rect.bottom + ATOM_HIT_TOLERANCE)
+
+                if (isWithinBounds) {
+                    return Pair(
+                        moleculeIndex,
+                        atomIndex
+                    )
+                }
             }
         }
         return null
