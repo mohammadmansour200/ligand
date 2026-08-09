@@ -45,9 +45,11 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.window.core.layout.WindowSizeClass
 import org.liganddraw.app.editor.domain.Bond
@@ -60,6 +62,7 @@ import org.liganddraw.app.editor.domain.DrawingPaneConstants.CENTERED_DOUBLE_BON
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_CORNER_RADIUS
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_STROKE_WIDTH
 import org.liganddraw.app.editor.domain.Molecule
+import org.liganddraw.app.editor.domain.TextBox
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneAction
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
@@ -70,6 +73,7 @@ import org.liganddraw.app.editor.presentation.utils.getSymbolStyle
 import org.liganddraw.app.editor.presentation.utils.labelRect
 import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.shortenBondToRectBoundary
+import org.liganddraw.app.editor.presentation.utils.toAnnotatedString
 import org.liganddraw.app.editor.presentation.utils.toChargeLabel
 import org.liganddraw.app.editor.presentation.utils.toLabel
 import kotlin.math.PI
@@ -106,6 +110,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     val symbolStyle = getSymbolStyle(density, structureColor)
 
     val molecules = state.document.molecules
+    val textBoxes = state.document.textBoxes
 
     LaunchedEffect(molecules) {
         val uniqueSymbols = mutableMapOf<String, IntSize>()
@@ -231,6 +236,13 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             translate(left = canvasOffset.x, top = canvasOffset.y)
             scale(scale = canvasScale, pivot = Offset.Zero)
         }) {
+            textBoxes.fastForEach { textBox ->
+                drawTextBox(
+                    textBox = textBox,
+                    textMeasurer = textMeasurer,
+                )
+            }
+
             molecules.fastForEachIndexed { moleculeIndex, mol ->
                 if (state.selectedMoleculeIndex == moleculeIndex) {
                     drawMoleculeHighlightRect(mol, highlightColor)
@@ -424,6 +436,26 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             }
         }
     }
+}
+
+fun DrawScope.drawTextBox(
+    textBox: TextBox,
+    textMeasurer: TextMeasurer,
+    fontFamilyResolver: (String) -> FontFamily = { FontFamily.Default },
+) {
+    val annotatedString = textBox.toAnnotatedString(
+        density = this,
+        fontFamilyResolver = fontFamilyResolver,
+    )
+
+    drawText(
+        textMeasurer = textMeasurer,
+        text = annotatedString,
+        topLeft = Offset(
+            x = textBox.anchorX.toFloat(),
+            y = textBox.anchorY.toFloat(),
+        ),
+    )
 }
 
 private fun DrawScope.drawChargeText(

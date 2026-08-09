@@ -4,11 +4,13 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.IntSize
 import org.liganddraw.app.editor.domain.Atom
 import org.liganddraw.app.editor.domain.Molecule
+import org.liganddraw.app.editor.domain.TextBox
 import org.liganddraw.app.editor.domain.Tool
 
 @Immutable
 data class DrawingDocument(
     val molecules: List<Molecule> = emptyList(),
+    val textBoxes: List<TextBox> = emptyList()
 )
 
 @Immutable
