@@ -9,8 +9,10 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.extension
 import io.github.vinceglb.filekit.readString
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.RDKit.Bond
@@ -44,6 +46,9 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private val history = UndoRedoStack(DrawingDocument())
     private val _state = MutableStateFlow(DrawingPaneState())
     val state = _state.asStateFlow()
+
+    private val _events = Channel<DrawingPaneEvent>()
+    val events = _events.receiveAsFlow()
 
     fun onAction(action: DrawingPaneAction) {
         when (action) {
@@ -97,6 +102,9 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun commitEdit(newDocument: DrawingDocument) {
+        viewModelScope.launch {
+            _events.send(DrawingPaneEvent.CalculateMolecule3DAndPropeties(newDocument.molecules[0]))
+        }
         history.push(newDocument)
         _state.update {
             it.copy(document = newDocument, canUndo = history.canUndo, canRedo = history.canRedo)

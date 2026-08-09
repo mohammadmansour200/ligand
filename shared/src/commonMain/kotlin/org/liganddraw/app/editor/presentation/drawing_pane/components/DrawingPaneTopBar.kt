@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -12,6 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +28,7 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.menu
 import liganddraw.shared.generated.resources.redo
+import liganddraw.shared.generated.resources.threeDimension
 import liganddraw.shared.generated.resources.undo
 import org.jetbrains.compose.resources.vectorResource
 import org.liganddraw.app.core.presentation.IconWithTooltip
@@ -37,6 +40,8 @@ import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
 fun DrawingPaneTopBar(
     state: DrawingPaneState,
     onAction: (DrawingPaneAction) -> Unit,
+    onNavigateToSupporting: () -> Unit,
+    showSupportingPaneButton: Boolean
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(
@@ -44,7 +49,9 @@ fun DrawingPaneTopBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MoreOptions(onAction)
+
             Spacer(modifier = Modifier.weight(1f))
+
             IconButton(
                 onClick = { onAction(DrawingPaneAction.OnUndo) },
                 enabled = state.canUndo,
@@ -62,6 +69,24 @@ fun DrawingPaneTopBar(
                     icon = vectorResource(Res.drawable.redo),
                     text = "Redo",
                 )
+            }
+
+            if (showSupportingPaneButton) {
+                VerticalDivider(
+                    modifier = Modifier
+                        .height(24.dp)
+                        .padding(horizontal = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+
+                IconButton(
+                    onClick = onNavigateToSupporting,
+                ) {
+                    IconWithTooltip(
+                        icon = vectorResource(Res.drawable.threeDimension),
+                        text = "Show 3D model and molecular properties",
+                    )
+                }
             }
         }
     }

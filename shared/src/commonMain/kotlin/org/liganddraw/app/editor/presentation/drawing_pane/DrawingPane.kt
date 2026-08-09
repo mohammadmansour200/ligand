@@ -18,19 +18,35 @@ import org.liganddraw.app.editor.presentation.drawing_pane.components.ElementPal
 import org.liganddraw.app.editor.presentation.drawing_pane.components.ValenceViolationExplanationDialog
 
 @Composable
-fun DrawingPaneRoot(viewModel: DrawingPaneViewModel = koinViewModel()) {
+fun DrawingPaneRoot(
+    viewModel: DrawingPaneViewModel = koinViewModel(),
+    onNavigateToSupporting: () -> Unit,
+    showSupportingPaneButton: Boolean
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    DrawingPane(state, viewModel::onAction)
+    DrawingPane(
+        state = state,
+        onAction = viewModel::onAction,
+        onNavigateToSupporting = onNavigateToSupporting,
+        showSupportingPaneButton = showSupportingPaneButton
+    )
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun DrawingPane(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit) {
+fun DrawingPane(
+    state: DrawingPaneState,
+    onAction: (DrawingPaneAction) -> Unit,
+    onNavigateToSupporting: () -> Unit,
+    showSupportingPaneButton: Boolean
+) {
     Scaffold(
         topBar = {
             DrawingPaneTopBar(
                 state = state,
                 onAction = { onAction(it) },
+                onNavigateToSupporting = onNavigateToSupporting,
+                showSupportingPaneButton = showSupportingPaneButton
             )
         },
     ) {

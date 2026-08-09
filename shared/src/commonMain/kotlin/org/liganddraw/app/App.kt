@@ -7,24 +7,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDragHandle
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.defaultDragHandleSemantics
 import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
 import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+import org.liganddraw.app.core.presentation.utils.ObserveAsEvents
+import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneEvent
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneRoot
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneViewModel
 import org.liganddraw.app.editor.presentation.molecule_pane.MoleculePaneAction
@@ -48,21 +48,21 @@ fun App() {
         )
 
         val drawingPaneViewModel = koinViewModel<DrawingPaneViewModel>()
-        val drawingPaneState by drawingPaneViewModel.state.collectAsStateWithLifecycle()
-
         val moleculePaneViewModel = koinViewModel<MoleculePaneViewModel>()
-        // TODO("Calculate properties and generate conformer on molecule selection from canvas")
-        LaunchedEffect(drawingPaneState.document.molecules) {
-            if (drawingPaneState.document.molecules.isNotEmpty()) {
-                moleculePaneViewModel.onAction(
-                    MoleculePaneAction.OnGenerateConformer(
-                        drawingPaneState.document.molecules.first()
+
+        ObserveAsEvents(drawingPaneViewModel.events) {
+            when (it) {
+                is DrawingPaneEvent.CalculateMolecule3DAndPropeties -> {
+                    moleculePaneViewModel.onAction(
+                        MoleculePaneAction.OnGenerateConformer(it.molecule)
                     )
-                )
-                moleculePaneViewModel.onAction(MoleculePaneAction.OnCalcProperties(drawingPaneState.document.molecules.first()))
-                navigator.navigateTo(SupportingPaneScaffoldRole.Supporting)
+                    moleculePaneViewModel.onAction(
+                        MoleculePaneAction.OnCalcProperties(it.molecule)
+                    )
+                }
             }
         }
+
         SupportingPaneScaffold(
             directive = navigator.scaffoldDirective,
             value = navigator.scaffoldValue,
@@ -72,7 +72,15 @@ fun App() {
                 }
             }, mainPane = {
                 AnimatedPane {
-                    DrawingPaneRoot(drawingPaneViewModel)
+                    val showSupportingPaneButton =
+                        navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] == PaneAdaptedValue.Hidden
+                    DrawingPaneRoot(
+                        viewModel = drawingPaneViewModel,
+                        onNavigateToSupporting = {
+                            scope.launch { navigator.navigateTo(SupportingPaneScaffoldRole.Supporting) }
+                        },
+                        showSupportingPaneButton = showSupportingPaneButton
+                    )
                 }
             },
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
