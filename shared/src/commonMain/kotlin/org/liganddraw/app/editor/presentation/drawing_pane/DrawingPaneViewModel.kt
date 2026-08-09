@@ -17,18 +17,25 @@ import org.RDKit.Bond
 import org.liganddraw.app.core.domain.onSuccess
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_HIT_TOLERANCE
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LENGTH
+import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.Tool
+import org.liganddraw.app.editor.presentation.utils.BondDragSession
+import org.liganddraw.app.editor.presentation.utils.ChainDragSession
 import org.liganddraw.app.editor.presentation.utils.UndoRedoStack
 import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
 import org.liganddraw.app.editor.presentation.utils.labelRect
 import org.liganddraw.app.editor.presentation.utils.offsetPx
+import org.liganddraw.app.editor.presentation.utils.snapAngle
 import org.liganddraw.app.editor.presentation.utils.toPositionAngstrom
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.writeText
+import kotlin.math.atan2
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 class DrawingPaneViewModel(private val cheminformaticsDataSource: CheminformaticsDataSource) :
@@ -51,6 +58,9 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             is DrawingPaneAction.OnPointerMove -> handlePointerMove(action.x, action.y)
             is DrawingPaneAction.OnPointerPress -> handlePointerPress(action.x, action.y)
             is DrawingPaneAction.OnPointerLongPress -> handlePointerLongPress(action.x, action.y)
+            is DrawingPaneAction.OnDragStart -> handleDragStart(action.x, action.y)
+            is DrawingPaneAction.OnDrag -> handleDrag(action.x, action.y)
+            is DrawingPaneAction.OnDragEnd -> handleDragEnd()
             is DrawingPaneAction.OnDismissValenceViolationDialog -> handleValenceViolationDialogDismiss()
         }
     }
@@ -61,7 +71,10 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 it.copy(
                     document = doc,
                     canUndo = history.canUndo,
-                    canRedo = history.canRedo
+                    canRedo = history.canRedo,
+                    hoveredAtomId = null,
+                    hoveredBondId = null,
+                    selectedMoleculeIndex = null
                 )
             }
         }
@@ -73,7 +86,10 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 it.copy(
                     document = doc,
                     canUndo = history.canUndo,
-                    canRedo = history.canRedo
+                    canRedo = history.canRedo,
+                    hoveredAtomId = null,
+                    hoveredBondId = null,
+                    selectedMoleculeIndex = null
                 )
             }
         }
@@ -125,7 +141,233 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun selectTool(tool: Tool) {
-        _state.update { it.copy(selectedTool = tool) }
+        _state.update {
+            it.copy(
+                selectedTool = tool,
+                hoveredAtomId = null,
+                hoveredBondId = null,
+                selectedMoleculeIndex = null,
+            )
+        }
+    }
+
+    private var bondDragSession: BondDragSession? = null
+    private var chainDragSession: ChainDragSession? = null
+    private var dragMoveSequence = 0L
+    private fun handleDragStart(x: Float, y: Float) {
+        when (_state.value.selectedTool) {
+            is Tool.SingleBond, is Tool.WedgeBond, is Tool.HashedWedgeBond,
+            is Tool.DoubleBond, is Tool.TripleBond, is Tool.HydrogenBond, is Tool.Element ->
+                handleBondDragStart(x, y)
+
+            is Tool.Chain -> handleChainDragStart(x, y)
+
+            is Tool.Erase -> handleDragErase(x, y)
+
+            else -> {}
+        }
+    }
+
+    private fun handleDrag(x: Float, y: Float) {
+        when (_state.value.selectedTool) {
+            is Tool.SingleBond, is Tool.WedgeBond, is Tool.HashedWedgeBond,
+            is Tool.DoubleBond, is Tool.TripleBond, is Tool.HydrogenBond, is Tool.Element -> handleBondDrag(
+                x,
+                y
+            )
+
+            is Tool.Chain -> handleChainDrag(x, y)
+
+            is Tool.Erase -> handleDragErase(x, y)
+
+            else -> {}
+        }
+    }
+
+    private fun handleDragEnd() {
+        if (bondDragSession != null || chainDragSession != null) {
+            commitEdit(_state.value.document)
+        }
+        bondDragSession = null
+        chainDragSession = null
+    }
+
+    private fun handleBondDragStart(x: Float, y: Float) {
+        val hitAtomId = findAtomByPosition(x, y) ?: return
+        val (moleculeIdx, atomIdx) = hitAtomId
+
+        val (symbol, bondType, bondDir) = when (val tool = _state.value.selectedTool) {
+            is Tool.SingleBond -> Triple("C", Bond.BondType.SINGLE, Bond.BondDir.NONE)
+            is Tool.WedgeBond -> Triple("C", Bond.BondType.SINGLE, Bond.BondDir.BEGINWEDGE)
+            is Tool.HashedWedgeBond -> Triple("C", Bond.BondType.SINGLE, Bond.BondDir.BEGINDASH)
+            is Tool.DoubleBond -> Triple("C", Bond.BondType.DOUBLE, Bond.BondDir.NONE)
+            is Tool.TripleBond -> Triple("C", Bond.BondType.TRIPLE, Bond.BondDir.NONE)
+            is Tool.HydrogenBond -> Triple("C", Bond.BondType.HYDROGEN, Bond.BondDir.NONE)
+            is Tool.Element -> Triple(tool.symbol, Bond.BondType.SINGLE, Bond.BondDir.NONE)
+            else -> return
+        }
+
+        bondDragSession = BondDragSession(
+            baselineDocument = _state.value.document,
+            moleculeIdx = moleculeIdx,
+            pivotAtomIdx = atomIdx,
+            atomSymbol = symbol,
+            bondType = bondType,
+            bondDir = bondDir
+        )
+        handleBondDrag(x, y)
+    }
+
+    private fun handleBondDrag(x: Float, y: Float) {
+        val session = bondDragSession ?: return
+        val currentSequence = ++dragMoveSequence
+
+        viewModelScope.launch {
+            val baselineMolecule = session.baselineDocument.molecules[session.moleculeIdx]
+            val pivotAtom = baselineMolecule.atoms[session.pivotAtomIdx]
+
+            val hit = findAtomByPosition(x, y, document = session.baselineDocument)
+                ?.takeIf { !(it.first == session.moleculeIdx && it.second == session.pivotAtomIdx) }
+
+            // --- BOND ATOM WITH ATOM ---
+            val newDocument = if (hit != null) {
+                val (hitMoleculeIdx, hitAtomIdx) = hit
+
+                // --- BOND ATOMS WITHIN SAME MOLECULE ---
+                if (hitMoleculeIdx == session.moleculeIdx) {
+                    val bonded = cheminformaticsDataSource.bondSameMoleculeAtoms(
+                        molecule = baselineMolecule,
+                        atomIdxA = session.pivotAtomIdx.toLong(),
+                        atomIdxB = hitAtomIdx.toLong(),
+                        type = session.bondType,
+                        dir = session.bondDir
+                    )
+                    replaceMolecule(session.baselineDocument, session.moleculeIdx, bonded)
+                } else {
+                    // --- BOND ATOMS ACROSS DIFFERENT MOLECULES ---
+                    val otherMolecule = session.baselineDocument.molecules[hitMoleculeIdx]
+                    val merged = cheminformaticsDataSource.bondDifferentMoleculesAtoms(
+                        moleculeA = baselineMolecule, atomIdxA = session.pivotAtomIdx.toLong(),
+                        moleculeB = otherMolecule, atomIdxB = hitAtomIdx.toLong(),
+                        type = session.bondType, dir = session.bondDir
+                    )
+
+                    replaceTwoMoleculesWithMerged(
+                        session.baselineDocument,
+                        session.moleculeIdx,
+                        hitMoleculeIdx,
+                        merged
+                    )
+                }
+            } else {
+                // --- ATTACH NEW ATOM AT ANGLE ---
+                val angstromPosition = Offset(x, y).toPositionAngstrom()
+                val rawAngle = atan2(
+                    angstromPosition.second - pivotAtom.y,
+                    angstromPosition.first - pivotAtom.x
+                )
+                val snappedAngle = snapAngle(rawAngle)
+                val withNewAtom = cheminformaticsDataSource.attachAtomToAtomAtAngle(
+                    molecule = baselineMolecule,
+                    targetAtomIdx = session.pivotAtomIdx.toLong(),
+                    newAtomSymbol = session.atomSymbol,
+                    type = session.bondType,
+                    dir = session.bondDir,
+                    angleRadians = snappedAngle
+                )
+                replaceMolecule(session.baselineDocument, session.moleculeIdx, withNewAtom)
+            }
+
+            if (currentSequence == dragMoveSequence) {
+                _state.update { it.copy(document = newDocument) }
+            }
+        }
+    }
+
+    private fun handleChainDragStart(x: Float, y: Float) {
+        val hit = findAtomByPosition(x, y)
+        val (originX, originY) = if (hit != null) {
+            val (moleculeIdx, atomIdx) = hit
+            val atom = _state.value.document.molecules[moleculeIdx].atoms[atomIdx]
+            atom.x to atom.y
+        } else {
+            Offset(x, y).toPositionAngstrom()
+        }
+
+        chainDragSession = ChainDragSession(
+            baselineDocument = _state.value.document,
+            moleculeIdx = hit?.first,
+            pivotAtomIdx = hit?.second,
+            originX = originX,
+            originY = originY
+        )
+        handleChainDrag(x, y)
+    }
+
+    private fun handleChainDrag(x: Float, y: Float) {
+        val session = chainDragSession ?: return
+        val thisSequence = ++dragMoveSequence
+
+        viewModelScope.launch {
+            val angstromPosition = Offset(x, y).toPositionAngstrom()
+            val dx = angstromPosition.first - session.originX
+            val dy = angstromPosition.second - session.originY
+            val distance = sqrt(dx * dx + dy * dy)
+
+            val atomCount = (distance / BOND_LENGTH).roundToInt().coerceAtLeast(0)
+
+            val rawAngle = atan2(
+                dy, dx
+            )
+            val snappedAngle = snapAngle(rawAngle)
+
+            val newDocument = when {
+                atomCount == 0 -> session.baselineDocument
+
+                session.moleculeIdx != null && session.pivotAtomIdx != null -> {
+                    // --- EXTEND CHAIN FROM EXISTING ATOM ---
+                    val baselineMolecule = session.baselineDocument.molecules[session.moleculeIdx]
+                    val chained = cheminformaticsDataSource.buildChainFromAtom(
+                        molecule = baselineMolecule,
+                        pivotAtomIdx = session.pivotAtomIdx.toLong(),
+                        atomCount = atomCount,
+                        angleRadians = snappedAngle
+                    )
+                    replaceMolecule(session.baselineDocument, session.moleculeIdx, chained)
+                }
+
+                else -> {
+                    // --- CREATE NEW CHAIN MOLECULE FROM POINT ---
+                    val newMolecule = cheminformaticsDataSource.buildChainFromPoint(
+                        x = session.originX,
+                        y = session.originY,
+                        atomCount = atomCount,
+                        angleRadians = snappedAngle
+                    )
+                    val edited = session.baselineDocument.molecules.toMutableList()
+                    edited.add(newMolecule)
+                    session.baselineDocument.copy(molecules = edited)
+                }
+            }
+
+            if (thisSequence == dragMoveSequence) {
+                _state.update { it.copy(document = newDocument) }
+            }
+        }
+    }
+
+    private fun handleDragErase(x: Float, y: Float) {
+        val hitAtomId = findAtomByPosition(x, y)
+        if (hitAtomId != null) {
+            handleEraseAtom(hitAtomId.first, hitAtomId.second)
+            return
+        }
+
+        val hitBondId = findBondByPosition(x, y)
+        if (hitBondId != null) {
+            handleEraseBond(hitBondId.first, hitBondId.second)
+            return
+        }
     }
 
     private fun handlePointerLongPress(x: Float, y: Float) {
@@ -291,8 +533,12 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
     }
 
-    private fun findAtomByPosition(x: Float, y: Float): Pair<Int, Int>? {
-        _state.value.document.molecules.fastForEachIndexed { molIndex, molecule ->
+    private fun findAtomByPosition(
+        x: Float,
+        y: Float,
+        document: DrawingDocument = _state.value.document
+    ): Pair<Int, Int>? {
+        document.molecules.fastForEachIndexed { moleculeIndex, molecule ->
             molecule.atoms.fastForEachIndexed { atomIndex, atom ->
                 val rect = labelRect(
                     symbolDimensions = getSymbolLabelDimensions(
@@ -300,15 +546,16 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                         _state.value.symbolLabelDimensionsCache
                     ),
                     hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
-                        atom.numImplicitHydrogen, _state.value.hydrogenLabelDimensionsCache
+                        atom.numImplicitHydrogen,
+                        _state.value.hydrogenLabelDimensionsCache
                     ),
                     isReversed = atom.isLabelReversed,
                     atomOffset = atom.offsetPx()
                 )
-
-                if (x in rect.left..rect.right && y in rect.top..rect.bottom) {
-                    return Pair(molIndex, atomIndex)
-                }
+                if (x in rect.left..rect.right && y in rect.top..rect.bottom) return Pair(
+                    moleculeIndex,
+                    atomIndex
+                )
             }
         }
         return null
@@ -587,5 +834,29 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleValenceViolationDialogDismiss() {
         _state.update { it.copy(valenceViolationExplanationAtom = null) }
+    }
+
+    private fun replaceTwoMoleculesWithMerged(
+        document: DrawingDocument,
+        idxA: Int,
+        idxB: Int,
+        merged: Molecule
+    ): DrawingDocument {
+        val edited = document.molecules.toMutableList()
+        val (lo, hi) = listOf(idxA, idxB).sorted()
+        edited.removeAt(hi)
+        edited.removeAt(lo)
+        edited.add(merged)
+        return document.copy(molecules = edited)
+    }
+
+    private fun replaceMolecule(
+        document: DrawingDocument,
+        idx: Int,
+        newMolecule: Molecule
+    ): DrawingDocument {
+        val edited = document.molecules.toMutableList()
+        edited[idx] = newMolecule
+        return document.copy(molecules = edited)
     }
 }

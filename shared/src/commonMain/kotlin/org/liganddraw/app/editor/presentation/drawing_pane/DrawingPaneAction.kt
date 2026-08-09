@@ -44,6 +44,25 @@ sealed interface DrawingPaneAction {
     // TODO(KDoc)
     data class OnPointerLongPress(val x: Float, val y: Float) : DrawingPaneAction
 
+    /**
+     * Action triggered when drag gesture starts.
+     *
+     * @property x The current X coordinate in canvas pixels.
+     * @property y The current Y coordinate in canvas pixels.
+     */
+    data class OnDragStart(val x: Float, val y: Float) : DrawingPaneAction
+
+    /**
+     * Action triggered when moving a pointer across the canvas during an active drag gesture.
+     *
+     * @property x The current X coordinate in canvas pixels.
+     * @property y The current Y coordinate in canvas pixels.
+     */
+    data class OnDrag(val x: Float, val y: Float) : DrawingPaneAction
+
+    /**Action triggered when drag gesture ends.*/
+    object OnDragEnd : DrawingPaneAction
+
     // TODO(KDoc)
     object OnDismissValenceViolationDialog : DrawingPaneAction
 }

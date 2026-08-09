@@ -3,6 +3,7 @@ package org.liganddraw.app.editor.domain
 object DrawingPaneConstants {
     val SUPPORTED_LOWERCASE_EXTENSIONS = listOf("sdf", "mol")
     const val SCALE_FACTOR = 40f
+    const val ROTATION_SNAP_DEGREES = 15.0
     const val BOND_LENGTH = 1.5
     const val BOND_STROKE_WIDTH = 2f
     const val BOND_LINES_SPACING = 6f

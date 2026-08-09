@@ -3,6 +3,7 @@ package org.liganddraw.app.editor.presentation.drawing_pane.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -105,7 +106,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     val symbolStyle = getSymbolStyle(density, structureColor)
 
     val molecules = state.document.molecules
-    
+
     LaunchedEffect(molecules) {
         val uniqueSymbols = mutableMapOf<String, IntSize>()
         val uniqueHydrogenCounts = mutableMapOf<Long, IntSize>()
@@ -190,6 +191,25 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             }
             .pointerInput(state.selectedTool) {
                 if (state.selectedTool == Tool.Pan) return@pointerInput
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val x = (offset.x - canvasOffset.x) / canvasScale
+                        val y = (offset.y - canvasOffset.y) / canvasScale
+                        onAction(DrawingPaneAction.OnDragStart(x, y))
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        val x = (change.position.x - canvasOffset.x) / canvasScale
+                        val y = (change.position.y - canvasOffset.y) / canvasScale
+                        onAction(DrawingPaneAction.OnDrag(x, y))
+                    },
+                    onDragEnd = {
+                        onAction(DrawingPaneAction.OnDragEnd)
+                    }
+                )
+            }
+            .pointerInput(state.selectedTool) {
+                if (state.selectedTool == Tool.Pan) return@pointerInput
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -199,6 +219,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val x = (pointerPosition.x - canvasOffset.x) / canvasScale
                         val y = (pointerPosition.y - canvasOffset.y) / canvasScale
 
+                        // Pointer hovering (highlighting hovered atom/bond)
                         when (event.type) {
                             PointerEventType.Move -> onAction(DrawingPaneAction.OnPointerMove(x, y))
                         }

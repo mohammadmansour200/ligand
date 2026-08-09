@@ -612,6 +612,173 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         }
     }
 
+    override suspend fun attachAtomToAtomAtAngle(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+        newAtomSymbol: String,
+        type: BondType,
+        dir: Bond.BondDir,
+        angleRadians: Double
+    ): Molecule = withContext(Dispatchers.Default) {
+        val rdkitRWMol = molecule.toRWMol()
+        try {
+            val endAtomIdx = rdkitRWMol.addAtom(Atom(newAtomSymbol))
+            rdkitRWMol.addBond(targetAtomIdx, endAtomIdx, type)
+            rdkitRWMol.getBondBetweenAtoms(targetAtomIdx, endAtomIdx)?.bondDir = dir
+
+            val conformer = rdkitRWMol.conformer
+            val targetAtomPosition = conformer.getAtomPos(targetAtomIdx)
+            val newPos = Point3D(
+                targetAtomPosition.x + BOND_LENGTH * cos(angleRadians),
+                targetAtomPosition.y + BOND_LENGTH * sin(angleRadians),
+                0.0
+            )
+            conformer.setAtomPos(endAtomIdx, newPos)
+
+            try {
+                rdkitRWMol.sanitizeMol()
+            } catch (_: Exception) {
+            }
+            return@withContext rdkitRWMol.toMolecule()
+        } finally {
+            rdkitRWMol.delete()
+        }
+    }
+
+    override suspend fun bondSameMoleculeAtoms(
+        molecule: Molecule,
+        atomIdxA: Long,
+        atomIdxB: Long,
+        type: BondType,
+        dir: Bond.BondDir
+    ): Molecule = withContext(Dispatchers.Default) {
+        val mol = molecule.toRWMol()
+        try {
+            if (mol.getBondBetweenAtoms(atomIdxA, atomIdxB) == null) {
+                mol.addBond(atomIdxA, atomIdxB, type)
+                mol.getBondBetweenAtoms(atomIdxA, atomIdxB)?.bondDir = dir
+            }
+            try {
+                mol.sanitizeMol()
+            } catch (_: Exception) {
+            }
+            return@withContext mol.toMolecule()
+        } finally {
+            mol.delete()
+        }
+    }
+
+    override suspend fun bondDifferentMoleculesAtoms(
+        moleculeA: Molecule,
+        atomIdxA: Long,
+        moleculeB: Molecule,
+        atomIdxB: Long,
+        type: BondType,
+        dir: Bond.BondDir
+    ): Molecule = withContext(Dispatchers.Default) {
+        val rwMolA = moleculeA.toRWMol()
+        val rwMolB = moleculeB.toRWMol()
+        try {
+            val offset = rwMolA.numAtoms
+            rwMolA.insertMol(rwMolB)
+            rwMolA.addBond(atomIdxA, offset + atomIdxB, type)
+            rwMolA.getBondBetweenAtoms(atomIdxA, offset + atomIdxB)?.bondDir = dir
+            try {
+                rwMolA.sanitizeMol()
+            } catch (_: Exception) {
+            }
+            return@withContext rwMolA.toMolecule()
+        } finally {
+            rwMolA.delete()
+            rwMolB.delete()
+        }
+    }
+
+    override suspend fun buildChainFromAtom(
+        molecule: Molecule,
+        pivotAtomIdx: Long,
+        atomCount: Int,
+        angleRadians: Double
+    ): Molecule = withContext(Dispatchers.Default) {
+        val mol = molecule.toRWMol()
+        try {
+            val conformer = mol.conformer
+            var previousAtomIdx = pivotAtomIdx
+            var previousPos = conformer.getAtomPos(pivotAtomIdx)
+            var sign = 1.0
+            val halfAngle = Math.toRadians(30.0)
+
+            repeat(atomCount) {
+                val stepAngle = angleRadians + sign * halfAngle
+                val newAtomIdx = mol.addAtom(Atom("C"))
+                mol.addBond(previousAtomIdx, newAtomIdx, BondType.SINGLE)
+
+                val newPos = Point3D(
+                    previousPos.x + BOND_LENGTH * cos(stepAngle),
+                    previousPos.y + BOND_LENGTH * sin(stepAngle),
+                    0.0
+                )
+                conformer.setAtomPos(newAtomIdx, newPos)
+
+                previousAtomIdx = newAtomIdx
+                previousPos = newPos
+                sign = -sign
+            }
+
+            try {
+                mol.sanitizeMol()
+            } catch (_: Exception) {
+            }
+            return@withContext mol.toMolecule()
+        } finally {
+            mol.delete()
+        }
+    }
+
+    override suspend fun buildChainFromPoint(
+        x: Double,
+        y: Double,
+        atomCount: Int,
+        angleRadians: Double
+    ): Molecule = withContext(Dispatchers.Default) {
+        val mol = RWMol()
+        try {
+            val conformer = Conformer()
+            val firstAtomIdx = mol.addAtom(Atom("C"))
+            var previousPos = Point3D(x, y, 0.0)
+            conformer.setAtomPos(firstAtomIdx, previousPos)
+
+            var previousAtomIdx = firstAtomIdx
+            var sign = 1.0
+            val halfAngle = Math.toRadians(30.0)
+
+            repeat(atomCount - 1) {
+                val stepAngle = angleRadians + sign * halfAngle
+                val newAtomIdx = mol.addAtom(Atom("C"))
+                mol.addBond(previousAtomIdx, newAtomIdx, BondType.SINGLE)
+
+                val newPos = Point3D(
+                    previousPos.x + BOND_LENGTH * cos(stepAngle),
+                    previousPos.y + BOND_LENGTH * sin(stepAngle),
+                    0.0
+                )
+                conformer.setAtomPos(newAtomIdx, newPos)
+
+                previousAtomIdx = newAtomIdx
+                previousPos = newPos
+                sign = -sign
+            }
+
+            conformer.is3D = false
+            mol.addConformer(conformer, true)
+            mol.sanitizeMol()
+
+            return@withContext mol.toMolecule()
+        } finally {
+            mol.delete()
+        }
+    }
+
     override suspend fun changeFormalCharge(
         molecule: Molecule,
         targetAtomIdx: Long,

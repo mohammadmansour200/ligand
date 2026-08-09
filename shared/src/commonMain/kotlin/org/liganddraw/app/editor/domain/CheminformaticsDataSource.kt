@@ -173,6 +173,94 @@ interface CheminformaticsDataSource {
     ): Molecule
 
     /**
+     * Attaches a new atom to an existing target atom at a specified angle and bond type.
+     *
+     * @param molecule The target [Molecule] to modify.
+     * @param targetAtomIdx The 0-based index of the target atom to attach to.
+     * @param newAtomSymbol The chemical symbol for the new atom (e.g., "C", "N", "O").
+     * @param type The [Bond.BondType] to form (e.g., SINGLE, DOUBLE, TRIPLE).
+     * @param dir The stereo/directional configuration of the bond (e.g., BEGINWEDGE, BEGINDASH).
+     * @param angleRadians The angle in radians relative to the target atom at which the new atom will be placed.
+     * @return The updated [Molecule] containing the newly attached atom and bond.
+     */
+    suspend fun attachAtomToAtomAtAngle(
+        molecule: Molecule,
+        targetAtomIdx: Long,
+        newAtomSymbol: String,
+        type: Bond.BondType,
+        dir: Bond.BondDir,
+        angleRadians: Double
+    ): Molecule
+
+    /**
+     * Creates a new bond between two existing atoms within the same molecule.
+     *
+     * @param molecule The target [Molecule] to modify.
+     * @param atomIdxA The 0-based index of the first atom.
+     * @param atomIdxB The 0-based index of the second atom.
+     * @param [type] The bond type to create (e.g., SINGLE, DOUBLE, TRIPLE).
+     * @return The updated [Molecule] with the internal bond established.
+     */
+    suspend fun bondSameMoleculeAtoms(
+        molecule: Molecule,
+        atomIdxA: Long,
+        atomIdxB: Long,
+        type: Bond.BondType,
+        dir: Bond.BondDir
+    ): Molecule
+
+    /**
+     * Creates a bond between two atoms belonging to different molecules, merging them into a single molecule.
+     *
+     * @param moleculeA The first molecule containing [atomIdxA].
+     * @param atomIdxA The 0-based index of the atom in [moleculeA].
+     * @param moleculeB The second molecule containing [atomIdxB].
+     * @param atomIdxB The 0-based index of the atom in [moleculeB].
+     * @param [dir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE).
+     * @return A single merged [Molecule] containing all atoms and bonds from both input molecules.
+     */
+    suspend fun bondDifferentMoleculesAtoms(
+        moleculeA: Molecule,
+        atomIdxA: Long,
+        moleculeB: Molecule,
+        atomIdxB: Long,
+        type: Bond.BondType,
+        dir: Bond.BondDir
+    ): Molecule
+
+    /**
+     * Builds a linear carbon chain extending from an existing pivot atom in a molecule.
+     *
+     * @param molecule The base molecule to attach the chain to.
+     * @param pivotAtomIdx The 0-based index of the atom where the chain originates.
+     * @param atomCount The number of additional carbon atoms to grow in the chain.
+     * @param angleRadians The primary direction angle in radians along which the chain extends.
+     * @return The updated [Molecule] with the newly grown chain attached.
+     */
+    suspend fun buildChainFromAtom(
+        molecule: Molecule,
+        pivotAtomIdx: Long,
+        atomCount: Int,
+        angleRadians: Double
+    ): Molecule
+
+    /**
+     * Creates a standalone molecule of carbon chain starting from canvas coordinates converted to Angstrom.
+     *
+     * @param x The starting X position in Angstrom.
+     * @param y The starting Y position in Angstrom.
+     * @param atomCount The total number of carbon atoms in the newly generated chain.
+     * @param angleRadians The primary direction angle in radians along which the chain extends.
+     * @return A new standalone [Molecule] representing the generated carbon chain.
+     */
+    suspend fun buildChainFromPoint(
+        x: Double,
+        y: Double,
+        atomCount: Int,
+        angleRadians: Double
+    ): Molecule
+
+    /**
      * Changes atom formal charge.
      * @param molecule The target [Molecule] to modify.
      * @param targetAtomIdx The zero-based index of the atom.

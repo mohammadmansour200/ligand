@@ -2,7 +2,9 @@ package org.liganddraw.app.editor.presentation.utils
 
 import androidx.compose.ui.geometry.Offset
 import org.liganddraw.app.editor.domain.Atom
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.ROTATION_SNAP_DEGREES
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.SCALE_FACTOR
+import kotlin.math.roundToLong
 
 /**
  * Converts Angstrom coordinates to screen-space pixels.
@@ -23,3 +25,18 @@ fun Offset.toPositionAngstrom(scaleFactor: Float = SCALE_FACTOR): Pair<Double, D
         (x / scaleFactor).toDouble(),
         (-(y / scaleFactor)).toDouble()
     )
+
+/**
+ * Snaps a raw angle to the nearest multiple of a specified snap interval.
+ *
+ * Used to constrain rotations to fixed directional increments (e.g., 15°, 30°, or 60° increments).
+ *
+ * @param angle The raw angle in radians (typically calculated via `atan2`).
+ * @param snapInterval The angular step size in radians to snap toward (e.g., `Math.toRadians(ROTATION_SNAP_DEGREES)`).
+ * @return The snapped angle in radians.
+ */
+fun snapAngle(
+    angle: Double,
+    snapInterval: Double = Math.toRadians(ROTATION_SNAP_DEGREES)
+): Double =
+    (angle / snapInterval).roundToLong() * snapInterval
