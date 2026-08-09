@@ -220,14 +220,34 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleBondDrag(x: Float, y: Float) {
         val session = bondDragSession ?: return
+
+        val hit = findAtomByPosition(x, y, document = session.baselineDocument)
+            ?.takeIf { !(it.first == session.moleculeIdx && it.second == session.pivotAtomIdx) }
+
+        val snappedAngle = if (hit == null) {
+            val baselineMolecule = session.baselineDocument.molecules[session.moleculeIdx]
+            val pivotAtom = baselineMolecule.atoms[session.pivotAtomIdx]
+            val angstromPosition = Offset(x, y).toPositionAngstrom()
+            val rawAngle = atan2(
+                angstromPosition.second - pivotAtom.y,
+                angstromPosition.first - pivotAtom.x
+            )
+            snapAngle(rawAngle)
+        } else {
+            null
+        }
+
+        if (hit == session.lastHit && snappedAngle == session.lastSnappedAngle) {
+            return
+        }
+
+        session.lastHit = hit
+        session.lastSnappedAngle = snappedAngle
+
         val currentSequence = ++dragMoveSequence
 
         viewModelScope.launch {
             val baselineMolecule = session.baselineDocument.molecules[session.moleculeIdx]
-            val pivotAtom = baselineMolecule.atoms[session.pivotAtomIdx]
-
-            val hit = findAtomByPosition(x, y, document = session.baselineDocument)
-                ?.takeIf { !(it.first == session.moleculeIdx && it.second == session.pivotAtomIdx) }
 
             // --- BOND ATOM WITH ATOM ---
             val newDocument = if (hit != null) {
@@ -261,19 +281,13 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 }
             } else {
                 // --- ATTACH NEW ATOM AT ANGLE ---
-                val angstromPosition = Offset(x, y).toPositionAngstrom()
-                val rawAngle = atan2(
-                    angstromPosition.second - pivotAtom.y,
-                    angstromPosition.first - pivotAtom.x
-                )
-                val snappedAngle = snapAngle(rawAngle)
                 val withNewAtom = cheminformaticsDataSource.attachAtomToAtomAtAngle(
                     molecule = baselineMolecule,
                     targetAtomIdx = session.pivotAtomIdx.toLong(),
                     newAtomSymbol = session.atomSymbol,
                     type = session.bondType,
                     dir = session.bondDir,
-                    angleRadians = snappedAngle
+                    angleRadians = snappedAngle!!
                 )
                 replaceMolecule(session.baselineDocument, session.moleculeIdx, withNewAtom)
             }
@@ -306,25 +320,31 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleChainDrag(x: Float, y: Float) {
         val session = chainDragSession ?: return
+
+        val angstromPosition = Offset(x, y).toPositionAngstrom()
+        val dx = angstromPosition.first - session.originX
+        val dy = angstromPosition.second - session.originY
+        val distance = sqrt(dx * dx + dy * dy)
+
+        val atomCount = (distance / BOND_LENGTH).roundToInt().coerceAtLeast(0)
+        val rawAngle = atan2(dy, dx)
+        val snappedAngle = snapAngle(rawAngle)
+
+        if (atomCount == session.lastAtomCount && snappedAngle == session.lastSnappedAngle) {
+            return
+        }
+
+        session.lastAtomCount = atomCount
+        session.lastSnappedAngle = snappedAngle
+
         val thisSequence = ++dragMoveSequence
 
         viewModelScope.launch {
-            val angstromPosition = Offset(x, y).toPositionAngstrom()
-            val dx = angstromPosition.first - session.originX
-            val dy = angstromPosition.second - session.originY
-            val distance = sqrt(dx * dx + dy * dy)
-
-            val atomCount = (distance / BOND_LENGTH).roundToInt().coerceAtLeast(0)
-
-            val rawAngle = atan2(
-                dy, dx
-            )
-            val snappedAngle = snapAngle(rawAngle)
-
             val newDocument = when {
                 atomCount == 0 -> session.baselineDocument
 
                 session.moleculeIdx != null && session.pivotAtomIdx != null -> {
+                    println("dx=$dx dy=$dy distance=$distance atomCount=$atomCount raw=$rawAngle snapped=$snappedAngle")
                     // --- EXTEND CHAIN FROM EXISTING ATOM ---
                     val baselineMolecule = session.baselineDocument.molecules[session.moleculeIdx]
                     val chained = cheminformaticsDataSource.buildChainFromAtom(

@@ -9,7 +9,9 @@ data class BondDragSession(
     val pivotAtomIdx: Int,
     val atomSymbol: String,
     val bondType: Bond.BondType,
-    val bondDir: Bond.BondDir = Bond.BondDir.NONE
+    val bondDir: Bond.BondDir = Bond.BondDir.NONE,
+    var lastHit: Pair<Int, Int>? = null,
+    var lastSnappedAngle: Double? = null
 )
 
 data class ChainDragSession(
@@ -17,5 +19,7 @@ data class ChainDragSession(
     val moleculeIdx: Int?,
     val pivotAtomIdx: Int?,
     val originX: Double,
-    val originY: Double
+    val originY: Double,
+    var lastAtomCount: Int? = null,
+    var lastSnappedAngle: Double? = null
 )
