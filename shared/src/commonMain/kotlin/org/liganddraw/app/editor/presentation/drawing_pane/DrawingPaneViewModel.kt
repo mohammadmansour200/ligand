@@ -668,8 +668,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 dir
             )
 
-            val editedMolecules = _state.value.document.molecules.toMutableList()
-            editedMolecules[moleculeIdx] = newMolecule
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
@@ -685,8 +688,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 targetBondIdx.toLong(),
             )
 
-            val editedMolecules = _state.value.document.molecules.toMutableList()
-            editedMolecules[moleculeIdx] = newMolecule
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
@@ -705,8 +711,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 type,
                 dir
             )
-            val editedMolecules = _state.value.document.molecules.toMutableList()
-            editedMolecules[moleculeIdx] = newMolecule
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
@@ -724,9 +733,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 delta = delta,
             )
 
-            val editedMolecules = _state.value.document.molecules.toMutableList().apply {
-                this[moleculeIdx] = newMolecule
-            }
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
@@ -794,8 +805,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 newAtomSymbol,
             )
 
-            val editedMolecules = _state.value.document.molecules.toMutableList()
-            editedMolecules[moleculeIdx] = newMolecule
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
@@ -813,8 +827,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 templateSmiles,
             )
 
-            val editedMolecules = _state.value.document.molecules.toMutableList()
-            editedMolecules[moleculeIdx] = newMolecule
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
@@ -832,8 +849,11 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 templateSmiles,
             )
 
-            val editedMolecules = _state.value.document.molecules.toMutableList()
-            editedMolecules[moleculeIdx] = newMolecule
+            val editedMolecules = replaceMolecule(
+                document = _state.value.document,
+                idx = moleculeIdx,
+                newMolecule = newMolecule
+            ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
