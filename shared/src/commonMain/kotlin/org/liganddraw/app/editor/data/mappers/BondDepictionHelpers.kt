@@ -8,8 +8,12 @@ import org.liganddraw.app.editor.domain.DoubleBondAlignment
 fun Bond.doubleBondAlignment(
     conformer: Conformer
 ): DoubleBondAlignment {
-    val isCentered =
-        (this.beginAtom.degree == 1L && this.endAtom.degree >= 3L) || (this.endAtom.degree == 1L && this.beginAtom.degree >= 3L)
+    val isCentered = when {
+        this.beginAtom.degree == 1L && this.endAtom.degree >= 3L -> true
+        this.endAtom.degree == 1L && this.beginAtom.degree >= 3L -> true
+        this.beginAtom.isLabelVisible() && this.endAtom.isLabelVisible() -> true
+        else -> false
+    }
 
     return if (isCentered) DoubleBondAlignment.CENTERED else
         this.determineAsymmetricDoubleBondSide(conformer)
