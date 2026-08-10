@@ -40,16 +40,11 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.window.core.layout.WindowSizeClass
 import org.liganddraw.app.editor.domain.Bond
@@ -66,16 +61,16 @@ import org.liganddraw.app.editor.domain.TextBox
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneAction
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
+import org.liganddraw.app.editor.presentation.utils.chargeLabel
+import org.liganddraw.app.editor.presentation.utils.getAtomLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getHydrogenCountStyle
-import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
-import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
+import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelLayout
+import org.liganddraw.app.editor.presentation.utils.getSymbolLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getSymbolStyle
-import org.liganddraw.app.editor.presentation.utils.labelRect
+import org.liganddraw.app.editor.presentation.utils.getTextBoxLayout
 import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.shortenBondToRectBoundary
 import org.liganddraw.app.editor.presentation.utils.toAnnotatedString
-import org.liganddraw.app.editor.presentation.utils.toChargeLabel
-import org.liganddraw.app.editor.presentation.utils.toLabel
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -92,7 +87,10 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
     val textMeasurer = rememberTextMeasurer()
 
+    // --- CANVAS THEME
     val structureColor = MaterialTheme.colorScheme.onSurface
+    val symbolStyle = getSymbolStyle(density, structureColor)
+
     val structureErrorColor = MaterialTheme.colorScheme.error
 
     val highlightColor = MaterialTheme.colorScheme.secondary
@@ -100,6 +98,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
     val background = MaterialTheme.colorScheme.surface
 
+    // --- CANVAS ZOOMING AND PANNING ---
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
     val isWindowCompact =
         !windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
@@ -107,51 +106,62 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     var canvasScale by remember { mutableFloatStateOf(if (isWindowCompact) 2.5f else 1f) }
     var canvasOffset by remember { mutableStateOf(Offset.Zero) }
 
-    val symbolStyle = getSymbolStyle(density, structureColor)
-
     val molecules = state.document.molecules
     val textBoxes = state.document.textBoxes
 
+    // --- CACHE TEXT BOX LAYOUT ---
+    LaunchedEffect(textBoxes) {
+        val existing = state.textBoxLayoutCache
+        val layouts = textBoxes.associate { box ->
+            val annotated = box.toAnnotatedString(density = density)
+            val cached = existing[box.id]
+            box.id to if (cached != null && cached.layoutInput.text == annotated) {
+                cached
+            } else {
+                textMeasurer.measure(annotated)
+            }
+        }
+        onAction(DrawingPaneAction.OnCacheTextBoxLayouts(layouts))
+    }
+
+    // --- CACHE ATOM LABEL LAYOUT ---
     LaunchedEffect(molecules) {
-        val uniqueSymbols = mutableMapOf<String, IntSize>()
-        val uniqueHydrogenCounts = mutableMapOf<Long, IntSize>()
+        val symbolLayouts = mutableMapOf<String, TextLayoutResult>()
+        val hydrogenCountLayouts = mutableMapOf<Long, TextLayoutResult>()
+
         molecules.forEach { mol ->
             mol.atoms.forEach { atom ->
                 val symbol = atom.symbol
-                if (!uniqueSymbols.containsKey(symbol)) {
-                    val measuredSymbol = textMeasurer.measure(
-                        text = symbol,
-                        style = symbolStyle
-                    )
-
-                    uniqueSymbols[symbol] = measuredSymbol.size
+                symbolLayouts.getOrPut(symbol) {
+                    textMeasurer.measure(text = symbol, style = symbolStyle)
                 }
 
                 val hydrogenCount = atom.numImplicitHydrogen
-                if (hydrogenCount > 0 && !uniqueHydrogenCounts.containsKey(hydrogenCount)) {
-                    val hydrogenLabel = buildAnnotatedString {
-                        append("H")
-                        if (hydrogenCount > 1) {
-                            pushStyle(
-                                getHydrogenCountStyle(density)
-                            )
-                            append(hydrogenCount.toString())
-                            pop()
+                if (hydrogenCount > 0) {
+                    hydrogenCountLayouts.getOrPut(hydrogenCount) {
+                        val hydrogenLabel = buildAnnotatedString {
+                            append("H")
+                            if (hydrogenCount > 1) {
+                                pushStyle(getHydrogenCountStyle(density))
+                                append(hydrogenCount.toString())
+                                pop()
+                            }
                         }
+                        textMeasurer.measure(hydrogenLabel, symbolStyle)
                     }
-
-                    val measuredHydrogenLabel =
-                        textMeasurer.measure(
-                            hydrogenLabel,
-                            symbolStyle
-                        )
-
-                    uniqueHydrogenCounts[hydrogenCount] = measuredHydrogenLabel.size
                 }
             }
         }
 
-        onAction(DrawingPaneAction.OnCacheLabelDimensions(uniqueSymbols, uniqueHydrogenCounts))
+        onAction(DrawingPaneAction.OnCacheLabelLayouts(symbolLayouts, hydrogenCountLayouts))
+    }
+
+    // --- CACHE ATOM CHARGE LAYOUT ---
+    val positiveChargeLayout = remember(symbolStyle) {
+        textMeasurer.measure(chargeLabel(charge = 1, symbolStyle), symbolStyle)
+    }
+    val negativeChargeLayout = remember(symbolStyle) {
+        textMeasurer.measure(chargeLabel(charge = -1, symbolStyle), symbolStyle)
     }
 
     Canvas(
@@ -236,13 +246,13 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             translate(left = canvasOffset.x, top = canvasOffset.y)
             scale(scale = canvasScale, pivot = Offset.Zero)
         }) {
-            textBoxes.fastForEach { textBox ->
-                drawTextBox(
-                    textBox = textBox,
-                    textMeasurer = textMeasurer,
-                )
+            // --- TEXT BOX --
+            textBoxes.forEach { box ->
+                val layout = getTextBoxLayout(box.id, state.textBoxLayoutCache) ?: return@forEach
+                drawTextBox(box, layout)
             }
 
+            // --- MOLECULE --
             molecules.fastForEachIndexed { moleculeIndex, mol ->
                 if (state.selectedMoleculeIndex == moleculeIndex) {
                     drawMoleculeHighlightRect(mol, highlightColor)
@@ -252,18 +262,21 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 mol.atoms.fastForEachIndexed { atomIndex, atom ->
                     val atomId = Pair(moleculeIndex, atomIndex)
 
-                    val labelRect =
-                        labelRect(
-                            symbolDimensions = getSymbolLabelDimensions(
-                                atom.symbol,
-                                state.symbolLabelDimensionsCache
-                            ),
-                            hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
-                                atom.numImplicitHydrogen, state.hydrogenLabelDimensionsCache
-                            ),
-                            isReversed = atom.isLabelReversed,
-                            atomOffset = atom.offsetPx()
-                        )
+                    val symbolLayout =
+                        getSymbolLabelLayout(atom.symbol, state.symbolLabelLayoutCache)
+                    val hydrogenLayout = if (atom.isLabelVisible) getHydrogenLabelLayout(
+                        atom.numImplicitHydrogen,
+                        state.hydrogenLabelLayoutCache
+                    ) else null
+
+                    val labelLayout = getAtomLabelLayout(
+                        symbolLayout = symbolLayout,
+                        hydrogenLayout = hydrogenLayout,
+                        isReversed = atom.isLabelReversed,
+                        atomOffset = atom.offsetPx(),
+                    )
+
+                    val labelRect = labelLayout.boundingRect
 
                     if (atom.hasValenceViolation) drawAtomHighlightRect(
                         rect = labelRect,
@@ -285,22 +298,25 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     )
 
                     if (atom.charge != 0) {
-                        drawChargeText(
-                            textMeasurer = textMeasurer,
-                            labelRect = labelRect,
-                            text = atom.toChargeLabel(symbolStyle),
-                            style = symbolStyle
-                        )
+                        val chargeLayout =
+                            if (atom.charge > 0) positiveChargeLayout else negativeChargeLayout
+                        drawChargeText(layoutResult = chargeLayout, labelRect = labelRect)
                     }
 
-                    if (atom.isLabelVisible)
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = atom.toLabel(density),
-                            topLeft = labelRect.topLeft,
-                            style = symbolStyle,
-                            size = labelRect.size
-                        )
+                    if (atom.isLabelVisible) {
+                        symbolLayout?.let { layoutResult ->
+                            drawText(
+                                textLayoutResult = layoutResult,
+                                topLeft = labelLayout.symbolTopLeft
+                            )
+                        }
+                        hydrogenLayout?.let { layoutResult ->
+                            drawText(
+                                textLayoutResult = layoutResult,
+                                topLeft = labelLayout.hydrogenTopLeft
+                            )
+                        }
+                    }
                 }
 
                 // --- DRAW BONDS ---
@@ -312,18 +328,20 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     var endAtomOffset = endAtom.offsetPx()
 
                     if (beginAtom.isLabelVisible) {
-                        val beginAtomLabelRect = labelRect(
-                            symbolDimensions = getSymbolLabelDimensions(
-                                beginAtom.symbol,
-                                state.symbolLabelDimensionsCache
-                            ),
-                            hydrogenDimensions = getHydrogenLabelDimensions(
-                                beginAtom.numImplicitHydrogen,
-                                state.hydrogenLabelDimensionsCache
-                            ),
-                            isReversed = beginAtom.isLabelReversed,
-                            atomOffset = beginAtomOffset
+                        val symbolLayout =
+                            getSymbolLabelLayout(beginAtom.symbol, state.symbolLabelLayoutCache)
+                        val hydrogenLayout = getHydrogenLabelLayout(
+                            beginAtom.numImplicitHydrogen,
+                            state.hydrogenLabelLayoutCache
                         )
+
+                        val beginAtomLabelRect = getAtomLabelLayout(
+                            symbolLayout = symbolLayout,
+                            hydrogenLayout = hydrogenLayout,
+                            isReversed = beginAtom.isLabelReversed,
+                            atomOffset = beginAtom.offsetPx(),
+                        ).boundingRect
+
                         beginAtomOffset = shortenBondToRectBoundary(
                             endAtomOffset,
                             beginAtomOffset,
@@ -332,18 +350,20 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     }
 
                     if (endAtom.isLabelVisible) {
-                        val endAtomLabelRect = labelRect(
-                            symbolDimensions = getSymbolLabelDimensions(
-                                endAtom.symbol,
-                                state.symbolLabelDimensionsCache
-                            ),
-                            hydrogenDimensions = getHydrogenLabelDimensions(
-                                endAtom.numImplicitHydrogen,
-                                state.hydrogenLabelDimensionsCache
-                            ),
-                            isReversed = endAtom.isLabelReversed,
-                            atomOffset = endAtomOffset
+                        val symbolLayout =
+                            getSymbolLabelLayout(endAtom.symbol, state.symbolLabelLayoutCache)
+                        val hydrogenLayout = getHydrogenLabelLayout(
+                            endAtom.numImplicitHydrogen,
+                            state.hydrogenLabelLayoutCache
                         )
+
+                        val endAtomLabelRect = getAtomLabelLayout(
+                            symbolLayout = symbolLayout,
+                            hydrogenLayout = hydrogenLayout,
+                            isReversed = endAtom.isLabelReversed,
+                            atomOffset = endAtom.offsetPx(),
+                        ).boundingRect
+
                         endAtomOffset =
                             shortenBondToRectBoundary(
                                 beginAtomOffset,
@@ -440,38 +460,29 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
 fun DrawScope.drawTextBox(
     textBox: TextBox,
-    textMeasurer: TextMeasurer,
-    fontFamilyResolver: (String) -> FontFamily = { FontFamily.Default },
+    layoutResult: TextLayoutResult,
 ) {
-    val annotatedString = textBox.toAnnotatedString(
-        density = this,
-        fontFamilyResolver = fontFamilyResolver,
+    val centeredTopLeft = Offset(
+        x = textBox.anchorX - layoutResult.size.width / 2f,
+        y = textBox.anchorY - layoutResult.size.height / 2f,
     )
 
     drawText(
-        textMeasurer = textMeasurer,
-        text = annotatedString,
-        topLeft = Offset(
-            x = textBox.anchorX.toFloat(),
-            y = textBox.anchorY.toFloat(),
-        ),
+        textLayoutResult = layoutResult,
+        topLeft = centeredTopLeft,
     )
 }
 
 private fun DrawScope.drawChargeText(
-    textMeasurer: TextMeasurer,
+    layoutResult: TextLayoutResult,
     labelRect: Rect,
-    text: AnnotatedString,
-    style: TextStyle
 ) {
     val x = labelRect.right
     val y = labelRect.center.y - labelRect.height
     val offset = Offset(x, y)
     drawText(
-        textMeasurer = textMeasurer,
-        text = text,
+        textLayoutResult = layoutResult,
         topLeft = offset,
-        style = style,
     )
 }
 

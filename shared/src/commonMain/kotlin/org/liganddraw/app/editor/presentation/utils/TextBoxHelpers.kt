@@ -3,6 +3,7 @@ package org.liganddraw.app.editor.presentation.utils
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -34,4 +35,8 @@ fun TextBox.toAnnotatedString(
             )
         }
     }.toAnnotatedString()
+}
+
+fun getTextBoxLayout(id: String, cache: Map<String, TextLayoutResult>): TextLayoutResult? {
+    return cache[id]
 }

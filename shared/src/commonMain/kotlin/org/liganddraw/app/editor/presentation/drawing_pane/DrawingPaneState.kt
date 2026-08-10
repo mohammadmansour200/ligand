@@ -1,7 +1,7 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.text.TextLayoutResult
 import org.liganddraw.app.editor.domain.Atom
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.TextBox
@@ -19,8 +19,9 @@ data class DrawingPaneState(
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
     val selectedTool: Tool = Tool.Pan,
-    val symbolLabelDimensionsCache: Map<String, IntSize> = emptyMap(),
-    val hydrogenLabelDimensionsCache: Map<Long, IntSize> = emptyMap(),
+    val symbolLabelLayoutCache: Map<String, TextLayoutResult> = emptyMap(),
+    val hydrogenLabelLayoutCache: Map<Long, TextLayoutResult> = emptyMap(),
+    val textBoxLayoutCache: Map<String, TextLayoutResult> = emptyMap(),
     /**Currently hovered atom as a pair of molecule index and atom index*/
     val hoveredAtomId: Pair<Int, Int>? = null,
     /**Currently hovered bond as a pair of molecule index and bond index*/

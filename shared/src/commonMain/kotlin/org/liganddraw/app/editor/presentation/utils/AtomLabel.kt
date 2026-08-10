@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
@@ -12,34 +13,15 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.center
-import org.liganddraw.app.editor.domain.Atom
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HYDROGEN_COUNT_FONT_SIZE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.SYMBOL_FONT_SIZE
 
-fun Atom.toLabel(density: Density): AnnotatedString {
-    return buildAnnotatedString {
-        if (numImplicitHydrogen == 0L) append(symbol)
-        else {
-            if (isLabelReversed) {
-                appendHydrogens(density, numImplicitHydrogen)
-                append(symbol)
-            } else {
-                append(symbol)
-                appendHydrogens(density, numImplicitHydrogen)
-            }
-        }
-    }
-}
-
-fun Atom.toChargeLabel(baseStyle: TextStyle): AnnotatedString {
+fun chargeLabel(charge: Int, baseStyle: TextStyle): AnnotatedString {
     val magnitude = kotlin.math.abs(charge)
     val symbol = if (charge > 0) "⊕" else "⊖"
-
     return buildAnnotatedString {
         if (magnitude != 1) {
-            withStyle(
-                SpanStyle(fontSize = baseStyle.fontSize * .8f)
-            ) {
+            withStyle(SpanStyle(fontSize = baseStyle.fontSize * .8f)) {
                 append(magnitude.toString())
             }
         }
@@ -49,48 +31,55 @@ fun Atom.toChargeLabel(baseStyle: TextStyle): AnnotatedString {
     }
 }
 
+data class AtomLabelLayout(
+    val boundingRect: Rect,
+    val symbolTopLeft: Offset,
+    val hydrogenTopLeft: Offset,
+)
 
-private fun AnnotatedString.Builder.appendHydrogens(density: Density, count: Long) {
-    append("H")
-    if (count > 1L) {
-        pushStyle(getHydrogenCountStyle(density))
-        append(count.toString())
-        pop()
-    }
-}
+fun getAtomLabelLayout(
+    symbolLayout: TextLayoutResult?,
+    hydrogenLayout: TextLayoutResult?,
+    isReversed: Boolean,
+    atomOffset: Offset,
+): AtomLabelLayout {
+    val symbolDimensions = symbolLayout?.size ?: IntSize.Zero
+    val hydrogenDimensions = hydrogenLayout?.size ?: IntSize.Zero
 
-fun labelRect(
-    symbolDimensions: IntSize,
-    hydrogenDimensions: IntSize,
-    isReversed: Boolean, // Reversed: [H][Symbol], Not reversed: [Symbol][H]
-    atomOffset: Offset, // Atom X and Y coordinates in pixels
-): Rect {
-    val totalWidth = symbolDimensions.width + hydrogenDimensions.width
-    val maxHeight = maxOf(symbolDimensions.height, hydrogenDimensions.height)
+    val width = symbolDimensions.width + hydrogenDimensions.width
+    val height = symbolDimensions.height
 
     val leftOffset = if (isReversed) hydrogenDimensions.width + symbolDimensions.center.x
     else symbolDimensions.center.x
-
     val left = atomOffset.x - leftOffset
-    val right = left + totalWidth
+    val top = atomOffset.y - (height / 2f)
 
-    val top = atomOffset.y - (maxHeight / 2)
-    val bottom = top + maxHeight
+    val symbolTopLeft =
+        if (isReversed) Offset(left + hydrogenDimensions.width, top) else Offset(
+            left,
+            top
+        )
+    val hydrogenTopLeft = if (isReversed) Offset(left, top) else Offset(
+        left + symbolDimensions.width,
+        top
+    )
 
-    return Rect(
-        left,
-        top,
-        right,
-        bottom
+    return AtomLabelLayout(
+        boundingRect = Rect(left, top, left + width, top + height),
+        symbolTopLeft = symbolTopLeft,
+        hydrogenTopLeft = hydrogenTopLeft,
     )
 }
 
-fun getSymbolLabelDimensions(symbol: String, dimensionsCache: Map<String, IntSize>): IntSize {
-    return dimensionsCache[symbol] ?: IntSize.Zero
+fun getSymbolLabelLayout(symbol: String, cache: Map<String, TextLayoutResult>): TextLayoutResult? {
+    return cache[symbol]
 }
 
-fun getHydrogenLabelDimensions(hydrogenCount: Long, dimensionsCache: Map<Long, IntSize>): IntSize {
-    return dimensionsCache[hydrogenCount] ?: IntSize.Zero
+fun getHydrogenLabelLayout(
+    hydrogenCount: Long,
+    cache: Map<Long, TextLayoutResult>
+): TextLayoutResult? {
+    return cache[hydrogenCount]
 }
 
 fun getSymbolStyle(density: Density, color: Color): TextStyle =

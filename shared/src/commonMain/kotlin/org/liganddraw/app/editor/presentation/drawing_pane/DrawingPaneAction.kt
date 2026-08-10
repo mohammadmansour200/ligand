@@ -1,6 +1,6 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.text.TextLayoutResult
 import io.github.vinceglb.filekit.PlatformFile
 import org.liganddraw.app.editor.domain.Tool
 
@@ -14,24 +14,31 @@ sealed interface DrawingPaneAction {
     /**
      * Action triggered when a file is successfully picked by the user.
      * File is parsed using Cheminformatics engine. parsed molecules are then saved in state
-     * @param file File from rememberFilePickerLauncher
-     * @param extension The extension of the picked file. This is typically used to determine the appropriate parsing method.
+     * @property file File from rememberFilePickerLauncher
      */
     data class OnFilePick(val file: PlatformFile) : DrawingPaneAction
 
     /**
      * Action triggered as effect to prevent repetitive TextMeasurer calls.
-     * @param uniqueSymbols Dimensions for each symbol (deduplicated) e.g. Cl, H, N, O etc. found in molecule data classes.
-     * @param uniqueHydrogenCounts Dimensions for each implicit hydrogen count converted to label: H, H2, H3, H4 found in molecule data classes.
+     * @property symbolLayouts Measured text layouts for symbols, keyed by symbol (C, N, H etc.).
+     * @property hydrogenLayouts Measured text layouts for hydrogen counts, keyed by count (1, 2, 3 etc.).
      */
-    data class OnCacheLabelDimensions(
-        val uniqueSymbols: Map<String, IntSize>,
-        val uniqueHydrogenCounts: Map<Long, IntSize>
+    data class OnCacheLabelLayouts(
+        val symbolLayouts: Map<String, TextLayoutResult>,
+        val hydrogenLayouts: Map<Long, TextLayoutResult>
+    ) : DrawingPaneAction
+
+    /**
+     * Action triggered as effect to prevent repetitive TextMeasurer calls.
+     * @property layouts Measured text layouts for text boxes, keyed by text box id.
+     */
+    data class OnCacheTextBoxLayouts(
+        val layouts: Map<String, TextLayoutResult>,
     ) : DrawingPaneAction
 
     /**
      * Action triggered when user selects a tool from toolbar.
-     * @param tool selected tool.
+     * @property tool selected tool.
      */
     data class OnSelectTool(val tool: Tool) : DrawingPaneAction
 

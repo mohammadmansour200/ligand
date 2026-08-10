@@ -1,7 +1,7 @@
 package org.liganddraw.app.editor.presentation.drawing_pane
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,9 +26,9 @@ import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.utils.BondDragSession
 import org.liganddraw.app.editor.presentation.utils.ChainDragSession
 import org.liganddraw.app.editor.presentation.utils.UndoRedoStack
-import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelDimensions
-import org.liganddraw.app.editor.presentation.utils.getSymbolLabelDimensions
-import org.liganddraw.app.editor.presentation.utils.labelRect
+import org.liganddraw.app.editor.presentation.utils.getAtomLabelLayout
+import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelLayout
+import org.liganddraw.app.editor.presentation.utils.getSymbolLabelLayout
 import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.snapAngle
 import org.liganddraw.app.editor.presentation.utils.toPositionAngstrom
@@ -55,9 +55,13 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             is DrawingPaneAction.OnRedo -> handleRedo()
             is DrawingPaneAction.OnUndo -> handleUndo()
             is DrawingPaneAction.OnFilePick -> parseFile(action.file)
-            is DrawingPaneAction.OnCacheLabelDimensions -> cacheLabelDimensions(
-                action.uniqueSymbols,
-                action.uniqueHydrogenCounts
+            is DrawingPaneAction.OnCacheLabelLayouts -> cacheAtomLabelLayouts(
+                action.symbolLayouts,
+                action.hydrogenLayouts
+            )
+
+            is DrawingPaneAction.OnCacheTextBoxLayouts -> handleCacheTextBoxLayouts(
+                action.layouts,
             )
 
             is DrawingPaneAction.OnSelectTool -> selectTool(action.tool)
@@ -137,16 +141,20 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         }
     }
 
-    private fun cacheLabelDimensions(
-        symbols: Map<String, IntSize>,
-        hydrogens: Map<Long, IntSize>
+    private fun cacheAtomLabelLayouts(
+        symbolLayouts: Map<String, TextLayoutResult>,
+        hydrogenLayouts: Map<Long, TextLayoutResult>
     ) {
         _state.update {
             it.copy(
-                symbolLabelDimensionsCache = symbols,
-                hydrogenLabelDimensionsCache = hydrogens
+                symbolLabelLayoutCache = symbolLayouts,
+                hydrogenLabelLayoutCache = hydrogenLayouts
             )
         }
+    }
+
+    private fun handleCacheTextBoxLayouts(layouts: Map<String, TextLayoutResult>) {
+        _state.update { it.copy(textBoxLayoutCache = layouts) }
     }
 
     private fun selectTool(tool: Tool) {
@@ -569,18 +577,20 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     ): Pair<Int, Int>? {
         document.molecules.fastForEachIndexed { moleculeIndex, molecule ->
             molecule.atoms.fastForEachIndexed { atomIndex, atom ->
-                val rect = labelRect(
-                    symbolDimensions = getSymbolLabelDimensions(
-                        atom.symbol,
-                        _state.value.symbolLabelDimensionsCache
-                    ),
-                    hydrogenDimensions = if (!atom.isLabelVisible) IntSize.Zero else getHydrogenLabelDimensions(
-                        atom.numImplicitHydrogen,
-                        _state.value.hydrogenLabelDimensionsCache
-                    ),
+                val symbolLayout =
+                    getSymbolLabelLayout(atom.symbol, _state.value.symbolLabelLayoutCache)
+                val hydrogenLayout = if (atom.isLabelVisible) getHydrogenLabelLayout(
+                    atom.numImplicitHydrogen,
+                    _state.value.hydrogenLabelLayoutCache
+                ) else null
+
+                val rect = getAtomLabelLayout(
+                    symbolLayout = symbolLayout,
+                    hydrogenLayout = hydrogenLayout,
                     isReversed = atom.isLabelReversed,
-                    atomOffset = atom.offsetPx()
-                )
+                    atomOffset = atom.offsetPx(),
+                ).boundingRect
+
 
                 val isWithinBounds =
                     x in (rect.left - ATOM_HIT_TOLERANCE)..(rect.right + ATOM_HIT_TOLERANCE) &&

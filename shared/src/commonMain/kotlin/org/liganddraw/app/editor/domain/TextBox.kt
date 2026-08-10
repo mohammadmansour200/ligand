@@ -16,8 +16,8 @@ data class TextBox(
     val id: String,
     val content: String,
     val runs: List<StyleRun>,
-    val anchorX: Double,
-    val anchorY: Double,
+    val anchorX: Float,
+    val anchorY: Float,
     val paragraphDirection: TextDirection = TextDirection.Auto,
 )
 
