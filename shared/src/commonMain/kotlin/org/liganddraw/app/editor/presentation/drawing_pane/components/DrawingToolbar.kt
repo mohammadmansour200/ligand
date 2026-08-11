@@ -115,7 +115,8 @@ fun BoxScope.DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
 
         ToolbarSeparator(isColumn = isColumn)
 
-        SingleBondToolGroup(
+        ToolGroup(
+            options = singleBondOptions,
             selectedTool = selectedTool,
             onSelectTool = { onSelectTool(it) }
         )
@@ -152,7 +153,8 @@ fun BoxScope.DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
             icon = Res.drawable.benzene_tool,
             tooltipText = "Benzene"
         )
-        CycloAlkaneToolGroup(
+        ToolGroup(
+            options = cycloAlkaneOptions,
             selectedTool = selectedTool,
             onSelectTool = onSelectTool
         )
@@ -270,58 +272,11 @@ private fun ToolbarButton(
     }
 }
 
-@Composable
-private fun SingleBondToolGroup(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
-    var showDropdownMenu by remember { mutableStateOf(false) }
-    var primaryTool by remember { mutableStateOf<Tool>(Tool.SingleBond) }
-    Box {
-        ToolbarButton(
-            checked = selectedTool == Tool.SingleBond || selectedTool == Tool.WedgeBond || selectedTool == Tool.HashedWedgeBond,
-            onClick = { onSelectTool(primaryTool) },
-            onLongClick = { showDropdownMenu = true },
-            icon = when (primaryTool) {
-                is Tool.SingleBond -> Res.drawable.single_bond
-                is Tool.WedgeBond -> Res.drawable.wedge_bond
-                else -> Res.drawable.hashed_wedge_bond
-            },
-            tooltipText = "Single Bond"
-        )
-        DropdownMenu(expanded = showDropdownMenu, onDismissRequest = { showDropdownMenu = false }) {
-            Row {
-                ToolbarButton(
-                    checked = selectedTool == Tool.SingleBond,
-                    onClick = {
-                        primaryTool = Tool.SingleBond
-                        showDropdownMenu = false
-                        onSelectTool(Tool.SingleBond)
-                    },
-                    icon = Res.drawable.single_bond,
-                    tooltipText = "Single Bond"
-                )
-                ToolbarButton(
-                    checked = selectedTool == Tool.WedgeBond,
-                    onClick = {
-                        primaryTool = Tool.WedgeBond
-                        showDropdownMenu = false
-                        onSelectTool(Tool.WedgeBond)
-                    },
-                    icon = Res.drawable.wedge_bond,
-                    tooltipText = "Wedge Bond"
-                )
-                ToolbarButton(
-                    checked = selectedTool == Tool.HashedWedgeBond,
-                    onClick = {
-                        primaryTool = Tool.HashedWedgeBond
-                        showDropdownMenu = false
-                        onSelectTool(Tool.HashedWedgeBond)
-                    },
-                    icon = Res.drawable.hashed_wedge_bond,
-                    tooltipText = "Hashed Wedge Bond"
-                )
-            }
-        }
-    }
-}
+val singleBondOptions = listOf(
+    Triple(Tool.SingleBond, Res.drawable.single_bond, "Single Bond"),
+    Triple(Tool.WedgeBond, Res.drawable.wedge_bond, "Wedge Bond"),
+    Triple(Tool.HashedWedgeBond, Res.drawable.hashed_wedge_bond, "Hashed Wedge Bond"),
+)
 
 val cycloAlkaneOptions = listOf(
     Triple(Tool.Template(CYCLOHEXANE), Res.drawable.cyclohexane_tool, "Cyclohexane"),
@@ -333,17 +288,18 @@ val cycloAlkaneOptions = listOf(
 )
 
 @Composable
-private fun CycloAlkaneToolGroup(
+private fun ToolGroup(
+    options: List<Triple<Tool, DrawableResource, String>>,
     selectedTool: Tool,
     onSelectTool: (Tool) -> Unit
 ) {
     var showDropdownMenu by remember { mutableStateOf(false) }
 
-    var primaryTool by remember { mutableStateOf(cycloAlkaneOptions[0]) }
+    var primaryTool by remember { mutableStateOf(options[0]) }
 
     Box {
         ToolbarButton(
-            checked = selectedTool in cycloAlkaneOptions.map { it.first },
+            checked = selectedTool in options.map { it.first },
             onClick = { onSelectTool(primaryTool.first) },
             onLongClick = { showDropdownMenu = true },
             icon = primaryTool.second,
@@ -355,7 +311,7 @@ private fun CycloAlkaneToolGroup(
             onDismissRequest = { showDropdownMenu = false }
         ) {
             Row {
-                cycloAlkaneOptions.forEach { (tool, iconRes, label) ->
+                options.forEach { (tool, iconRes, label) ->
                     ToolbarButton(
                         checked = selectedTool == tool,
                         onClick = {
