@@ -14,10 +14,13 @@ import androidx.compose.material3.adaptive.layout.defaultDragHandleSemantics
 import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
 import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -63,39 +66,41 @@ fun App() {
             }
         }
 
-        SupportingPaneScaffold(
-            directive = navigator.scaffoldDirective,
-            value = navigator.scaffoldValue,
-            supportingPane = {
-                AnimatedPane {
-                    MoleculePaneRoot(moleculePaneViewModel)
-                }
-            }, mainPane = {
-                AnimatedPane {
-                    val showSupportingPaneButton =
-                        navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] == PaneAdaptedValue.Hidden
-                    DrawingPaneRoot(
-                        viewModel = drawingPaneViewModel,
-                        onNavigateToSupporting = {
-                            scope.launch { navigator.navigateTo(SupportingPaneScaffoldRole.Supporting) }
-                        },
-                        showSupportingPaneButton = showSupportingPaneButton
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            SupportingPaneScaffold(
+                directive = navigator.scaffoldDirective,
+                value = navigator.scaffoldValue,
+                supportingPane = {
+                    AnimatedPane {
+                        MoleculePaneRoot(moleculePaneViewModel)
+                    }
+                }, mainPane = {
+                    AnimatedPane {
+                        val showSupportingPaneButton =
+                            navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] == PaneAdaptedValue.Hidden
+                        DrawingPaneRoot(
+                            viewModel = drawingPaneViewModel,
+                            onNavigateToSupporting = {
+                                scope.launch { navigator.navigateTo(SupportingPaneScaffoldRole.Supporting) }
+                            },
+                            showSupportingPaneButton = showSupportingPaneButton
+                        )
+                    }
+                },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
+                paneExpansionState = rememberPaneExpansionState(navigator.scaffoldValue),
+                paneExpansionDragHandle = { state ->
+                    val interactionSource =
+                        remember { MutableInteractionSource() }
+                    VerticalDragHandle(
+                        modifier =
+                            Modifier.paneExpansionDraggable(
+                                state,
+                                LocalMinimumInteractiveComponentSize.current,
+                                interactionSource, state.defaultDragHandleSemantics()
+                            ), interactionSource = interactionSource
                     )
-                }
-            },
-            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
-            paneExpansionState = rememberPaneExpansionState(navigator.scaffoldValue),
-            paneExpansionDragHandle = { state ->
-                val interactionSource =
-                    remember { MutableInteractionSource() }
-                VerticalDragHandle(
-                    modifier =
-                        Modifier.paneExpansionDraggable(
-                            state,
-                            LocalMinimumInteractiveComponentSize.current,
-                            interactionSource, state.defaultDragHandleSemantics()
-                        ), interactionSource = interactionSource
-                )
-            })
+                })
+        }
     }
 }
