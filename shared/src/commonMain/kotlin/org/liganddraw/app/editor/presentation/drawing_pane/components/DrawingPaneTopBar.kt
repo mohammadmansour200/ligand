@@ -28,7 +28,7 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.menu
 import liganddraw.shared.generated.resources.redo
-import liganddraw.shared.generated.resources.threeDimension
+import liganddraw.shared.generated.resources.show_info
 import liganddraw.shared.generated.resources.undo
 import org.jetbrains.compose.resources.vectorResource
 import org.liganddraw.app.core.presentation.IconWithTooltip
@@ -83,7 +83,9 @@ fun DrawingPaneTopBar(
                     onClick = onNavigateToSupporting,
                 ) {
                     IconWithTooltip(
-                        icon = vectorResource(Res.drawable.threeDimension),
+                        iconModifier = Modifier
+                            .height(32.dp),
+                        icon = vectorResource(Res.drawable.show_info),
                         text = "Show 3D model and molecular properties",
                     )
                 }
