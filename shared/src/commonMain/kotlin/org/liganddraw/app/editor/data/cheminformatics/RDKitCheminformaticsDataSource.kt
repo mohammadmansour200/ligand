@@ -6,6 +6,7 @@ import org.RDKit.Atom
 import org.RDKit.Bond
 import org.RDKit.Bond.BondType
 import org.RDKit.Conformer
+import org.RDKit.ConformerException
 import org.RDKit.DistanceGeom
 import org.RDKit.ForceField
 import org.RDKit.Int_Pair
@@ -129,7 +130,12 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
                 val resultMolecule = hydrogenatedRdkitRWMol.toMolecule(false)
                 return@withContext Result.Success(resultMolecule)
-            } catch (_: Exception) {
+            } catch (_: ConformerException) {
+                return@withContext Result.Error(
+                    ChemistryError.NoConformation
+                )
+            } catch (e: Exception) {
+                println(e)
                 return@withContext Result.Error(
                     ChemistryError.SanitizationFailed
                 )
