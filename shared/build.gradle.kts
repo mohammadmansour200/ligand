@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 kotlin {
@@ -66,6 +67,8 @@ kotlin {
             implementation(libs.filament.utils)
 
             implementation(libs.compose.navigationevent)
+
+            implementation(libs.bundles.ktor)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
