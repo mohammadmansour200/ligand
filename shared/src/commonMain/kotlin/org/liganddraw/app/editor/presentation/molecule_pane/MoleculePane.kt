@@ -1,8 +1,7 @@
 package org.liganddraw.app.editor.presentation.molecule_pane
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -12,9 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import org.liganddraw.app.editor.presentation.molecule_pane.components.Molecule3DViewer
-import org.liganddraw.app.editor.presentation.molecule_pane.components.MoleculeErrorNotice
-import org.liganddraw.app.editor.presentation.molecule_pane.components.MoleculePropertiesTable
-import org.liganddraw.app.editor.presentation.molecule_pane.components.NoSelectedMoleculeNotice
+import org.liganddraw.app.editor.presentation.molecule_pane.components.MoleculePropertiesCard
+import org.liganddraw.app.editor.presentation.molecule_pane.components.NoMoleculeNotice
 
 @Composable
 fun MoleculePaneRoot(viewModel: MoleculePaneViewModel = koinViewModel()) {
@@ -24,23 +22,18 @@ fun MoleculePaneRoot(viewModel: MoleculePaneViewModel = koinViewModel()) {
 
 @Composable
 fun MoleculePane(state: MoleculePaneState) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer)) {
         when {
-            state.error != null -> MoleculeErrorNotice()
-            state.conformer == null || state.properties == null -> NoSelectedMoleculeNotice()
+            state.conformer == null -> NoMoleculeNotice(modifier = Modifier.align(Alignment.Center))
             else -> {
                 Molecule3DViewer(
                     conformer = state.conformer,
                     iblBytes = state.iblBytes,
                     solidColorMaterialBytes = state.solidColorMaterialBytes,
-                    epmMaterialBytes = state.epmMaterialBytes
+                    epmMaterialBytes = state.epmMaterialBytes,
+                    error = state.conformerError
                 )
-                MoleculePropertiesTable(state.properties)
+                MoleculePropertiesCard(state)
             }
         }
     }

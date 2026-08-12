@@ -1,12 +1,16 @@
 package org.liganddraw.app.editor.presentation.molecule_pane.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
@@ -47,8 +52,11 @@ import io.github.erkko68.filament.utils.normalize
 import liganddraw.shared.generated.resources.Res
 import liganddraw.shared.generated.resources.ball_and_stick
 import liganddraw.shared.generated.resources.ball_and_stick_epm
+import liganddraw.shared.generated.resources.van_der_waals
 import org.jetbrains.compose.resources.vectorResource
+import org.liganddraw.app.core.domain.ChemistryError
 import org.liganddraw.app.core.presentation.IconWithTooltip
+import org.liganddraw.app.core.presentation.toErrorText
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.MoleculePaneConstants.ATOM_VAN_DER_WAALS_RADII_MAP
@@ -64,14 +72,39 @@ import io.github.erkko68.filament.compose.scene.Color as FilColor
 
 const val MAX_COLOR_VALUE = 255f
 
+enum class MoleculeRenderMode {
+    BALL_AND_STICK,
+    SPACE_FILLING,
+    ELECTRON_DISTRIBUTION
+}
+
+val moleculeRenderModeOptions = listOf(
+    Triple(
+        Res.drawable.ball_and_stick,
+        "Ball and Stick",
+        MoleculeRenderMode.BALL_AND_STICK
+    ),
+    Triple(
+        Res.drawable.van_der_waals,
+        "Space filling",
+        MoleculeRenderMode.SPACE_FILLING
+    ),
+    Triple(
+        Res.drawable.ball_and_stick_epm,
+        "Electron Distribution",
+        MoleculeRenderMode.ELECTRON_DISTRIBUTION
+    )
+)
+
 @Composable
-fun ColumnScope.Molecule3DViewer(
+fun BoxScope.Molecule3DViewer(
     conformer: Molecule,
     iblBytes: ByteArray,
     solidColorMaterialBytes: ByteArray,
-    epmMaterialBytes: ByteArray
+    epmMaterialBytes: ByteArray,
+    error: ChemistryError?
 ) {
-    var showEPMSurface by remember { mutableStateOf(false) }
+    var moleculeRenderMode by remember { mutableStateOf(MoleculeRenderMode.BALL_AND_STICK) }
 
     val engine = rememberFilamentEngine()
 
@@ -102,12 +135,13 @@ fun ColumnScope.Molecule3DViewer(
             val green = atomColor.second / MAX_COLOR_VALUE
             val blue = atomColor.third / MAX_COLOR_VALUE
 
-            val atomVanDerWaalsRadii =
+            val spaceFillingRadii =
                 ATOM_VAN_DER_WAALS_RADII_MAP.getOrDefault(
                     atom.symbol,
                     FALLBACK_ATOM_VAN_DER_WAALS_RADII
                 )
-            val atomRadius = atomVanDerWaalsRadii * BALL_STICK_RADII_SCALE
+
+            val ballAndStickRadii = spaceFillingRadii * BALL_STICK_RADII_SCALE
             Sphere(
                 material = rememberSolidColorInstance(
                     template = template,
@@ -117,7 +151,7 @@ fun ColumnScope.Molecule3DViewer(
                     reflectance = .5f
                 ),
                 position = Position(atom.x.toFloat(), atom.y.toFloat(), atom.z.toFloat()),
-                radius = atomRadius
+                radius = if (moleculeRenderMode == MoleculeRenderMode.SPACE_FILLING) spaceFillingRadii else ballAndStickRadii
             )
         }
 
@@ -139,99 +173,103 @@ fun ColumnScope.Molecule3DViewer(
                 reflectance = 0f,
                 isDashed = true
             )
-        conformer.bonds.forEach { bond ->
-            if (bond is Bond.Ionic) return@forEach
+        if (moleculeRenderMode != MoleculeRenderMode.SPACE_FILLING) {
+            conformer.bonds.forEach { bond ->
+                if (bond is Bond.Ionic) return@forEach
 
-            val beginAtom = conformer.atoms[bond.beginAtomIndex.toInt()]
-            val beginAtomXPos = beginAtom.x.toFloat()
-            val beginAtomYPos = beginAtom.y.toFloat()
-            val beginAtomZPos = beginAtom.z.toFloat()
-            val endAtom = conformer.atoms[bond.endAtomIndex.toInt()]
-            val endAtomXPos = endAtom.x.toFloat()
-            val endAtomYPos = endAtom.y.toFloat()
-            val endAtomZPos = endAtom.z.toFloat()
+                val beginAtom = conformer.atoms[bond.beginAtomIndex.toInt()]
+                val beginAtomXPos = beginAtom.x.toFloat()
+                val beginAtomYPos = beginAtom.y.toFloat()
+                val beginAtomZPos = beginAtom.z.toFloat()
+                val endAtom = conformer.atoms[bond.endAtomIndex.toInt()]
+                val endAtomXPos = endAtom.x.toFloat()
+                val endAtomYPos = endAtom.y.toFloat()
+                val endAtomZPos = endAtom.z.toFloat()
 
-            // Height is the distance between the two atoms determined by Pythagoras theorem
-            val height = sqrt(
-                (endAtomXPos - beginAtomXPos).pow(2) + (endAtomYPos - beginAtomYPos).pow(2) + (endAtomZPos - beginAtomZPos).pow(
-                    2
-                )
-            )
-
-            val initialDirection = normalize(Float3(0f, 1f, 0f))
-            val targetDirection = normalize(
-                Float3(
-                    endAtomXPos - beginAtomXPos,
-                    endAtomYPos - beginAtomYPos,
-                    endAtomZPos - beginAtomZPos
-                )
-            )
-
-            val rotationAxis = normalize(cross(initialDirection, targetDirection))
-
-            val rotationAngleRadians = acos(dot(initialDirection, targetDirection))
-            val rotationAngle = rotationAngleRadians.times(180.div(PI)).toFloat()
-
-            val position = Position(
-                beginAtomXPos,
-                beginAtomYPos,
-                beginAtomZPos
-            )
-
-            when (bond) {
-                is Bond.Single ->
-                    CylinderBond(
-                        bondMaterial, position, height, rotationAxis, rotationAngle
+                // Height is the distance between the two atoms determined by Pythagoras theorem
+                val height = sqrt(
+                    (endAtomXPos - beginAtomXPos).pow(2) + (endAtomYPos - beginAtomYPos).pow(2) + (endAtomZPos - beginAtomZPos).pow(
+                        2
                     )
+                )
 
-                is Bond.Double -> {
-                    val spacing = .15f
-                    CylinderBond(
-                        bondMaterial,
-                        position.plus(Direction(rotationAxis.times(spacing))),
-                        height,
-                        rotationAxis,
-                        rotationAngle
+                val initialDirection = normalize(Float3(0f, 1f, 0f))
+                val targetDirection = normalize(
+                    Float3(
+                        endAtomXPos - beginAtomXPos,
+                        endAtomYPos - beginAtomYPos,
+                        endAtomZPos - beginAtomZPos
                     )
-                    CylinderBond(
-                        bondMaterial,
-                        position.minus(Direction(rotationAxis.times(spacing))),
-                        height,
-                        rotationAxis,
-                        rotationAngle
+                )
+
+                val rotationAxis = normalize(cross(initialDirection, targetDirection))
+
+                val rotationAngleRadians = acos(dot(initialDirection, targetDirection))
+                val rotationAngle = rotationAngleRadians.times(180.div(PI)).toFloat()
+
+                val position = Position(
+                    beginAtomXPos,
+                    beginAtomYPos,
+                    beginAtomZPos
+                )
+
+                when (bond) {
+                    is Bond.Single ->
+                        CylinderBond(
+                            bondMaterial, position, height, rotationAxis, rotationAngle
+                        )
+
+                    is Bond.Double -> {
+                        val spacing = .15f
+                        CylinderBond(
+                            bondMaterial,
+                            position.plus(Direction(rotationAxis.times(spacing))),
+                            height,
+                            rotationAxis,
+                            rotationAngle
+                        )
+                        CylinderBond(
+                            bondMaterial,
+                            position.minus(Direction(rotationAxis.times(spacing))),
+                            height,
+                            rotationAxis,
+                            rotationAngle
+                        )
+                    }
+
+                    is Bond.Triple -> {
+                        val spacing = 0.25f
+                        CylinderBond(
+                            bondMaterial,
+                            position.plus(Direction(rotationAxis.times(spacing))),
+                            height,
+                            rotationAxis,
+                            rotationAngle
+                        )
+                        CylinderBond(
+                            bondMaterial, position, height, rotationAxis, rotationAngle
+                        )
+                        CylinderBond(
+                            bondMaterial,
+                            position.minus(Direction(rotationAxis.times(spacing))),
+                            height,
+                            rotationAxis,
+                            rotationAngle
+                        )
+                    }
+
+                    is Bond.Hydrogen -> CylinderBond(
+                        hydrogenBondMaterial, position, height, rotationAxis, rotationAngle
                     )
                 }
-
-                is Bond.Triple -> {
-                    val spacing = 0.25f
-                    CylinderBond(
-                        bondMaterial,
-                        position.plus(Direction(rotationAxis.times(spacing))),
-                        height,
-                        rotationAxis,
-                        rotationAngle
-                    )
-                    CylinderBond(
-                        bondMaterial, position, height, rotationAxis, rotationAngle
-                    )
-                    CylinderBond(
-                        bondMaterial,
-                        position.minus(Direction(rotationAxis.times(spacing))),
-                        height,
-                        rotationAxis,
-                        rotationAngle
-                    )
-                }
-
-                is Bond.Hydrogen -> CylinderBond(
-                    hydrogenBondMaterial, position, height, rotationAxis, rotationAngle
-                )
             }
         }
 
-        EPMMoleculeSurface(conformer.atoms, epmMaterialBytes, showEPMSurface)
+        val isEPMSurfaceVisible = moleculeRenderMode == MoleculeRenderMode.ELECTRON_DISTRIBUTION
+        EPMMoleculeSurface(conformer.atoms, epmMaterialBytes, isEPMSurfaceVisible)
     }
-    Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+
+    if (error == null) {
         FilamentView(
             modifier = Modifier.fillMaxSize().orbitGestures(orbit),
             cameraState = cameraState,
@@ -243,19 +281,15 @@ fun ColumnScope.Molecule3DViewer(
             scene = scene
         )
 
-        val moleculeViewOptions = listOf(
-            Triple(Res.drawable.ball_and_stick, "Hide charge distribution surface", false),
-            Triple(Res.drawable.ball_and_stick_epm, "Show charge distribution surface", true)
-        )
         SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)) {
-            moleculeViewOptions.forEachIndexed { index, (icon, label, isEPM) ->
+            moleculeRenderModeOptions.forEachIndexed { index, (icon, label, mode) ->
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(
                         index = index,
-                        count = moleculeViewOptions.size
+                        count = moleculeRenderModeOptions.size
                     ),
-                    onClick = { showEPMSurface = isEPM },
-                    selected = showEPMSurface == isEPM,
+                    onClick = { moleculeRenderMode = mode },
+                    selected = moleculeRenderMode == mode,
                     label = {
                         IconWithTooltip(
                             icon = vectorResource(icon),
@@ -265,7 +299,10 @@ fun ColumnScope.Molecule3DViewer(
                 )
             }
         }
-    }
+    } else Molecule3dViewerErrorNotice(
+        error = error,
+        modifier = Modifier.align(Alignment.Center)
+    )
 }
 
 @Composable
@@ -306,5 +343,36 @@ private fun rememberSolidColorInstance(
         setParameter("metallic", metallic)
         setParameter("roughness", roughness)
         setParameter("reflectance", reflectance)
+    }
+}
+
+@Composable
+private fun Molecule3dViewerErrorNotice(modifier: Modifier = Modifier, error: ChemistryError) {
+    val errorText = error.toErrorText()
+    Column(
+        modifier = modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = errorText.title,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = errorText.body,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        errorText.hint?.let {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

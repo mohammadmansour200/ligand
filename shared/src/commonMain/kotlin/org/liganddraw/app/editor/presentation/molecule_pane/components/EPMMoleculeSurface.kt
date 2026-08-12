@@ -501,9 +501,9 @@ fun FilamentSceneScope.EPMMoleculeSurface(
     isVisible: Boolean
 ) {
     val material = rememberEPMSurfaceInstance(epmMaterialBytes)
+    val meshData = remember(atoms) { computeEpmMeshData(atoms) }
 
     if (isVisible) {
-        val meshData = remember(atoms) { computeEpmMeshData(atoms) }
         Mesh(
             material = material,
             positions = meshData.positions,
