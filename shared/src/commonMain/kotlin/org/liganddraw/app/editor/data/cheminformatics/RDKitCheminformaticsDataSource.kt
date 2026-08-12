@@ -158,6 +158,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             try {
                 // --- CALCULATE PROPERTIES ---
+                val formula = RDKFuncs.calcMolFormula(rdkitMol)
                 val logp = RDKFuncs.calcMolLogP(rdkitMol)
                 val hba = RDKFuncs.calcNumHBA(rdkitMol)
                 val hbd = RDKFuncs.calcNumHBD(rdkitMol)
@@ -166,6 +167,8 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
                 return@withContext Result.Success(
                     MoleculeProperties(
+                        iupacName = null,
+                        formula = formula,
                         logp = logp,
                         molecularWeight = mwt,
                         hydrogenBondAcceptors = hba,
@@ -814,4 +817,20 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             mol.delete()
         }
     }
+
+    override suspend fun getInchiKey(molecule: Molecule): Result<String, ChemistryError> =
+        withContext(Dispatchers.Default) {
+            // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+            val mol = molecule.toRWMol(sanitize = true)
+
+            try {
+                val inchiKey = RDKFuncs.MolToInchiKey(mol)
+                return@withContext Result.Success(inchiKey)
+            } catch (_: Exception) {
+                return@withContext Result.Error(ChemistryError.SanitizationFailed)
+            } finally {
+                // --- CLEANUP ---
+                mol.delete()
+            }
+        }
 }

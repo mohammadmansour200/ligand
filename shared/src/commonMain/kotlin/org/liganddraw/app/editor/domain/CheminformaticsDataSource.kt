@@ -272,4 +272,13 @@ interface CheminformaticsDataSource {
         targetAtomIdx: Long,
         delta: Int,
     ): Molecule
+
+    /**
+     * Gets Molecule InCHI key.
+     * @param molecule The target [Molecule].
+     * @return [String] InCHI key
+     */
+    suspend fun getInchiKey(
+        molecule: Molecule,
+    ): Result<String, ChemistryError>
 }

@@ -59,6 +59,8 @@ data class Molecule(
 )
 
 data class MoleculeProperties(
+    val formula: String,
+    val iupacName: String?,
     val logp: Double,
     val molecularWeight: Double,
     val hydrogenBondAcceptors: Long,
