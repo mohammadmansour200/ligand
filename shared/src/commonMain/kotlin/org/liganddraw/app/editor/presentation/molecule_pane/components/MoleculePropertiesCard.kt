@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -53,6 +52,7 @@ import liganddraw.shared.generated.resources.close
 import liganddraw.shared.generated.resources.error
 import liganddraw.shared.generated.resources.info
 import org.jetbrains.compose.resources.vectorResource
+import org.liganddraw.app.core.presentation.IconWithTooltip
 import org.liganddraw.app.core.utils.truncateTo
 import org.liganddraw.app.editor.presentation.drawing_pane.modifier.fadingEdges
 import org.liganddraw.app.editor.presentation.molecule_pane.MoleculePaneState
@@ -72,7 +72,7 @@ fun BoxScope.MoleculePropertiesCard(
         exit = fadeOut() + scaleOut()
     ) {
         FilledTonalIconButton(onClick = { propertiesExpanded = true }) {
-            Icon(vectorResource(Res.drawable.info), contentDescription = "Show properties")
+            IconWithTooltip(icon = vectorResource(Res.drawable.info), text = "Show properties")
         }
     }
 
@@ -103,10 +103,10 @@ fun BoxScope.MoleculePropertiesCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     IconButton(onClick = { propertiesExpanded = false }) {
-                        Icon(
-                            vectorResource(Res.drawable.close),
-                            contentDescription = "Hide properties",
-                            modifier = Modifier.size(18.dp)
+                        IconWithTooltip(
+                            icon = vectorResource(Res.drawable.close),
+                            text = "Hide properties",
+                            iconModifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -159,46 +159,41 @@ private fun CompactErrorNotice(
 @Composable
 private fun MoleculePropertiesTable(state: MoleculePaneState) {
     val scrollState = rememberScrollState()
-    Box(
+    Column(
         modifier = Modifier
-            .wrapContentSize()
+            .fadingEdges(
+                scrollState = scrollState,
+                isVertical = true,
+                edgeColor = MaterialTheme.colorScheme.surface
+            )
             .padding(horizontal = 16.dp)
+            .verticalScroll(scrollState)
     ) {
-        Column(
-            modifier = Modifier
-                .fadingEdges(
-                    scrollState = scrollState,
-                    isVertical = true,
-                    edgeColor = MaterialTheme.colorScheme.surface,
-                )
-                .verticalScroll(scrollState)
-        ) {
-            state.properties?.let { properties ->
-                TableRow(
-                    label = "IUPAC Name",
-                    value = properties.iupacName ?: "Unavailable",
-                    stacked = true,
-                    isLoading = state.isIupacLoading
-                )
-                TableRow(
-                    label = "Molecular Formula",
-                    value = formulaToSubscriptAnnotatedString(properties.formula)
-                )
-                TableRow(
-                    label = "Molecular Weight",
-                    value = "${properties.molecularWeight.truncateTo(3)} g/mol"
-                )
-                TableRow(label = "LogP", value = "${properties.logp.truncateTo(3)}")
-                TableRow(
-                    label = "H-Bond Donors",
-                    value = "${properties.hydrogenBondDonors}"
-                )
-                TableRow(
-                    label = "H-Bond Acceptors",
-                    value = "${properties.hydrogenBondAcceptors}"
-                )
-                TableRow(label = "Rotatable Bonds", value = "${properties.rotatableBonds}")
-            }
+        state.properties?.let { properties ->
+            TableRow(
+                label = "IUPAC Name",
+                value = properties.iupacName ?: "Unavailable",
+                stacked = true,
+                isLoading = state.isIupacLoading
+            )
+            TableRow(
+                label = "Molecular Formula",
+                value = formulaToSubscriptAnnotatedString(properties.formula)
+            )
+            TableRow(
+                label = "Molecular Weight",
+                value = "${properties.molecularWeight.truncateTo(3)} g/mol"
+            )
+            TableRow(label = "LogP", value = "${properties.logp.truncateTo(3)}")
+            TableRow(
+                label = "H-Bond Donors",
+                value = "${properties.hydrogenBondDonors}"
+            )
+            TableRow(
+                label = "H-Bond Acceptors",
+                value = "${properties.hydrogenBondAcceptors}"
+            )
+            TableRow(label = "Rotatable Bonds", value = "${properties.rotatableBonds}")
         }
     }
 }
@@ -233,7 +228,6 @@ private fun TableRow(
                         text = value,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 4.dp)
                     )
             }
@@ -254,7 +248,6 @@ private fun TableRow(
                     text = value,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
