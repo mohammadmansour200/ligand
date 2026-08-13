@@ -65,6 +65,8 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             )
 
             is DrawingPaneAction.OnSelectTool -> selectTool(action.tool)
+            is DrawingPaneAction.OnSelectPreviousMolecule -> handleSelectPreviousMolecule()
+            is DrawingPaneAction.OnSelectNextMolecule -> handleSelectNextMolecule()
             is DrawingPaneAction.OnPointerMove -> handlePointerMove(action.x, action.y)
             is DrawingPaneAction.OnPointerPress -> handlePointerPress(action.x, action.y)
             is DrawingPaneAction.OnPointerLongPress -> handlePointerLongPress(action.x, action.y)
@@ -77,14 +79,23 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleUndo() {
         history.undo()?.let { doc ->
-            _state.update {
-                it.copy(
+            val followedMoleculeIdx = _state.value.followedMoleculeIndex
+                .takeIf { it in doc.molecules.indices } ?: 0
+            val followedMolecule = doc.molecules.getOrNull(followedMoleculeIdx)
+            viewModelScope.launch {
+                _events.send(DrawingPaneEvent.CalculateMolecule3DAndProperties(followedMolecule))
+            }
+
+            _state.update { current ->
+                current.copy(
                     document = doc,
                     canUndo = history.canUndo,
                     canRedo = history.canRedo,
                     hoveredAtomId = null,
                     hoveredBondId = null,
-                    selectedMoleculeIndex = null
+                    followedMoleculeIndex = followedMoleculeIdx,
+                    followedMoleculeHasPreviousMolecule = followedMoleculeIdx > 0,
+                    followedMoleculeHasNextMolecule = followedMoleculeIdx < doc.molecules.lastIndex
                 )
             }
         }
@@ -92,26 +103,84 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleRedo() {
         history.redo()?.let { doc ->
-            _state.update {
-                it.copy(
+            val followedMoleculeIdx = _state.value.followedMoleculeIndex
+                .takeIf { it in doc.molecules.indices } ?: 0
+            val followedMolecule = doc.molecules.getOrNull(followedMoleculeIdx)
+            viewModelScope.launch {
+                _events.send(DrawingPaneEvent.CalculateMolecule3DAndProperties(followedMolecule))
+            }
+
+            _state.update { current ->
+                current.copy(
                     document = doc,
                     canUndo = history.canUndo,
                     canRedo = history.canRedo,
                     hoveredAtomId = null,
                     hoveredBondId = null,
-                    selectedMoleculeIndex = null
+                    followedMoleculeIndex = followedMoleculeIdx,
+                    followedMoleculeHasPreviousMolecule = followedMoleculeIdx > 0,
+                    followedMoleculeHasNextMolecule = followedMoleculeIdx < doc.molecules.lastIndex
                 )
             }
         }
     }
 
     private fun commitEdit(newDocument: DrawingDocument) {
+        val followedMoleculeIdx = _state.value.followedMoleculeIndex
+            .takeIf { it in newDocument.molecules.indices } ?: 0
+        val followedMolecule = newDocument.molecules.getOrNull(followedMoleculeIdx)
         viewModelScope.launch {
-            _events.send(DrawingPaneEvent.CalculateMolecule3DAndPropeties(newDocument.molecules[0]))
+            _events.send(DrawingPaneEvent.CalculateMolecule3DAndProperties(followedMolecule))
         }
+
         history.push(newDocument)
         _state.update {
-            it.copy(document = newDocument, canUndo = history.canUndo, canRedo = history.canRedo)
+            it.copy(
+                document = newDocument,
+                canUndo = history.canUndo,
+                canRedo = history.canRedo,
+                followedMoleculeIndex = followedMoleculeIdx,
+                followedMoleculeHasPreviousMolecule = followedMoleculeIdx > 0,
+                followedMoleculeHasNextMolecule = followedMoleculeIdx < newDocument.molecules.lastIndex
+            )
+        }
+    }
+
+    private fun handleSelectNextMolecule() {
+        val document = _state.value.document
+        val nextIndex = _state.value.followedMoleculeIndex + 1
+        if (nextIndex !in document.molecules.indices) return
+
+        val molecule = document.molecules.getOrNull(nextIndex)
+        viewModelScope.launch {
+            _events.send(DrawingPaneEvent.CalculateMolecule3DAndProperties(molecule))
+        }
+
+        _state.update {
+            it.copy(
+                followedMoleculeIndex = nextIndex,
+                followedMoleculeHasPreviousMolecule = nextIndex > 0,
+                followedMoleculeHasNextMolecule = nextIndex < document.molecules.lastIndex
+            )
+        }
+    }
+
+    private fun handleSelectPreviousMolecule() {
+        val document = _state.value.document
+        val previousIndex = _state.value.followedMoleculeIndex - 1
+        if (previousIndex !in document.molecules.indices) return
+
+        val molecule = document.molecules.getOrNull(previousIndex)
+        viewModelScope.launch {
+            _events.send(DrawingPaneEvent.CalculateMolecule3DAndProperties(molecule))
+        }
+
+        _state.update {
+            it.copy(
+                followedMoleculeIndex = previousIndex,
+                followedMoleculeHasPreviousMolecule = previousIndex > 0,
+                followedMoleculeHasNextMolecule = previousIndex < document.molecules.lastIndex
+            )
         }
     }
 
@@ -163,7 +232,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 selectedTool = tool,
                 hoveredAtomId = null,
                 hoveredBondId = null,
-                selectedMoleculeIndex = null,
             )
         }
     }
@@ -439,7 +507,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleAtomPress(moleculeIdx: Int, atomIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
-            is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
+            is Tool.StructureSelect -> {}
             is Tool.Erase -> handleEraseAtom(moleculeIdx, atomIdx)
             is Tool.SingleBond -> handleAttachBondToAtom(
                 moleculeIdx,
@@ -505,7 +573,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private fun handleBondPress(moleculeIdx: Int, bondIdx: Int) {
         when (val currentTool = _state.value.selectedTool) {
-            is Tool.StructureSelect -> handleStructureSelect(moleculeIdx)
+            is Tool.StructureSelect -> {}
             is Tool.Erase -> handleEraseBond(moleculeIdx, bondIdx)
             is Tool.SingleBond -> handleCycleBondType(moleculeIdx, bondIdx)
 
@@ -537,12 +605,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun handleNullHit(x: Float, y: Float) {
-        if (_state.value.selectedMoleculeIndex != null) _state.update {
-            it.copy(
-                selectedMoleculeIndex = null
-            )
-        }
-
         val angstromPosition = Offset(x, y).toPositionAngstrom()
         when (val currentTool = _state.value.selectedTool) {
             is Tool.Element -> handleCreateMoleculeFromAtom(
@@ -856,10 +918,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             ).molecules
             commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
-    }
-
-    private fun handleStructureSelect(moleculeIdx: Int) {
-        _state.update { it.copy(selectedMoleculeIndex = moleculeIdx) }
     }
 
     private fun handleCreateMoleculeFromSmiles(

@@ -12,6 +12,7 @@ import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.defaultDragHandleSemantics
 import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
+import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
 import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,6 +43,7 @@ fun App() {
     AppTheme {
         val navigator = rememberSupportingPaneScaffoldNavigator()
         val scope = rememberCoroutineScope()
+        val backNavigationBehavior = BackNavigationBehavior.PopUntilScaffoldValueChange
 
         NavigationBackHandler(
             state = rememberNavigationEventState(NavigationEventInfo.None),
@@ -55,7 +57,7 @@ fun App() {
 
         ObserveAsEvents(drawingPaneViewModel.events) {
             when (it) {
-                is DrawingPaneEvent.CalculateMolecule3DAndPropeties -> {
+                is DrawingPaneEvent.CalculateMolecule3DAndProperties -> {
                     moleculePaneViewModel.onAction(
                         MoleculePaneAction.OnGenerateConformer(it.molecule)
                     )
@@ -67,23 +69,28 @@ fun App() {
         }
 
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            val isSupportingPaneVisible =
+                navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] != PaneAdaptedValue.Hidden
             SupportingPaneScaffold(
                 directive = navigator.scaffoldDirective,
                 value = navigator.scaffoldValue,
                 supportingPane = {
                     AnimatedPane {
-                        MoleculePaneRoot(moleculePaneViewModel)
+                        MoleculePaneRoot(
+                            moleculePaneViewModel = moleculePaneViewModel,
+                            drawingPaneViewModel = drawingPaneViewModel,
+                            onClose = { scope.launch { navigator.navigateBack(backNavigationBehavior) } },
+                            showCloseButton = isSupportingPaneVisible
+                        )
                     }
                 }, mainPane = {
                     AnimatedPane {
-                        val showSupportingPaneButton =
-                            navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] == PaneAdaptedValue.Hidden
                         DrawingPaneRoot(
                             viewModel = drawingPaneViewModel,
                             onNavigateToSupporting = {
                                 scope.launch { navigator.navigateTo(SupportingPaneScaffoldRole.Supporting) }
                             },
-                            showSupportingPaneButton = showSupportingPaneButton
+                            showSupportingPaneButton = !isSupportingPaneVisible
                         )
                     }
                 },

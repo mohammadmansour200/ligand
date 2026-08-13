@@ -56,7 +56,6 @@ import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_STROKE_WIDTH
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.CENTERED_DOUBLE_BOND_LINES_SPACING
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_CORNER_RADIUS
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_STROKE_WIDTH
-import org.liganddraw.app.editor.domain.Molecule
 import org.liganddraw.app.editor.domain.TextBox
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneAction
@@ -94,7 +93,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     val structureErrorColor = MaterialTheme.colorScheme.error
 
     val highlightColor = MaterialTheme.colorScheme.secondary
-    val selectionColor = MaterialTheme.colorScheme.secondary.copy(alpha = .8f)
+    val selectionColor = MaterialTheme.colorScheme.secondary.copy(alpha = .03f)
 
     val background = MaterialTheme.colorScheme.surface
 
@@ -162,6 +161,34 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     }
     val negativeChargeLayout = remember(symbolStyle) {
         textMeasurer.measure(chargeLabel(charge = -1, symbolStyle), symbolStyle)
+    }
+
+    // --- CACHE FOLLOWED MOLECULE BOUNDING BOX ---
+    val followedMolecule = state.document.molecules.getOrNull(state.followedMoleculeIndex)
+    val followedMoleculeRect = remember(followedMolecule) {
+        val atoms = followedMolecule?.atoms
+        if (atoms.isNullOrEmpty()) return@remember null
+
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = -Float.MAX_VALUE
+        var maxY = -Float.MAX_VALUE
+
+        for (atom in atoms) {
+            val atomOffsetPx = atom.offsetPx()
+            val x = atomOffsetPx.x
+            val y = atomOffsetPx.y
+            if (x < minX) minX = x
+            if (y < minY) minY = y
+            if (x > maxX) maxX = x
+            if (y > maxY) maxY = y
+        }
+
+        val paddingPx = 16f
+        val paddedTopLeft = Offset(minX - paddingPx, minY - paddingPx)
+        val paddedBottomRight = Offset(maxX + paddingPx, maxY + paddingPx)
+
+        return@remember Rect(paddedTopLeft, paddedBottomRight)
     }
 
     Canvas(
@@ -254,8 +281,8 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
             // --- MOLECULE --
             molecules.fastForEachIndexed { moleculeIndex, mol ->
-                if (state.selectedMoleculeIndex == moleculeIndex) {
-                    drawMoleculeHighlightRect(mol, highlightColor)
+                if (state.followedMoleculeIndex == moleculeIndex) {
+                    drawMoleculeHighlightRect(followedMoleculeRect, selectionColor)
                 }
 
                 // --- DRAW ATOM SYMBOL ---
@@ -289,12 +316,6 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         labelRect,
                         highlightColor,
                         highlightStroke,
-                    )
-
-                    if (state.selectedMoleculeIndex == moleculeIndex) drawAtomHighlightRect(
-                        labelRect,
-                        selectionColor,
-                        Fill,
                     )
 
                     if (atom.charge != 0) {
@@ -378,13 +399,6 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         beginAtomOffset,
                         highlightColor,
                         highlightStroke
-                    )
-
-                    if (state.selectedMoleculeIndex == moleculeIndex) drawBondHighlightRect(
-                        endAtomOffset,
-                        beginAtomOffset,
-                        selectionColor,
-                        Fill
                     )
 
                     val bondColor =
@@ -508,39 +522,16 @@ private fun DrawScope.drawAtomHighlightRect(
 }
 
 private fun DrawScope.drawMoleculeHighlightRect(
-    molecule: Molecule,
+    highlightRect: Rect?,
     color: Color,
-    paddingPx: Float = 16f
 ) {
-    val atoms = molecule.atoms
-    if (atoms.isEmpty()) return
-
-    var minX = Float.MAX_VALUE
-    var minY = Float.MAX_VALUE
-    var maxX = -Float.MAX_VALUE
-    var maxY = -Float.MAX_VALUE
-
-    for (atom in atoms) {
-        val atomOffsetPx = atom.offsetPx()
-        val x = atomOffsetPx.x
-        val y = atomOffsetPx.y
-        if (x < minX) minX = x
-        if (y < minY) minY = y
-        if (x > maxX) maxX = x
-        if (y > maxY) maxY = y
-    }
-
-    // Apply padding by expanding the bounding box outward
-    val paddedTopLeft = Offset(minX - paddingPx, minY - paddingPx)
-    val paddedBottomRight = Offset(maxX + paddingPx, maxY + paddingPx)
-
-    val highlightRect = Rect(paddedTopLeft, paddedBottomRight)
+    if (highlightRect == null) return
 
     drawRoundRect(
         color = color,
         topLeft = highlightRect.topLeft,
         size = highlightRect.size,
-        style = highlightStroke,
+        style = Fill,
         cornerRadius = highlightCornerRadius
     )
 }

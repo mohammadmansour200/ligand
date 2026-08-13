@@ -44,7 +44,14 @@ class MoleculePaneViewModel(
         }
     }
 
-    private fun generateConformer(molecule: Molecule) {
+    private var previousGenerateConformerMolecule: Molecule? = null
+    private fun generateConformer(molecule: Molecule?) {
+        if (previousGenerateConformerMolecule == molecule) return
+        previousGenerateConformerMolecule = molecule
+        if (molecule == null) {
+            _state.update { it.copy(conformer = molecule, conformerError = null) }
+            return
+        }
         viewModelScope.launch {
             cheminformaticsDataSource.generate3DConformer(molecule)
                 .onSuccess { mol ->
@@ -57,8 +64,16 @@ class MoleculePaneViewModel(
         }
     }
 
+    private var previousCalcPropertiesMolecule: Molecule? = null
     private var iupacNameJob: Job? = null
-    private fun calcProperties(molecule: Molecule) {
+    private fun calcProperties(molecule: Molecule?) {
+        if (previousCalcPropertiesMolecule == molecule) return
+        previousCalcPropertiesMolecule = molecule
+
+        if (molecule == null) {
+            _state.update { it.copy(properties = null, propertiesError = null) }
+            return
+        }
         viewModelScope.launch {
             _state.update { it.copy(isIupacLoading = true, propertiesError = null) }
 

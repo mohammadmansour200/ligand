@@ -26,6 +26,8 @@ data class DrawingPaneState(
     val hoveredAtomId: Pair<Int, Int>? = null,
     /**Currently hovered bond as a pair of molecule index and bond index*/
     val hoveredBondId: Pair<Int, Int>? = null,
-    val selectedMoleculeIndex: Int? = null,
+    val followedMoleculeIndex: Int = 0,
+    val followedMoleculeHasPreviousMolecule: Boolean = false,
+    val followedMoleculeHasNextMolecule: Boolean = false,
     val valenceViolationExplanationAtom: Atom? = null,
 )

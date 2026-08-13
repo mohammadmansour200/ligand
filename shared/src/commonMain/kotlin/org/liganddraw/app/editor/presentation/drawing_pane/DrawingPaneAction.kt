@@ -42,6 +42,12 @@ sealed interface DrawingPaneAction {
      */
     data class OnSelectTool(val tool: Tool) : DrawingPaneAction
 
+    /**Action triggered by Molecule pane when user clicks next molecule button*/
+    object OnSelectNextMolecule : DrawingPaneAction
+
+    /**Action triggered by Molecule pane when user clicks previous molecule button*/
+    object OnSelectPreviousMolecule : DrawingPaneAction
+
     // TODO(KDoc)
     data class OnPointerMove(val x: Float, val y: Float) : DrawingPaneAction
 
