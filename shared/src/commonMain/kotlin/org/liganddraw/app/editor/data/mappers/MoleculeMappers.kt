@@ -15,12 +15,12 @@ fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
     val mol = RWMol()
 
     // --- SET ATOMS ---
-    val coordinates = mutableListOf<Point3D>()
-    this.atoms.forEach { atom ->
+    val conformer = Conformer(this.atoms.size.toLong())
+    this.atoms.forEachIndexed { index, atom ->
         val rdkitAtom = org.RDKit.Atom(atom.symbol)
         rdkitAtom.formalCharge = atom.charge
         mol.addAtom(rdkitAtom)
-        coordinates.add(Point3D(atom.x, atom.y, 0.0))
+        conformer.setAtomPos(index.toLong(), Point3D(atom.x, atom.y, 0.0))
     }
 
     // --- SET BONDS ---
@@ -50,10 +50,6 @@ fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
     }
 
     // --- SET ATOM X, Y POSITIONS ---
-    val conformer = Conformer(coordinates.size.toLong())
-    coordinates.forEachIndexed { index, point3D ->
-        conformer.setAtomPos(index.toLong(), point3D)
-    }
     conformer.is3D = false
     mol.addConformer(
         conformer, true
