@@ -712,8 +712,13 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         val mol = molecule.toRWMol()
         try {
             val conformer = mol.conformer
+
             var previousAtomIdx = pivotAtomIdx
-            var previousPos = conformer.getAtomPos(pivotAtomIdx)
+
+            val pivotAtomPos = conformer.getAtomPos(pivotAtomIdx)
+            var previousX = pivotAtomPos.x
+            var previousY = pivotAtomPos.y
+
             var sign = 1.0
             val halfAngle = Math.toRadians(30.0)
 
@@ -722,15 +727,13 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 val newAtomIdx = mol.addAtom(Atom("C"))
                 mol.addBond(previousAtomIdx, newAtomIdx, BondType.SINGLE)
 
-                val newPos = Point3D(
-                    previousPos.x + BOND_LENGTH * cos(stepAngle),
-                    previousPos.y + BOND_LENGTH * sin(stepAngle),
-                    0.0
-                )
-                conformer.setAtomPos(newAtomIdx, newPos)
+                val newX = previousX + BOND_LENGTH * cos(stepAngle)
+                val newY = previousY + BOND_LENGTH * sin(stepAngle)
+                conformer.setAtomPos(newAtomIdx, Point3D(newX, newY, 0.0))
 
                 previousAtomIdx = newAtomIdx
-                previousPos = newPos
+                previousX = newX
+                previousY = newY
                 sign = -sign
             }
 

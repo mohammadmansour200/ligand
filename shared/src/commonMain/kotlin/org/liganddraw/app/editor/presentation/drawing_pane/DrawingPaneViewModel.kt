@@ -429,7 +429,6 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 atomCount == 0 -> session.baselineDocument
 
                 session.moleculeIdx != null && session.pivotAtomIdx != null -> {
-                    println("dx=$dx dy=$dy distance=$distance atomCount=$atomCount raw=$rawAngle snapped=$snappedAngle")
                     // --- EXTEND CHAIN FROM EXISTING ATOM ---
                     val baselineMolecule = session.baselineDocument.molecules[session.moleculeIdx]
                     val chained = cheminformaticsDataSource.buildChainFromAtom(
