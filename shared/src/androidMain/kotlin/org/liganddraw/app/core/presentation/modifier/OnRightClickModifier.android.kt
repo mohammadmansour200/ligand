@@ -1,4 +1,4 @@
-package org.liganddraw.app.core.presentation.modifier
+package org.ligand.app.core.presentation.modifier
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

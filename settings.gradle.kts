@@ -1,4 +1,4 @@
-rootProject.name = "LigandDraw"
+rootProject.name = "Ligand"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

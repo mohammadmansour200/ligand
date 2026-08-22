@@ -21,11 +21,11 @@ dependencies {
 }
 
 android {
-    namespace = "org.liganddraw.app"
+    namespace = "org.ligand.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "org.liganddraw.app"
+        applicationId = "org.ligand.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

@@ -19,11 +19,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "org.liganddraw.app.MainKt"
+        mainClass = "org.ligand.app.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
-            packageName = "org.liganddraw.app"
+            packageName = "org.ligand.app"
             packageVersion = "1.0.0"
 
             appResourcesRootDir.set(project.layout.projectDirectory.dir("libs"))

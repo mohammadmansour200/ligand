@@ -1,4 +1,4 @@
-package org.liganddraw.app
+package org.ligand.app
 
 import android.os.Build
 
