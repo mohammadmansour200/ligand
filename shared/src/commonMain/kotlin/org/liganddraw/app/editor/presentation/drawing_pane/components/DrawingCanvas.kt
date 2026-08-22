@@ -47,19 +47,25 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.window.core.layout.WindowSizeClass
+import org.liganddraw.app.editor.domain.ArrowHeadHalf
+import org.liganddraw.app.editor.domain.ArrowHeadShape
 import org.liganddraw.app.editor.domain.Bond
 import org.liganddraw.app.editor.domain.BondDir
 import org.liganddraw.app.editor.domain.DoubleBondAlignment
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.ARROWHEAD_LENGTH
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.ARROWHEAD_WIDTH_ANGLE_DEGREES
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LINES_SPACING
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_STROKE_WIDTH
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.CENTERED_DOUBLE_BOND_LINES_SPACING
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_CORNER_RADIUS
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.HIGHLIGHT_STROKE_WIDTH
+import org.liganddraw.app.editor.domain.ReactionArrow
 import org.liganddraw.app.editor.domain.TextBox
 import org.liganddraw.app.editor.domain.Tool
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneAction
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingPaneState
+import org.liganddraw.app.editor.presentation.utils.centerPosition
 import org.liganddraw.app.editor.presentation.utils.chargeLabel
 import org.liganddraw.app.editor.presentation.utils.getAtomLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getHydrogenCountStyle
@@ -67,6 +73,8 @@ import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getSymbolStyle
 import org.liganddraw.app.editor.presentation.utils.getTextBoxLayout
+import org.liganddraw.app.editor.presentation.utils.halfAwayFromBow
+import org.liganddraw.app.editor.presentation.utils.halfTowardOutward
 import org.liganddraw.app.editor.presentation.utils.offsetPx
 import org.liganddraw.app.editor.presentation.utils.shortenBondToRectBoundary
 import org.liganddraw.app.editor.presentation.utils.toAnnotatedString
@@ -107,6 +115,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
 
     val molecules = state.document.molecules
     val textBoxes = state.document.textBoxes
+    val reactionArrows = state.document.reactionArrows
 
     // --- CACHE TEXT BOX LAYOUT ---
     LaunchedEffect(textBoxes) {
@@ -273,6 +282,18 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             translate(left = canvasOffset.x, top = canvasOffset.y)
             scale(scale = canvasScale, pivot = Offset.Zero)
         }) {
+            // --- REACTION ARROW ---
+            reactionArrows.forEach { arrow ->
+                if (state.hoveredArrowId == arrow.id) {
+                    drawArrowHandles(arrow, color = highlightColor)
+                }
+
+                drawReactionArrow(
+                    arrow = arrow,
+                    color = structureColor,
+                )
+            }
+
             // --- TEXT BOX --
             textBoxes.forEach { box ->
                 val layout = getTextBoxLayout(box.id, state.textBoxLayoutCache) ?: return@forEach
@@ -470,6 +491,243 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             }
         }
     }
+}
+
+private fun DrawScope.drawArrowHandles(
+    arrow: ReactionArrow,
+    color: Color
+) {
+    val start = Offset(arrow.startX, arrow.startY)
+    val end = Offset(arrow.endX, arrow.endY)
+
+    val handles = mutableListOf(start, end)
+
+    if (arrow is ReactionArrow.ElectronPushing) handles.add(arrow.centerPosition())
+
+    for (pos in handles) {
+        drawCircle(color = color, radius = 5f, center = pos)
+    }
+}
+
+private fun DrawScope.drawReactionArrow(
+    arrow: ReactionArrow,
+    color: Color,
+    strokeWidth: Float = 3f
+) {
+    when (arrow) {
+        is ReactionArrow.Forward -> drawSingleHeadedArrow(
+            start = Offset(arrow.startX, arrow.startY),
+            end = Offset(arrow.endX, arrow.endY),
+            color = color,
+            strokeWidth = strokeWidth
+        )
+
+        is ReactionArrow.ElectronPushing -> drawSingleHeadedArrow(
+            start = Offset(arrow.startX, arrow.startY),
+            end = Offset(arrow.endX, arrow.endY),
+            curveBow = arrow.curveBow,
+            headShape = arrow.headShape,
+            color = color,
+            strokeWidth = strokeWidth
+        )
+
+        is ReactionArrow.Resonance -> drawDoubleHeadedArrow(
+            start = Offset(arrow.startX, arrow.startY),
+            end = Offset(arrow.endX, arrow.endY),
+            color = color,
+            strokeWidth = strokeWidth
+        )
+
+        is ReactionArrow.Equilibrium -> drawEquilibriumArrow(
+            start = Offset(arrow.startX, arrow.startY),
+            end = Offset(arrow.endX, arrow.endY),
+            bias = arrow.bias,
+            topHeadShape = arrow.topHeadShape,
+            bottomHeadShape = arrow.bottomHeadShape,
+            color = color,
+            strokeWidth = strokeWidth
+        )
+    }
+}
+
+private fun DrawScope.drawSingleHeadedArrow(
+    start: Offset,
+    end: Offset,
+    curveBow: Float = 0f,
+    headShape: ArrowHeadShape = ArrowHeadShape.FULL,
+    color: Color,
+    strokeWidth: Float
+) {
+    val control = drawArrowShaft(start, end, curveBow, color, strokeWidth)
+    val angle = if (control == null) atan2(end.y - start.y, end.x - start.x)
+    else atan2(end.y - control.y, end.x - control.x)
+
+    val half = if (headShape == ArrowHeadShape.HALF) {
+        halfAwayFromBow(start, end, curveBow)
+    } else {
+        ArrowHeadHalf.TOP
+    }
+
+    drawFilledArrowhead(
+        tip = end,
+        angleRadians = angle,
+        color = color,
+        shape = headShape,
+        half = half
+    )
+}
+
+private fun DrawScope.drawDoubleHeadedArrow(
+    start: Offset,
+    end: Offset,
+    color: Color,
+    strokeWidth: Float
+) {
+    drawArrowShaft(start = start, end = end, color = color, strokeWidth = strokeWidth)
+
+    val endAngle = atan2(end.y - start.y, end.x - start.x)
+    drawFilledArrowhead(
+        tip = end,
+        angleRadians = endAngle,
+        color = color,
+        shape = ArrowHeadShape.FULL
+    )
+
+    val startAngle = atan2(start.y - end.y, start.x - end.x)
+    drawFilledArrowhead(
+        tip = start,
+        angleRadians = startAngle,
+        color = color,
+        shape = ArrowHeadShape.FULL
+    )
+}
+
+private fun DrawScope.drawEquilibriumArrow(
+    start: Offset,
+    end: Offset,
+    bias: Float,
+    topHeadShape: ArrowHeadShape,
+    bottomHeadShape: ArrowHeadShape,
+    color: Color,
+    strokeWidth: Float
+) {
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    val len = sqrt(dx * dx + dy * dy)
+    if (len == 0f) return
+
+    val perpX = -dy / len
+    val perpY = dx / len
+    val gap = strokeWidth * 2.5f
+
+    val topOffset = Offset(perpX * gap, perpY * gap)
+    val topStart = Offset(end.x + topOffset.x, end.y + topOffset.y)
+    val topEnd = Offset(start.x + topOffset.x, start.y + topOffset.y)
+
+    val bottomOffset = Offset(-perpX * gap, -perpY * gap)
+    val bottomStart = Offset(start.x + bottomOffset.x, start.y + bottomOffset.y)
+    val bottomEnd = Offset(end.x + bottomOffset.x, end.y + bottomOffset.y)
+
+    val topT = 1f - bias.coerceIn(-1f, 1f).coerceAtLeast(0f)
+    val bottomT = 1f - (-bias.coerceIn(-1f, 1f)).coerceAtLeast(0f)
+
+    val adjustedTopEnd = lerp(topStart, topEnd, topT)
+    val adjustedBottomEnd = lerp(bottomStart, bottomEnd, bottomT)
+
+    drawLine(color = color, start = topStart, end = adjustedTopEnd, strokeWidth = strokeWidth)
+    drawLine(color = color, start = bottomStart, end = adjustedBottomEnd, strokeWidth = strokeWidth)
+
+    val topAngle = atan2(adjustedTopEnd.y - topStart.y, adjustedTopEnd.x - topStart.x)
+    val bottomAngle =
+        atan2(adjustedBottomEnd.y - bottomStart.y, adjustedBottomEnd.x - bottomStart.x)
+    drawFilledArrowhead(
+        tip = adjustedTopEnd,
+        angleRadians = topAngle,
+        color = color,
+        shape = topHeadShape,
+        half = halfTowardOutward(topAngle, topOffset.x, topOffset.y)
+    )
+    drawFilledArrowhead(
+        tip = adjustedBottomEnd,
+        angleRadians = bottomAngle,
+        color = color,
+        shape = bottomHeadShape,
+        half = halfTowardOutward(bottomAngle, bottomOffset.x, bottomOffset.y)
+    )
+}
+
+private fun DrawScope.drawArrowShaft(
+    start: Offset,
+    end: Offset,
+    curveBow: Float = 0f,
+    color: Color,
+    strokeWidth: Float
+): Offset? {
+    val control = if (curveBow != 0f) {
+        val mid = Offset((start.x + end.x) / 2f, (start.y + end.y) / 2f)
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        val len = sqrt(dx * dx + dy * dy)
+        val perpX = if (len == 0f) 0f else -dy / len
+        val perpY = if (len == 0f) 0f else dx / len
+        Offset(mid.x + perpX * curveBow, mid.y + perpY * curveBow)
+    } else null
+
+    val path = Path().apply {
+        moveTo(start.x, start.y)
+        if (control == null) lineTo(end.x, end.y)
+        else quadraticTo(control.x, control.y, end.x, end.y)
+    }
+    drawPath(path, color = color, style = Stroke(width = strokeWidth))
+    return control
+}
+
+private fun DrawScope.drawFilledArrowhead(
+    tip: Offset,
+    angleRadians: Float,
+    color: Color,
+    shape: ArrowHeadShape = ArrowHeadShape.FULL,
+    half: ArrowHeadHalf = ArrowHeadHalf.TOP,
+    length: Float = ARROWHEAD_LENGTH,
+    halfWidthAngle: Float = Math.toRadians(ARROWHEAD_WIDTH_ANGLE_DEGREES).toFloat()
+) {
+    val backAngle = angleRadians + PI.toFloat()
+    val left = Offset(
+        tip.x + length * cos(backAngle - halfWidthAngle),
+        tip.y + length * sin(backAngle - halfWidthAngle)
+    )
+    val right = Offset(
+        tip.x + length * cos(backAngle + halfWidthAngle),
+        tip.y + length * sin(backAngle + halfWidthAngle)
+    )
+    val back = Offset(
+        tip.x + length * cos(backAngle),
+        tip.y + length * sin(backAngle)
+    )
+
+    val headPath = Path().apply {
+        moveTo(tip.x, tip.y)
+        when (shape) {
+            ArrowHeadShape.FULL -> {
+                lineTo(left.x, left.y)
+                lineTo(right.x, right.y)
+            }
+
+            ArrowHeadShape.HALF -> when (half) {
+                ArrowHeadHalf.TOP -> {
+                    lineTo(left.x, left.y)
+                    lineTo(back.x, back.y)
+                }
+
+                ArrowHeadHalf.BOTTOM -> {
+                    lineTo(right.x, right.y)
+                    lineTo(back.x, back.y)
+                }
+            }
+        }
+        close()
+    }
+    drawPath(headPath, color = color)
 }
 
 fun DrawScope.drawTextBox(

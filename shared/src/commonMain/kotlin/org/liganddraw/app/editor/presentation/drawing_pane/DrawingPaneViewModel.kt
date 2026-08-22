@@ -2,6 +2,7 @@ package org.liganddraw.app.editor.presentation.drawing_pane
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,15 +18,25 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.RDKit.Bond
 import org.liganddraw.app.core.domain.onSuccess
+import org.liganddraw.app.editor.domain.ArrowHandle
+import org.liganddraw.app.editor.domain.ArrowHeadShape
 import org.liganddraw.app.editor.domain.CheminformaticsDataSource
+import org.liganddraw.app.editor.domain.DrawingPaneConstants.ARROW_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.ATOM_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_HIT_TOLERANCE
 import org.liganddraw.app.editor.domain.DrawingPaneConstants.BOND_LENGTH
 import org.liganddraw.app.editor.domain.Molecule
+import org.liganddraw.app.editor.domain.ReactionArrow
+import org.liganddraw.app.editor.domain.ReactionArrow.Equilibrium
+import org.liganddraw.app.editor.domain.ReactionArrow.Forward
+import org.liganddraw.app.editor.domain.ReactionArrow.Resonance
+import org.liganddraw.app.editor.domain.ReactionArrowType
 import org.liganddraw.app.editor.domain.Tool
+import org.liganddraw.app.editor.presentation.utils.ArrowDragSession
 import org.liganddraw.app.editor.presentation.utils.BondDragSession
 import org.liganddraw.app.editor.presentation.utils.ChainDragSession
 import org.liganddraw.app.editor.presentation.utils.UndoRedoStack
+import org.liganddraw.app.editor.presentation.utils.centerPosition
 import org.liganddraw.app.editor.presentation.utils.getAtomLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getHydrogenLabelLayout
 import org.liganddraw.app.editor.presentation.utils.getSymbolLabelLayout
@@ -37,9 +48,12 @@ import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.writeText
 import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.uuid.Uuid
 
 class DrawingPaneViewModel(private val cheminformaticsDataSource: CheminformaticsDataSource) :
     ViewModel() {
@@ -238,7 +252,9 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     private var bondDragSession: BondDragSession? = null
     private var chainDragSession: ChainDragSession? = null
+    private var arrowDragSession: ArrowDragSession? = null
     private var dragMoveSequence = 0L
+
     private fun handleDragStart(x: Float, y: Float) {
         when (_state.value.selectedTool) {
             is Tool.SingleBond, is Tool.WedgeBond, is Tool.HashedWedgeBond,
@@ -246,9 +262,22 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 handleBondDragStart(x, y)
 
             is Tool.Chain -> handleChainDragStart(x, y)
+            is Tool.ForwardArrow -> handleArrowDragStart(x, y, ReactionArrowType.FORWARD)
+            is Tool.ResonanceArrow -> handleArrowDragStart(x, y, ReactionArrowType.RESONANCE)
+            is Tool.EquilibriumArrow -> handleArrowDragStart(x, y, ReactionArrowType.EQUILIBRIUM)
+            is Tool.ElectronPairPushingArrow -> handleArrowDragStart(
+                x,
+                y,
+                ReactionArrowType.ELECTRON_PAIR_PUSHING
+            )
+
+            is Tool.SingleElectronPushingArrow -> handleArrowDragStart(
+                x,
+                y,
+                ReactionArrowType.SINGLE_ELECTRON_PUSHING
+            )
 
             is Tool.Erase -> handleDragErase(x, y)
-
             else -> {}
         }
     }
@@ -256,25 +285,195 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     private fun handleDrag(x: Float, y: Float) {
         when (_state.value.selectedTool) {
             is Tool.SingleBond, is Tool.WedgeBond, is Tool.HashedWedgeBond,
-            is Tool.DoubleBond, is Tool.TripleBond, is Tool.HydrogenBond, is Tool.Element -> handleBondDrag(
+            is Tool.DoubleBond, is Tool.TripleBond, is Tool.HydrogenBond, is Tool.Element ->
+                handleBondDrag(x, y)
+
+            is Tool.Chain -> handleChainDrag(x, y)
+            is Tool.ForwardArrow, Tool.ResonanceArrow, Tool.EquilibriumArrow, Tool.ElectronPairPushingArrow, Tool.SingleElectronPushingArrow -> handleArrowDrag(
                 x,
                 y
             )
 
-            is Tool.Chain -> handleChainDrag(x, y)
-
             is Tool.Erase -> handleDragErase(x, y)
-
             else -> {}
         }
     }
 
     private fun handleDragEnd() {
-        if (bondDragSession != null || chainDragSession != null) {
+        if (bondDragSession != null || chainDragSession != null || arrowDragSession != null) {
             commitEdit(_state.value.document)
         }
         bondDragSession = null
         chainDragSession = null
+        arrowDragSession = null
+    }
+
+    private fun handleArrowDragStart(x: Float, y: Float, arrowType: ReactionArrowType) {
+        val arrow = findReactionArrowByPosition(
+            x = x,
+            y = y,
+        )
+
+        if (arrow == null) {
+            arrowDragSession = ArrowDragSession(
+                baselineDocument = _state.value.document,
+                arrowId = null,
+                arrowType = arrowType,
+                handle = ArrowHandle.END,
+                startX = x,
+                startY = y
+            )
+        } else {
+            val start = Offset(arrow.startX, arrow.startY)
+            val end = Offset(arrow.endX, arrow.endY)
+
+            val handle = when {
+                isNearHandle(x, y, start) -> ArrowHandle.START
+                isNearHandle(x, y, end) -> ArrowHandle.END
+                arrow is ReactionArrow.ElectronPushing && isNearHandle(
+                    x,
+                    y,
+                    arrow.centerPosition()
+                ) -> ArrowHandle.CURVE
+
+                else -> null
+            }
+            if (handle != null) {
+                arrowDragSession = ArrowDragSession(
+                    baselineDocument = _state.value.document,
+                    arrowId = arrow.id,
+                    arrowType = arrowType,
+                    handle = handle,
+                    startX = arrow.startX,
+                    startY = arrow.startY
+                )
+            }
+        }
+    }
+
+    private fun isNearHandle(
+        x: Float,
+        y: Float,
+        handlePos: Offset,
+        tolerance: Float = ARROW_HIT_TOLERANCE
+    ): Boolean {
+        val dx = x - handlePos.x
+        val dy = y - handlePos.y
+        return sqrt(dx * dx + dy * dy) <= tolerance
+    }
+
+    private fun handleArrowDrag(x: Float, y: Float) {
+        val session = arrowDragSession ?: return
+
+        if (session.arrowId == null) {
+            // --- Drawing a new arrow ---
+            val id = Uuid.random().toString()
+
+            val dx = x - session.startX
+            val dy = y - session.startY
+            val distance = sqrt(dx * dx + dy * dy)
+            val rawAngle = atan2(dy, dx)
+            val snappedAngle = snapAngle(rawAngle.toDouble()).toFloat()
+
+            val endX = session.startX + distance * cos(snappedAngle)
+            val endY = session.startY + distance * sin(snappedAngle)
+
+            if (endX == session.lastX && endY == session.lastY) return
+            session.lastX = endX
+            session.lastY = endY
+
+            val newArrow = when (session.arrowType) {
+                ReactionArrowType.FORWARD -> Forward(
+                    id = id,
+                    startX = session.startX, startY = session.startY,
+                    endX = endX, endY = endY
+                )
+
+                ReactionArrowType.RESONANCE -> Resonance(
+                    id = id,
+                    startX = session.startX, startY = session.startY,
+                    endX = endX, endY = endY
+                )
+
+                ReactionArrowType.EQUILIBRIUM -> Equilibrium(
+                    id = id,
+                    startX = session.startX, startY = session.startY,
+                    endX = endX, endY = endY
+                )
+
+                ReactionArrowType.ELECTRON_PAIR_PUSHING -> ReactionArrow.ElectronPushing(
+                    id = id,
+                    startX = session.startX,
+                    startY = session.startY,
+                    endX = endX,
+                    endY = endY,
+                )
+
+                ReactionArrowType.SINGLE_ELECTRON_PUSHING -> ReactionArrow.ElectronPushing(
+                    id = id,
+                    startX = session.startX,
+                    startY = session.startY,
+                    endX = endX,
+                    endY = endY,
+                    headShape = ArrowHeadShape.HALF
+                )
+            }
+
+            val newDocument = session.baselineDocument.copy(
+                reactionArrows = session.baselineDocument.reactionArrows + newArrow
+            )
+            _state.update { it.copy(document = newDocument) }
+            return
+        }
+
+        // --- Editing an existing arrow's handle ---
+        val arrows = session.baselineDocument.reactionArrows
+        val arrow = arrows.find { it.id == session.arrowId } ?: return
+
+        val newArrow = when (session.handle) {
+            ArrowHandle.START -> {
+                if (x == session.lastX && y == session.lastY) return
+                session.lastX = x
+                session.lastY = y
+                arrow.withPositions(startX = x, startY = y, endX = arrow.endX, endY = arrow.endY)
+            }
+
+            ArrowHandle.END -> {
+                if (x == session.lastX && y == session.lastY) return
+                session.lastX = x
+                session.lastY = y
+                arrow.withPositions(
+                    startX = arrow.startX,
+                    startY = arrow.startY,
+                    endX = x,
+                    endY = y
+                )
+            }
+
+            ArrowHandle.CURVE -> {
+                if (arrow !is ReactionArrow.ElectronPushing) return
+
+                val dx = arrow.endX - arrow.startX
+                val dy = arrow.endY - arrow.startY
+                val len = sqrt(dx * dx + dy * dy)
+                if (len == 0f) return
+                val perpX = -dy / len
+                val perpY = dx / len
+                val midX = (arrow.startX + arrow.endX) / 2f
+                val midY = (arrow.startY + arrow.endY) / 2f
+                val newBow = ((x - midX) * perpX + (y - midY) * perpY) * 2f
+
+                if (newBow == session.lastCurveBow) return
+                session.lastCurveBow = newBow
+
+                arrow.copy(curveBow = newBow)
+            }
+        }
+
+        val newArrows = arrows.toMutableList().map {
+            if (it.id == arrow.id) newArrow else it
+        }
+        _state.update { it.copy(document = session.baselineDocument.copy(reactionArrows = newArrows)) }
     }
 
     private fun handleBondDragStart(x: Float, y: Float) {
@@ -623,11 +822,20 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun handlePointerMove(x: Float, y: Float) {
-        val hitAtomId = findAtomByPosition(x, y)
+        val hitArrowId = findReactionArrowByPosition(x, y)?.id
+        val hitAtomId = if (hitArrowId == null) findAtomByPosition(x, y) else null
         val hitBondId = if (hitAtomId == null) findBondByPosition(x, y) else null
-
-        if (state.value.hoveredAtomId != hitAtomId || state.value.hoveredBondId != hitBondId) {
-            _state.update { it.copy(hoveredAtomId = hitAtomId, hoveredBondId = hitBondId) }
+        if (state.value.hoveredAtomId != hitAtomId ||
+            state.value.hoveredBondId != hitBondId ||
+            state.value.hoveredArrowId != hitArrowId
+        ) {
+            _state.update {
+                it.copy(
+                    hoveredAtomId = hitAtomId,
+                    hoveredBondId = hitBondId,
+                    hoveredArrowId = hitArrowId
+                )
+            }
         }
     }
 
@@ -712,6 +920,78 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         val across = vx * -uy + vy * ux
 
         return along in 0f..bondLength && across in -width / 2f..width / 2f
+    }
+
+    private fun findReactionArrowByPosition(x: Float, y: Float): ReactionArrow? {
+        _state.value.document.reactionArrows.fastForEach { arrow ->
+            if (isArrowHit(x, y, arrow)) {
+                return arrow
+            }
+        }
+        return null
+    }
+
+    private fun isArrowHit(
+        px: Float, py: Float,
+        arrow: ReactionArrow,
+        tolerance: Float = ARROW_HIT_TOLERANCE
+    ): Boolean {
+        return when (arrow) {
+            is ReactionArrow.ElectronPushing -> {
+                if (arrow.curveBow == 0f) {
+                    isBondHit(
+                        px,
+                        py,
+                        Offset(arrow.startX, arrow.startY),
+                        Offset(arrow.endX, arrow.endY),
+                        tolerance
+                    )
+                } else {
+                    isCurveHit(px, py, arrow, tolerance)
+                }
+            }
+
+            else -> isBondHit(
+                px,
+                py,
+                Offset(arrow.startX, arrow.startY),
+                Offset(arrow.endX, arrow.endY),
+                tolerance
+            )
+        }
+    }
+
+    /** Approximates the curve as line segments and hit-tests each, since it's a quadratic Bezier. */
+    private fun isCurveHit(
+        px: Float,
+        py: Float,
+        arrow: ReactionArrow.ElectronPushing,
+        width: Float
+    ): Boolean {
+        val start = Offset(arrow.startX, arrow.startY)
+        val end = Offset(arrow.endX, arrow.endY)
+        val mid = Offset((start.x + end.x) / 2f, (start.y + end.y) / 2f)
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        val len = sqrt(dx * dx + dy * dy)
+        if (len == 0f) return false
+        val perpX = -dy / len
+        val perpY = dx / len
+        val control = Offset(mid.x + perpX * arrow.curveBow, mid.y + perpY * arrow.curveBow)
+
+        val segments = 12
+        var prev = start
+        for (i in 1..segments) {
+            val t = i / segments.toFloat()
+            val oneMinusT = 1f - t
+            val point = Offset(
+                oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
+                oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y
+            )
+            if (isBondHit(px, py, prev, point, width)) return true
+            prev = point
+        }
+        return false
     }
 
     private fun handleAttachBondToAtom(

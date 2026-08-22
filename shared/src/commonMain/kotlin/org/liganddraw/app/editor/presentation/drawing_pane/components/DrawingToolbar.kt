@@ -53,6 +53,11 @@ import liganddraw.shared.generated.resources.hydrogen_bond_tool
 import liganddraw.shared.generated.resources.minus_tool
 import liganddraw.shared.generated.resources.pan_tool
 import liganddraw.shared.generated.resources.plus_tool
+import liganddraw.shared.generated.resources.reaction_electron_pair_pushing_arrow_tool
+import liganddraw.shared.generated.resources.reaction_equilibrium_arrow_tool
+import liganddraw.shared.generated.resources.reaction_forward_arrow_tool
+import liganddraw.shared.generated.resources.reaction_resonance_arrow_tool
+import liganddraw.shared.generated.resources.reaction_single_electron_pushing_arrow_tool
 import liganddraw.shared.generated.resources.single_bond
 import liganddraw.shared.generated.resources.structure_select_tool
 import liganddraw.shared.generated.resources.triple_bond_tool
@@ -143,6 +148,14 @@ fun BoxScope.DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
             onClick = { onSelectTool(Tool.Chain) },
             icon = Res.drawable.chain_tool,
             tooltipText = "Chain"
+        )
+
+        ToolbarSeparator(isColumn = isColumn)
+
+        ToolGroup(
+            options = reactionArrowOptions,
+            selectedTool = selectedTool,
+            onSelectTool = onSelectTool
         )
 
         ToolbarSeparator(isColumn = isColumn)
@@ -276,6 +289,26 @@ val singleBondOptions = listOf(
     Triple(Tool.SingleBond, Res.drawable.single_bond, "Single Bond"),
     Triple(Tool.WedgeBond, Res.drawable.wedge_bond, "Wedge Bond"),
     Triple(Tool.HashedWedgeBond, Res.drawable.hashed_wedge_bond, "Hashed Wedge Bond"),
+)
+
+val reactionArrowOptions = listOf(
+    Triple(Tool.ForwardArrow, Res.drawable.reaction_forward_arrow_tool, "Forward Arrow"),
+    Triple(
+        Tool.ElectronPairPushingArrow,
+        Res.drawable.reaction_electron_pair_pushing_arrow_tool,
+        "Push Electron Pair"
+    ),
+    Triple(
+        Tool.SingleElectronPushingArrow,
+        Res.drawable.reaction_single_electron_pushing_arrow_tool,
+        "Push Single Electron"
+    ),
+    Triple(Tool.ResonanceArrow, Res.drawable.reaction_resonance_arrow_tool, "Resonance Arrow"),
+    Triple(
+        Tool.EquilibriumArrow,
+        Res.drawable.reaction_equilibrium_arrow_tool,
+        "Equilibrium Arrow"
+    ),
 )
 
 val cycloAlkaneOptions = listOf(

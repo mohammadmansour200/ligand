@@ -12,6 +12,7 @@ object DrawingPaneConstants {
     const val HYDROGEN_COUNT_FONT_SIZE = 20f
     const val HIGHLIGHT_STROKE_WIDTH = 2f
     const val HIGHLIGHT_CORNER_RADIUS = 8f
+    const val ARROW_HIT_TOLERANCE = 25f
     const val BOND_HIT_TOLERANCE = 20f
     const val ATOM_HIT_TOLERANCE = 5f
     const val BENZENE = "c1ccccc1"
@@ -24,4 +25,6 @@ object DrawingPaneConstants {
     const val CYCLOOCTANE = "C1CCCCCCC1"
     const val MAX_FORMAL_CHARGE = 1
     const val MIN_FORMAL_CHARGE = -1
+    const val ARROWHEAD_LENGTH = 24f
+    const val ARROWHEAD_WIDTH_ANGLE_DEGREES = 22.0
 }

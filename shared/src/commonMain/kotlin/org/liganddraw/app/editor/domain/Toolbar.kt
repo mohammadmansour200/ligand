@@ -13,6 +13,11 @@ sealed interface Tool {
     object TripleBond : Tool
     object HydrogenBond : Tool
     object Chain : Tool
+    object ForwardArrow : Tool
+    object ResonanceArrow : Tool
+    object EquilibriumArrow : Tool
+    object SingleElectronPushingArrow : Tool
+    object ElectronPairPushingArrow : Tool
     data class Element(val symbol: String) : Tool
     data class Template(val smiles: String) : Tool
 }

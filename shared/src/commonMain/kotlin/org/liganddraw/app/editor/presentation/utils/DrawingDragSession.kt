@@ -1,6 +1,8 @@
 package org.liganddraw.app.editor.presentation.utils
 
 import org.RDKit.Bond
+import org.liganddraw.app.editor.domain.ArrowHandle
+import org.liganddraw.app.editor.domain.ReactionArrowType
 import org.liganddraw.app.editor.presentation.drawing_pane.DrawingDocument
 
 data class BondDragSession(
@@ -22,4 +24,16 @@ data class ChainDragSession(
     val originY: Double,
     var lastAtomCount: Int? = null,
     var lastSnappedAngle: Double? = null
+)
+
+data class ArrowDragSession(
+    val baselineDocument: DrawingDocument,
+    val arrowId: String? = null,
+    val arrowType: ReactionArrowType = ReactionArrowType.FORWARD,
+    val handle: ArrowHandle = ArrowHandle.END,
+    val startX: Float,
+    val startY: Float,
+    var lastX: Float? = null,
+    var lastY: Float? = null,
+    var lastCurveBow: Float? = null
 )
