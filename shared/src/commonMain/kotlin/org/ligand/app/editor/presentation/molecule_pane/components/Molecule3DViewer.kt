@@ -31,18 +31,17 @@ import io.github.erkko68.filament.compose.rememberOrbitCameraController
 import io.github.erkko68.filament.compose.scene.AmbientOcclusion
 import io.github.erkko68.filament.compose.scene.AntiAliasing
 import io.github.erkko68.filament.compose.scene.Bloom
-import io.github.erkko68.filament.compose.scene.Color
 import io.github.erkko68.filament.compose.scene.Direction
+import io.github.erkko68.filament.compose.scene.LinearColor
 import io.github.erkko68.filament.compose.scene.Position
 import io.github.erkko68.filament.compose.scene.PostProcessing
-import io.github.erkko68.filament.compose.scene.SkyboxSource
+import io.github.erkko68.filament.compose.scene.Rotation
 import io.github.erkko68.filament.compose.scene.primitives.Cylinder
 import io.github.erkko68.filament.compose.scene.primitives.Sphere
 import io.github.erkko68.filament.compose.scene.rememberCameraState
 import io.github.erkko68.filament.compose.scene.rememberKTXEnvironment
 import io.github.erkko68.filament.compose.scene.rememberMaterial
 import io.github.erkko68.filament.compose.scene.rememberMaterialInstance
-import io.github.erkko68.filament.compose.scene.rememberSkyboxState
 import io.github.erkko68.filament.compose.scene.setParameter
 import io.github.erkko68.filament.utils.Float3
 import io.github.erkko68.filament.utils.Quaternion
@@ -68,7 +67,6 @@ import kotlin.math.PI
 import kotlin.math.acos
 import kotlin.math.pow
 import kotlin.math.sqrt
-import io.github.erkko68.filament.compose.scene.Color as FilColor
 
 const val MAX_COLOR_VALUE = 255f
 
@@ -108,9 +106,6 @@ fun BoxScope.Molecule3DViewer(
 
     val engine = rememberFilamentEngine()
 
-    // Black background
-    val skybox = rememberSkyboxState(initialSource = SkyboxSource.Color(FilColor(0f, 0f, 0f)))
-
     val cameraState = rememberCameraState(initialEye = Position(0f, 1f, 25f))
     val orbit = rememberOrbitCameraController(cameraState = cameraState, zoomSpeed = 10f)
 
@@ -122,7 +117,6 @@ fun BoxScope.Molecule3DViewer(
 
     val scene = rememberFilamentScene(
         engine = engine,
-        skyboxState = skybox,
         indirectLightState = environment.indirectLightState,
     ) {
         val template = rememberMaterial { solidColorMaterialBytes }
@@ -145,7 +139,7 @@ fun BoxScope.Molecule3DViewer(
             Sphere(
                 material = rememberSolidColorInstance(
                     template = template,
-                    color = FilColor(red, green, blue),
+                    color = LinearColor(red, green, blue),
                     metallic = .2f,
                     roughness = .55f,
                     reflectance = .5f
@@ -159,7 +153,7 @@ fun BoxScope.Molecule3DViewer(
         val bondMaterial =
             rememberSolidColorInstance(
                 template = template,
-                color = FilColor(.70f, .80f, 1f),
+                color = LinearColor(.70f, .80f, 1f),
                 metallic = 1f,
                 roughness = .6f,
                 reflectance = 0f,
@@ -167,7 +161,7 @@ fun BoxScope.Molecule3DViewer(
         val hydrogenBondMaterial =
             rememberSolidColorInstance(
                 template = template,
-                color = FilColor(.70f, .80f, 1f),
+                color = LinearColor(.70f, .80f, 1f),
                 metallic = 1f,
                 roughness = .6f,
                 reflectance = 0f,
@@ -266,7 +260,7 @@ fun BoxScope.Molecule3DViewer(
         }
 
         val isEPMSurfaceVisible = moleculeRenderMode == MoleculeRenderMode.ELECTRON_DISTRIBUTION
-        EPMMoleculeSurface(conformer.atoms, epmMaterialBytes, isEPMSurfaceVisible)
+        EPMMoleculeSurface(engine, conformer.atoms, epmMaterialBytes, isEPMSurfaceVisible)
     }
 
     if (error == null) {
@@ -278,7 +272,8 @@ fun BoxScope.Molecule3DViewer(
                 bloom = Bloom(),
                 ambientOcclusion = AmbientOcclusion()
             ),
-            scene = scene
+            scene = scene,
+            transparent = true
         )
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)) {
@@ -319,14 +314,14 @@ private fun FilamentSceneScope.CylinderBond(
         height = height,
         radius = 0.1f,
         pivot = Position(0f, -height.div(2), 0f),
-        rotation = Quaternion.fromAxisAngle(rotationAxis, rotationAngle)
+        rotation = Rotation(Quaternion.fromAxisAngle(rotationAxis, rotationAngle))
     )
 }
 
 @Composable
 private fun rememberSolidColorInstance(
     template: Material?,
-    color: Color,
+    color: LinearColor,
     metallic: Float = 0f,
     roughness: Float = 0.5f,
     reflectance: Float = 0.5f,

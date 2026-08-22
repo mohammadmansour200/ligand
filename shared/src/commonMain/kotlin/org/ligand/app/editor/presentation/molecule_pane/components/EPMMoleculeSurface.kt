@@ -7,7 +7,6 @@ import io.github.erkko68.filament.MaterialInstance
 import io.github.erkko68.filament.Texture
 import io.github.erkko68.filament.TextureSampler
 import io.github.erkko68.filament.compose.FilamentSceneScope
-import io.github.erkko68.filament.compose.LocalFilamentEngine
 import io.github.erkko68.filament.compose.scene.primitives.Mesh
 import io.github.erkko68.filament.compose.scene.rememberMaterial
 import io.github.erkko68.filament.compose.scene.rememberMaterialInstance
@@ -474,10 +473,10 @@ private fun createEpmLutTexture(engine: Engine, width: Int = 256): Texture {
 
 @Composable
 private fun rememberEPMSurfaceInstance(
+    engine: Engine,
     materialBytes: ByteArray,
     opacity: Float = 0.3f,
 ): MaterialInstance? {
-    val engine = LocalFilamentEngine.current
     val template = rememberMaterial { materialBytes }
 
     val lutTexture = remember { createEpmLutTexture(engine) }
@@ -496,11 +495,12 @@ private fun rememberEPMSurfaceInstance(
 
 @Composable
 fun FilamentSceneScope.EPMMoleculeSurface(
+    engine: Engine,
     atoms: List<Atom>,
     epmMaterialBytes: ByteArray,
     isVisible: Boolean
 ) {
-    val material = rememberEPMSurfaceInstance(epmMaterialBytes)
+    val material = rememberEPMSurfaceInstance(engine, epmMaterialBytes)
     val meshData = remember(atoms) { computeEpmMeshData(atoms) }
 
     if (isVisible) {
