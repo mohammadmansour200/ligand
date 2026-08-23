@@ -72,7 +72,7 @@ fun BoxScope.MoleculePropertiesCard(
         exit = fadeOut() + scaleOut()
     ) {
         FilledTonalIconButton(onClick = { propertiesExpanded = true }) {
-            IconWithTooltip(icon = vectorResource(Res.drawable.info), text = "Show properties")
+            IconWithTooltip(icon = vectorResource(Res.drawable.info), text = "Show molecule info")
         }
     }
 
@@ -89,27 +89,22 @@ fun BoxScope.MoleculePropertiesCard(
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
         ) {
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Properties",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
+            ) {
+                IconButton(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    onClick = { propertiesExpanded = false }) {
+                    IconWithTooltip(
+                        icon = vectorResource(Res.drawable.close),
+                        text = "Hide molecule info",
+                        iconModifier = Modifier.size(18.dp)
                     )
-                    IconButton(onClick = { propertiesExpanded = false }) {
-                        IconWithTooltip(
-                            icon = vectorResource(Res.drawable.close),
-                            text = "Hide properties",
-                            iconModifier = Modifier.size(18.dp)
-                        )
-                    }
                 }
+            }
+            Column {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 when {

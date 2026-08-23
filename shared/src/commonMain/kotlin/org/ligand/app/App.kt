@@ -7,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDragHandle
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
-import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.defaultDragHandleSemantics
@@ -69,8 +68,6 @@ fun App() {
         }
 
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            val isSupportingPaneVisible =
-                navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] != PaneAdaptedValue.Hidden
             SupportingPaneScaffold(
                 directive = navigator.scaffoldDirective,
                 value = navigator.scaffoldValue,
@@ -80,7 +77,6 @@ fun App() {
                             moleculePaneViewModel = moleculePaneViewModel,
                             drawingPaneViewModel = drawingPaneViewModel,
                             onClose = { scope.launch { navigator.navigateBack(backNavigationBehavior) } },
-                            showCloseButton = isSupportingPaneVisible
                         )
                     }
                 }, mainPane = {
@@ -90,7 +86,6 @@ fun App() {
                             onNavigateToSupporting = {
                                 scope.launch { navigator.navigateTo(SupportingPaneScaffoldRole.Supporting) }
                             },
-                            showSupportingPaneButton = !isSupportingPaneVisible
                         )
                     }
                 },

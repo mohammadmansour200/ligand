@@ -41,7 +41,6 @@ fun DrawingPaneTopBar(
     state: DrawingPaneState,
     onAction: (DrawingPaneAction) -> Unit,
     onNavigateToSupporting: () -> Unit,
-    showSupportingPaneButton: Boolean
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(
@@ -71,24 +70,22 @@ fun DrawingPaneTopBar(
                 )
             }
 
-            if (showSupportingPaneButton) {
-                VerticalDivider(
-                    modifier = Modifier
-                        .height(24.dp)
-                        .padding(horizontal = 4.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
+            VerticalDivider(
+                modifier = Modifier
+                    .height(24.dp)
+                    .padding(horizontal = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
 
-                IconButton(
-                    onClick = onNavigateToSupporting,
-                ) {
-                    IconWithTooltip(
-                        iconModifier = Modifier
-                            .height(32.dp),
-                        icon = vectorResource(Res.drawable.show_info),
-                        text = "Show 3D model and molecular properties",
-                    )
-                }
+            IconButton(
+                onClick = onNavigateToSupporting,
+            ) {
+                IconWithTooltip(
+                    iconModifier = Modifier
+                        .height(32.dp),
+                    icon = vectorResource(Res.drawable.show_info),
+                    text = "Show 3D model and molecular info",
+                )
             }
         }
     }

@@ -25,26 +25,26 @@ fun MoleculePaneRoot(
     moleculePaneViewModel: MoleculePaneViewModel = koinViewModel(),
     drawingPaneViewModel: DrawingPaneViewModel = koinViewModel(),
     onClose: (() -> Unit),
-    showCloseButton: Boolean
 ) {
+    val filamentResources by moleculePaneViewModel.filamentResources.collectAsStateWithLifecycle()
     val moleculePaneState by moleculePaneViewModel.state.collectAsStateWithLifecycle()
     val drawingPaneState by drawingPaneViewModel.state.collectAsStateWithLifecycle()
     MoleculePane(
+        filamentResources = filamentResources,
         moleculePaneState = moleculePaneState,
         drawingPaneState = drawingPaneState,
         drawingPaneOnAction = drawingPaneViewModel::onAction,
         onClose = onClose,
-        showCloseButton = showCloseButton
     )
 }
 
 @Composable
 fun MoleculePane(
+    filamentResources: FilamentResources,
     moleculePaneState: MoleculePaneState,
     drawingPaneState: DrawingPaneState,
     drawingPaneOnAction: (DrawingPaneAction) -> Unit,
     onClose: (() -> Unit),
-    showCloseButton: Boolean
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -53,7 +53,6 @@ fun MoleculePane(
                 onPrevious = { drawingPaneOnAction(DrawingPaneAction.OnSelectPreviousMolecule) },
                 onNext = { drawingPaneOnAction(DrawingPaneAction.OnSelectNextMolecule) },
                 onClose = onClose,
-                showCloseButton = showCloseButton
             )
 
             Box(
@@ -61,8 +60,9 @@ fun MoleculePane(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
+
                 when {
-                    moleculePaneState.conformer == null -> NoMoleculeNotice(
+                    filamentResources !is FilamentResources.Ready || moleculePaneState.epmMeshData == null || moleculePaneState.conformer == null -> NoMoleculeNotice(
                         modifier = Modifier.align(
                             Alignment.Center
                         )
@@ -70,10 +70,12 @@ fun MoleculePane(
 
                     else -> {
                         Molecule3DViewer(
+                            engine = filamentResources.engine,
+                            epmMeshData = moleculePaneState.epmMeshData,
                             conformer = moleculePaneState.conformer,
-                            iblBytes = moleculePaneState.iblBytes,
-                            solidColorMaterialBytes = moleculePaneState.solidColorMaterialBytes,
-                            epmMaterialBytes = moleculePaneState.epmMaterialBytes,
+                            iblBytes = filamentResources.iblBytes,
+                            solidColorMaterialBytes = filamentResources.solidColorMaterialBytes,
+                            epmMaterialBytes = filamentResources.epmMaterialBytes,
                             error = moleculePaneState.conformerError
                         )
                         MoleculePropertiesCard(moleculePaneState)

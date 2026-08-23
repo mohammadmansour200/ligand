@@ -20,12 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.erkko68.filament.Engine
 import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
 import io.github.erkko68.filament.compose.FilamentSceneScope
 import io.github.erkko68.filament.compose.FilamentView
 import io.github.erkko68.filament.compose.orbitGestures
-import io.github.erkko68.filament.compose.rememberFilamentEngine
 import io.github.erkko68.filament.compose.rememberFilamentScene
 import io.github.erkko68.filament.compose.rememberOrbitCameraController
 import io.github.erkko68.filament.compose.scene.AmbientOcclusion
@@ -36,12 +36,14 @@ import io.github.erkko68.filament.compose.scene.LinearColor
 import io.github.erkko68.filament.compose.scene.Position
 import io.github.erkko68.filament.compose.scene.PostProcessing
 import io.github.erkko68.filament.compose.scene.Rotation
+import io.github.erkko68.filament.compose.scene.SkyboxSource
 import io.github.erkko68.filament.compose.scene.primitives.Cylinder
 import io.github.erkko68.filament.compose.scene.primitives.Sphere
 import io.github.erkko68.filament.compose.scene.rememberCameraState
 import io.github.erkko68.filament.compose.scene.rememberKTXEnvironment
 import io.github.erkko68.filament.compose.scene.rememberMaterial
 import io.github.erkko68.filament.compose.scene.rememberMaterialInstance
+import io.github.erkko68.filament.compose.scene.rememberSkyboxState
 import io.github.erkko68.filament.compose.scene.setParameter
 import io.github.erkko68.filament.utils.Float3
 import io.github.erkko68.filament.utils.Quaternion
@@ -57,6 +59,7 @@ import org.ligand.app.core.domain.ChemistryError
 import org.ligand.app.core.presentation.IconWithTooltip
 import org.ligand.app.core.presentation.toErrorText
 import org.ligand.app.editor.domain.Bond
+import org.ligand.app.editor.domain.EPMMeshData
 import org.ligand.app.editor.domain.Molecule
 import org.ligand.app.editor.domain.MoleculePaneConstants.ATOM_VAN_DER_WAALS_RADII_MAP
 import org.ligand.app.editor.domain.MoleculePaneConstants.BALL_STICK_RADII_SCALE
@@ -96,6 +99,8 @@ val moleculeRenderModeOptions = listOf(
 
 @Composable
 fun BoxScope.Molecule3DViewer(
+    engine: Engine,
+    epmMeshData: EPMMeshData,
     conformer: Molecule,
     iblBytes: ByteArray,
     solidColorMaterialBytes: ByteArray,
@@ -104,8 +109,7 @@ fun BoxScope.Molecule3DViewer(
 ) {
     var moleculeRenderMode by remember { mutableStateOf(MoleculeRenderMode.BALL_AND_STICK) }
 
-    val engine = rememberFilamentEngine()
-
+    val skybox = rememberSkyboxState(initialSource = SkyboxSource.Color(LinearColor(0f, 0f, 0f)))
     val cameraState = rememberCameraState(initialEye = Position(0f, 1f, 25f))
     val orbit = rememberOrbitCameraController(cameraState = cameraState, zoomSpeed = 10f)
 
@@ -118,6 +122,7 @@ fun BoxScope.Molecule3DViewer(
     val scene = rememberFilamentScene(
         engine = engine,
         indirectLightState = environment.indirectLightState,
+        skyboxState = skybox
     ) {
         val template = rememberMaterial { solidColorMaterialBytes }
 
@@ -260,7 +265,12 @@ fun BoxScope.Molecule3DViewer(
         }
 
         val isEPMSurfaceVisible = moleculeRenderMode == MoleculeRenderMode.ELECTRON_DISTRIBUTION
-        EPMMoleculeSurface(engine, conformer.atoms, epmMaterialBytes, isEPMSurfaceVisible)
+        EPMMoleculeSurface(
+            engine = engine,
+            meshData = epmMeshData,
+            epmMaterialBytes = epmMaterialBytes,
+            isVisible = isEPMSurfaceVisible
+        )
     }
 
     if (error == null) {
@@ -273,7 +283,6 @@ fun BoxScope.Molecule3DViewer(
                 ambientOcclusion = AmbientOcclusion()
             ),
             scene = scene,
-            transparent = true
         )
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)) {

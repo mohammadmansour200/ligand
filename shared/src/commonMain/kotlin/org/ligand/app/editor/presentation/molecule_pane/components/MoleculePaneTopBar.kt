@@ -24,7 +24,6 @@ fun MoleculePaneTopBar(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
-    showCloseButton: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -53,14 +52,13 @@ fun MoleculePaneTopBar(
                 )
             }
         }
-        if (showCloseButton) {
-            IconButton(onClick = onClose) {
-                IconWithTooltip(
-                    icon = vectorResource(Res.drawable.close),
-                    text = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
+
+        IconButton(onClick = onClose) {
+            IconWithTooltip(
+                icon = vectorResource(Res.drawable.close),
+                text = "Close",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
