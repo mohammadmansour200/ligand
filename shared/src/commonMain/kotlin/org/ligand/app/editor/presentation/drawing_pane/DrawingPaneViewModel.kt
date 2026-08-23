@@ -817,6 +817,38 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 angstromPosition.second
             )
 
+            is Tool.SingleBond -> handleCreateMoleculeFromEthane(
+                bondType = Bond.BondType.SINGLE,
+                xAngstrom = angstromPosition.first,
+                yAngstrom = angstromPosition.second
+            )
+
+            is Tool.WedgeBond -> handleCreateMoleculeFromEthane(
+                bondType = Bond.BondType.SINGLE,
+                bondDir = Bond.BondDir.BEGINWEDGE,
+                xAngstrom = angstromPosition.first,
+                yAngstrom = angstromPosition.second
+            )
+
+            is Tool.HashedWedgeBond -> handleCreateMoleculeFromEthane(
+                bondType = Bond.BondType.SINGLE,
+                bondDir = Bond.BondDir.BEGINDASH,
+                xAngstrom = angstromPosition.first,
+                yAngstrom = angstromPosition.second
+            )
+
+            is Tool.DoubleBond -> handleCreateMoleculeFromEthane(
+                bondType = Bond.BondType.DOUBLE,
+                xAngstrom = angstromPosition.first,
+                yAngstrom = angstromPosition.second
+            )
+
+            is Tool.TripleBond -> handleCreateMoleculeFromEthane(
+                bondType = Bond.BondType.TRIPLE,
+                xAngstrom = angstromPosition.first,
+                yAngstrom = angstromPosition.second
+            )
+
             else -> {}
         }
     }
@@ -1225,6 +1257,26 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         viewModelScope.launch {
             val newMolecule = cheminformaticsDataSource.createMoleculeFromAtom(
                 symbol,
+                xAngstrom,
+                yAngstrom,
+            )
+
+            val editedMolecules = _state.value.document.molecules.toMutableList()
+            editedMolecules.add(newMolecule)
+            commitEdit(_state.value.document.copy(molecules = editedMolecules))
+        }
+    }
+
+    private fun handleCreateMoleculeFromEthane(
+        bondType: Bond.BondType,
+        bondDir: Bond.BondDir = Bond.BondDir.NONE,
+        xAngstrom: Double,
+        yAngstrom: Double
+    ) {
+        viewModelScope.launch {
+            val newMolecule = cheminformaticsDataSource.createMoleculeFromEthane(
+                bondType,
+                bondDir,
                 xAngstrom,
                 yAngstrom,
             )

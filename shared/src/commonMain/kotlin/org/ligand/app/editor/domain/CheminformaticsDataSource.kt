@@ -146,6 +146,21 @@ interface CheminformaticsDataSource {
     ): Molecule
 
     /**
+     * Creates a new molecule with two carbons at a specified canvas coordinate.
+     * @param [bondType] The bond type between the two carbons (e.g., SINGLE, DOUBLE, TRIPLE).
+     * @param [bondDir] The stereochemical direction of the bond [Bond.BondDir] (BEGINWEDGE, BEGINDASH or NONE). Defaults to [Bond.BondDir.NONE].
+     * @param x The target x-coordinate in angstroms.
+     * @param y The target  y-coordinate in angstroms.
+     * @return [Molecule]
+     */
+    suspend fun createMoleculeFromEthane(
+        bondType: Bond.BondType,
+        bondDir: Bond.BondDir = Bond.BondDir.NONE,
+        x: Double,
+        y: Double
+    ): Molecule
+
+    /**
      * Cycles the bond type of the specified bond through single, double, and triple,
      * wrapping back to single after triple (single -> double -> triple -> single).
      * @param molecule The target [Molecule] to modify.

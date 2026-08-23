@@ -565,6 +565,43 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         }
     }
 
+    override suspend fun createMoleculeFromEthane(
+        bondType: BondType,
+        bondDir: Bond.BondDir,
+        x: Double,
+        y: Double
+    ): Molecule = withContext(Dispatchers.Default) {
+        val mol = RWMol()
+        try {
+            val conformer = Conformer()
+
+            // --- ADD FIRST ATOM ---
+            val atomIdx1 = mol.addAtom(Atom("C"))
+            conformer.setAtomPos(atomIdx1, Point3D(x, y, 0.0))
+
+            // --- ADD SECOND ATOM, OFFSET BY STANDARD C-C BOND LENGTH ---
+            val atomIdx2 = mol.addAtom(Atom("C"))
+            val secondX = x + BOND_LENGTH
+            conformer.setAtomPos(atomIdx2, Point3D(secondX, y, 0.0))
+
+            conformer.is3D = false
+            mol.addConformer(conformer, true)
+
+            // --- ADD BOND BETWEEN THE TWO ATOMS ---
+            mol.addBond(atomIdx1, atomIdx2, bondType)
+            val bond = mol.getBondBetweenAtoms(atomIdx1, atomIdx2)
+            bond.bondDir = bondDir
+
+            mol.sanitizeMol()
+
+            // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
+            return@withContext mol.toMolecule()
+        } finally {
+            // --- CLEANUP ---
+            mol.delete()
+        }
+    }
+
     override suspend fun cycleBondType(
         molecule: Molecule,
         targetBondIdx: Long
