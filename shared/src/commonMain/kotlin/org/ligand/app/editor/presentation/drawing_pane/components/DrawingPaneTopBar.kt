@@ -85,8 +85,6 @@ fun DrawingPaneTopBar(
                 onClick = onNavigateToSupporting,
             ) {
                 IconWithTooltip(
-                    iconModifier = Modifier
-                        .height(32.dp),
                     icon = vectorResource(Res.drawable.show_info),
                     text = "Show 3D model and molecular info",
                 )
