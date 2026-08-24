@@ -52,6 +52,7 @@ import ligand.shared.generated.resources.close
 import ligand.shared.generated.resources.error
 import ligand.shared.generated.resources.info
 import org.jetbrains.compose.resources.vectorResource
+import org.ligand.app.core.domain.DataError
 import org.ligand.app.core.presentation.IconWithTooltip
 import org.ligand.app.core.utils.truncateTo
 import org.ligand.app.editor.presentation.drawing_pane.modifier.fadingEdges
@@ -165,9 +166,20 @@ private fun MoleculePropertiesTable(state: MoleculePaneState) {
             .verticalScroll(scrollState)
     ) {
         state.properties?.let { properties ->
+            val iupacValue = when (state.iupacError) {
+                null -> properties.iupacName ?: "Not available for this compound"
+                DataError.NoInternet -> "No internet connection"
+                DataError.RequestTimeout -> "Connection timed out"
+                DataError.TooManyRequests -> "Too many requests — try again in a moment"
+                DataError.Server,
+                DataError.Serialization,
+                DataError.FileCorrupted,
+                DataError.Unknown -> "Couldn't load name"
+            }
+
             TableRow(
                 label = "IUPAC Name",
-                value = properties.iupacName ?: "Unavailable",
+                value = iupacValue,
                 stacked = true,
                 isLoading = state.isIupacLoading
             )

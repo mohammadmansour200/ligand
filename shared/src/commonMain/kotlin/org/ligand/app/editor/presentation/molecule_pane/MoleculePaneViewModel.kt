@@ -120,11 +120,12 @@ class MoleculePaneViewModel(
                                 )
                             }
                         }
-                        .onError {
+                        .onError { error ->
                             _state.update {
                                 it.copy(
                                     properties = it.properties?.copy(iupacName = null),
-                                    isIupacLoading = false
+                                    isIupacLoading = false,
+                                    iupacError = error
                                 )
                             }
                         }
