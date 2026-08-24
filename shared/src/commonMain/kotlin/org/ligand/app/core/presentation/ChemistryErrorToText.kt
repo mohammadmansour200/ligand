@@ -12,8 +12,8 @@ fun ChemistryError.toErrorText(): ErrorText {
     return when (this) {
         ChemistryError.SanitizationFailed -> ErrorText(
             title = "This structure isn't chemically valid",
-            body = "Check the highlighted bonds and atoms and correct them.",
-            hint = "Long-press the highlighted atom to see why."
+            body = "Long-press the highlighted atom to see why.",
+            hint = null
         )
 
         ChemistryError.NoConformation -> ErrorText(
