@@ -66,6 +66,8 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     fun onAction(action: DrawingPaneAction) {
         when (action) {
+            is DrawingPaneAction.OnZoom -> handleZoom(action.change)
+            is DrawingPaneAction.OnPan -> handlePan(action.change)
             is DrawingPaneAction.OnRedo -> handleRedo()
             is DrawingPaneAction.OnUndo -> handleUndo()
             is DrawingPaneAction.OnFilePick -> parseFile(action.file)
@@ -89,6 +91,14 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             is DrawingPaneAction.OnDragEnd -> handleDragEnd()
             is DrawingPaneAction.OnDismissValenceViolationDialog -> handleValenceViolationDialogDismiss()
         }
+    }
+
+    private fun handleZoom(change: Float) {
+        _state.update { it.copy(canvasScale = change) }
+    }
+
+    private fun handlePan(change: Offset) {
+        _state.update { it.copy(canvasOffset = change) }
     }
 
     private fun handleUndo() {

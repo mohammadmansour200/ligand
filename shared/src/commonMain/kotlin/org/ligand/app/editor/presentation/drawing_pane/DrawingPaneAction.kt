@@ -1,10 +1,17 @@
 package org.ligand.app.editor.presentation.drawing_pane
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextLayoutResult
 import io.github.vinceglb.filekit.PlatformFile
 import org.ligand.app.editor.domain.Tool
 
 sealed interface DrawingPaneAction {
+    /** Triggered when user zooms canvas */
+    data class OnZoom(val change: Float) : DrawingPaneAction
+
+    /** Triggered when user pans canvas */
+    data class OnPan(val change: Offset) : DrawingPaneAction
+
     /** Reverts the most recent committed edit, restoring the previous [DrawingDocument] state. No-op if there is nothing to undo. */
     object OnUndo : DrawingPaneAction
 

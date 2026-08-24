@@ -14,9 +14,9 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -110,8 +110,17 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
     val isWindowCompact =
         !windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
-    var canvasScale by remember { mutableFloatStateOf(if (isWindowCompact) 2.5f else 1f) }
-    var canvasOffset by remember { mutableStateOf(Offset.Zero) }
+    val canvasScale = state.canvasScale
+    val canvasOffset = state.canvasOffset
+
+    var hasInitializedScale by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!hasInitializedScale) {
+            val initialScale = if (isWindowCompact) 2.5f else 1f
+            onAction(DrawingPaneAction.OnZoom(initialScale))
+            hasInitializedScale = true
+        }
+    }
 
     val molecules = state.document.molecules
     val textBoxes = state.document.textBoxes
@@ -214,11 +223,16 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                 state = rememberTransformableState { centroid, zoomChange, offsetChange, _ ->
                     val anchoredOffset = centroid - (centroid - canvasOffset) * zoomChange
 
-                    canvasOffset = when (state.selectedTool) {
-                        Tool.Pan -> anchoredOffset + offsetChange
-                        else -> anchoredOffset
-                    }
-                    canvasScale *= zoomChange
+                    onAction(
+                        DrawingPaneAction.OnPan(
+                            when (state.selectedTool) {
+                                Tool.Pan -> anchoredOffset + offsetChange
+                                else -> anchoredOffset
+                            }
+                        )
+                    )
+
+                    onAction(DrawingPaneAction.OnZoom(canvasScale * zoomChange))
                 }
             ).pointerInput(state.selectedTool) {
                 if (state.selectedTool == Tool.Pan) return@pointerInput
