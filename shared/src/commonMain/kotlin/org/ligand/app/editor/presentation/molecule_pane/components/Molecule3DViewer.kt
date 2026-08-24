@@ -360,6 +360,7 @@ private fun Molecule3dViewerErrorNotice(modifier: Modifier = Modifier, error: Ch
         Text(
             text = errorText.title,
             style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.error
         )
         Spacer(modifier = Modifier.height(4.dp))
