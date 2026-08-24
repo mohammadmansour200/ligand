@@ -18,5 +18,5 @@ data class PropertyTableDto(
 @Serializable
 data class PropertyDto(
     @SerialName("IUPACName")
-    val iupacName: String
+    val iupacName: String? = null
 )
