@@ -801,7 +801,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             var sign = 1.0
             val halfAngle = Math.toRadians(30.0)
 
-            repeat(atomCount - 1) {
+            repeat(atomCount) {
                 val stepAngle = angleRadians + sign * halfAngle
                 val newAtomIdx = mol.addAtom(Atom("C"))
                 mol.addBond(previousAtomIdx, newAtomIdx, BondType.SINGLE)
