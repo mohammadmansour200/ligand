@@ -150,6 +150,8 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun commitEdit(newDocument: DrawingDocument) {
+        handleResetHoveredItems()
+
         val followedMoleculeIdx = _state.value.followedMoleculeIndex
             .takeIf { it in newDocument.molecules.indices } ?: 0
         val followedMolecule = newDocument.molecules.getOrNull(followedMoleculeIdx)
@@ -293,6 +295,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
     }
 
     private fun handleDrag(x: Float, y: Float) {
+        handleResetHoveredItems()
         when (_state.value.selectedTool) {
             is Tool.SingleBond, is Tool.WedgeBond, is Tool.HashedWedgeBond,
             is Tool.DoubleBond, is Tool.TripleBond, is Tool.HydrogenBond, is Tool.Element ->
@@ -1323,5 +1326,16 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
         val edited = document.molecules.toMutableList()
         edited[idx] = newMolecule
         return document.copy(molecules = edited)
+    }
+
+    private fun handleResetHoveredItems() {
+        if (_state.value.hoveredAtomId != null || _state.value.hoveredBondId != null || _state.value.hoveredArrowId != null)
+            _state.update {
+                it.copy(
+                    hoveredAtomId = null,
+                    hoveredBondId = null,
+                    hoveredArrowId = null
+                )
+            }
     }
 }
