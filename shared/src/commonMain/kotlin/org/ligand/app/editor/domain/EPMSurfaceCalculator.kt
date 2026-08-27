@@ -6,7 +6,6 @@ import org.ligand.app.editor.domain.MoleculePaneConstants.SURFACE_RADII_SCALE
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
-import kotlin.math.sign
 import kotlin.math.sqrt
 
 /**
@@ -352,19 +351,14 @@ private fun buildEpmSurface(
  */
 private fun potentialsToUvs(
     potentials: FloatArray,
+    fixedScale: Float = 0.20f
 ): FloatArray {
     if (potentials.isEmpty()) return FloatArray(0)
 
-    val sortedAbs = potentials.map { abs(it) }.sorted()
-    val idx = (sortedAbs.size - 1).coerceIn(0, sortedAbs.size - 1)
-    val scale = sortedAbs[idx].coerceAtLeast(1e-4f)
-
     val uvs = FloatArray(potentials.size * 2)
     for (i in potentials.indices) {
-        val ratio = (potentials[i] / scale).coerceIn(-1f, 1f)
-        val boosted =
-            sign(ratio) * abs(ratio).toDouble().toFloat()
-        val t = (0.5f - 0.5f * boosted).coerceIn(0f, 1f)
+        val ratio = (potentials[i] / fixedScale).coerceIn(-1f, 1f)
+        val t = (0.5f - 0.5f * ratio).coerceIn(0f, 1f)
         uvs[i * 2] = t
         uvs[i * 2 + 1] = 0.5f
     }
