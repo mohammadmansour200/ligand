@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import org.ligand.app.core.data.safeCall
 import org.ligand.app.core.domain.DataError
 import org.ligand.app.core.domain.Result
+import org.ligand.app.core.domain.map
 import org.ligand.app.editor.data.mappers.IupacNamePropertyResponseDto
 import org.ligand.app.editor.domain.PubchemDataSource
 
@@ -14,25 +15,14 @@ const val BASE_URL =
     "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey"
 
 class KtorPubchemDataSource(val httpClient: HttpClient) : PubchemDataSource {
-    override suspend fun getIupacName(inchiKey: String): Result<String, DataError> =
+    override suspend fun getIupacName(inchiKey: String): Result<String?, DataError> =
         withContext(Dispatchers.IO) {
-            when (
-                val result = safeCall<IupacNamePropertyResponseDto> {
-                    httpClient.get(
-                        "$BASE_URL/$inchiKey/property/IUPACName/JSON"
-                    )
-                }
-            ) {
-                is Result.Success -> {
-                    val iupacName = result.data.propertyTable.properties.firstOrNull()?.iupacName
-                    if (iupacName != null) {
-                        Result.Success(iupacName)
-                    } else {
-                        Result.Error(DataError.Unknown)
-                    }
-                }
-
-                is Result.Error -> Result.Error(result.error)
+            safeCall<IupacNamePropertyResponseDto> {
+                httpClient.get(
+                    "$BASE_URL/$inchiKey/property/IUPACName/JSON"
+                )
+            }.map { response ->
+                response.propertyTable.properties.firstOrNull()?.iupacName
             }
         }
 }

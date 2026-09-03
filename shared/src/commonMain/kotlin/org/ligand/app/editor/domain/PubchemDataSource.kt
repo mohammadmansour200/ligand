@@ -6,5 +6,5 @@ import org.ligand.app.core.domain.Result
 interface PubchemDataSource {
     suspend fun getIupacName(
         inchiKey: String
-    ): Result<String, DataError>
+    ): Result<String?, DataError>
 }
