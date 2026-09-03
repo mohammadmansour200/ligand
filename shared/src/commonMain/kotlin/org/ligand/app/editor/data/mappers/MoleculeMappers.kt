@@ -2,6 +2,7 @@ package org.ligand.app.editor.data.mappers
 
 import org.RDKit.Conformer
 import org.RDKit.Point3D
+import org.RDKit.RDKFuncs
 import org.RDKit.RWMol
 import org.ligand.app.core.domain.utils.safeValueOf
 import org.ligand.app.editor.domain.Atom
@@ -58,6 +59,9 @@ fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
     if (sanitize) {
         try {
             mol.sanitizeMol()
+            mol.DetectBondStereoChemistry(conformer)
+            RDKFuncs.assignChiralTypesFromBondDirs(mol)
+            RDKFuncs.assignStereochemistry(mol)
         } catch (_: Exception) {
         }
     }
