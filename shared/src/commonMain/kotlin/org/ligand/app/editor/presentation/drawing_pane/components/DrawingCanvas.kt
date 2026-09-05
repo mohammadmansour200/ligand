@@ -153,7 +153,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     textMeasurer.measure(text = symbol, style = symbolStyle)
                 }
 
-                val hydrogenCount = atom.numImplicitHydrogen
+                val hydrogenCount = atom.hydrogenCount
                 if (hydrogenCount > 0) {
                     hydrogenCountLayouts.getOrPut(hydrogenCount) {
                         val hydrogenLabel = buildAnnotatedString {
@@ -327,7 +327,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     val symbolLayout =
                         getSymbolLabelLayout(atom.symbol, state.symbolLabelLayoutCache)
                     val hydrogenLayout = if (atom.isLabelVisible) getHydrogenLabelLayout(
-                        atom.numImplicitHydrogen,
+                        atom.hydrogenCount,
                         state.hydrogenLabelLayoutCache
                     ) else null
 
@@ -387,7 +387,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val symbolLayout =
                             getSymbolLabelLayout(beginAtom.symbol, state.symbolLabelLayoutCache)
                         val hydrogenLayout = getHydrogenLabelLayout(
-                            beginAtom.numImplicitHydrogen,
+                            beginAtom.hydrogenCount,
                             state.hydrogenLabelLayoutCache
                         )
 
@@ -409,7 +409,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val symbolLayout =
                             getSymbolLabelLayout(endAtom.symbol, state.symbolLabelLayoutCache)
                         val hydrogenLayout = getHydrogenLabelLayout(
-                            endAtom.numImplicitHydrogen,
+                            endAtom.hydrogenCount,
                             state.hydrogenLabelLayoutCache
                         )
 

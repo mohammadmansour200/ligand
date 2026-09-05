@@ -6,7 +6,7 @@ data class Atom(
     val z: Double,
     val gasteigerCharge: Float?,
     val symbol: String,
-    val numImplicitHydrogen: Long,
+    val hydrogenCount: Long,
     val charge: Int,
     val isLabelReversed: Boolean,
     val isLabelVisible: Boolean,

@@ -894,7 +894,7 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
                 val symbolLayout =
                     getSymbolLabelLayout(atom.symbol, _state.value.symbolLabelLayoutCache)
                 val hydrogenLayout = if (atom.isLabelVisible) getHydrogenLabelLayout(
-                    atom.numImplicitHydrogen,
+                    atom.hydrogenCount,
                     _state.value.hydrogenLabelLayoutCache
                 ) else null
 
