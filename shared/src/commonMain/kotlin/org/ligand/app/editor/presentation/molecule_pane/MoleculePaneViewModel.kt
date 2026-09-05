@@ -116,7 +116,8 @@ class MoleculePaneViewModel(
                             _state.update {
                                 it.copy(
                                     properties = it.properties?.copy(iupacName = name),
-                                    isIupacLoading = false
+                                    isIupacLoading = false,
+                                    iupacError = null
                                 )
                             }
                         }

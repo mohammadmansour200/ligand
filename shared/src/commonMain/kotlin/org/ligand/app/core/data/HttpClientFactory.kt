@@ -25,7 +25,7 @@ object HttpClientFactory {
             }
             install(HttpTimeout) {
                 socketTimeoutMillis = 20_000L
-                requestTimeoutMillis = 20_000L
+                requestTimeoutMillis = 5000_000L
             }
             install(Logging) {
                 logger = object : Logger {
