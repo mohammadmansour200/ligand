@@ -13,6 +13,13 @@ import io.github.erkko68.filament.MaterialInstance
 import io.github.erkko68.filament.compose.*
 import io.github.erkko68.filament.compose.scene.*
 import io.github.erkko68.filament.compose.scene.Direction
+import io.github.erkko68.filament.compose.scene.DirectionalLight
+import io.github.erkko68.filament.compose.scene.LightIntensity
+import io.github.erkko68.filament.compose.scene.LinearColor
+import io.github.erkko68.filament.compose.scene.Position
+import io.github.erkko68.filament.compose.scene.PostProcessing
+import io.github.erkko68.filament.compose.scene.Rotation
+import io.github.erkko68.filament.compose.scene.SkyboxSource
 import io.github.erkko68.filament.compose.scene.primitives.Cylinder
 import io.github.erkko68.filament.compose.scene.primitives.Sphere
 import io.github.erkko68.filament.utils.*
@@ -90,6 +97,12 @@ fun BoxScope.Molecule3DViewer(
         indirectLightState = environment.indirectLightState,
         skyboxState = skybox
     ) {
+        // Rear lightening
+        DirectionalLight(
+            direction = Direction(0f, 0f, 1f),
+            intensity = LightIntensity.LuminousPower(25_000F),
+        )
+
         val template = rememberMaterial { solidColorMaterialBytes }
 
         // --- ATOM SPHERES ---
