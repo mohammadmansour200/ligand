@@ -32,8 +32,9 @@ fun BoxScope.ElementPalette(
     onAtomSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val topAtoms = listOf("H", "O", "N", "C", "S")
-    val bottomAtoms = listOf("P", "F", "Cl", "Br", "I")
+    val topAtoms = listOf("H", "C", "N", "O", "S")
+    val middleAtoms = listOf("P", "F", "Cl", "Br", "I")
+    val bottomAtoms = listOf("B", "Al", "Li", "Mg", "Fe")
 
     val scrollState = rememberScrollState()
     val background = MaterialTheme.colorScheme.surfaceContainerLow
@@ -70,6 +71,21 @@ fun BoxScope.ElementPalette(
         )
 
         bottomAtoms.forEach { atom ->
+            ElementItem(
+                atom = atom,
+                isSelected = atom == selectedAtom,
+                onSelect = { onAtomSelected(atom) }
+            )
+        }
+
+        HorizontalDivider(
+            modifier = Modifier
+                .width(24.dp)
+                .padding(vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        middleAtoms.forEach { atom ->
             ElementItem(
                 atom = atom,
                 isSelected = atom == selectedAtom,
