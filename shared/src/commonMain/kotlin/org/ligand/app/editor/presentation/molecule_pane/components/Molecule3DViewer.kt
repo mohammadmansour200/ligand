@@ -1,21 +1,8 @@
 package org.ligand.app.editor.presentation.molecule_pane.components
 
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -23,33 +10,12 @@ import androidx.compose.ui.unit.dp
 import io.github.erkko68.filament.Engine
 import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
-import io.github.erkko68.filament.compose.FilamentSceneScope
-import io.github.erkko68.filament.compose.FilamentView
-import io.github.erkko68.filament.compose.orbitGestures
-import io.github.erkko68.filament.compose.rememberFilamentScene
-import io.github.erkko68.filament.compose.rememberOrbitCameraController
-import io.github.erkko68.filament.compose.scene.AmbientOcclusion
-import io.github.erkko68.filament.compose.scene.AntiAliasing
-import io.github.erkko68.filament.compose.scene.Bloom
+import io.github.erkko68.filament.compose.*
+import io.github.erkko68.filament.compose.scene.*
 import io.github.erkko68.filament.compose.scene.Direction
-import io.github.erkko68.filament.compose.scene.LinearColor
-import io.github.erkko68.filament.compose.scene.Position
-import io.github.erkko68.filament.compose.scene.PostProcessing
-import io.github.erkko68.filament.compose.scene.Rotation
-import io.github.erkko68.filament.compose.scene.SkyboxSource
 import io.github.erkko68.filament.compose.scene.primitives.Cylinder
 import io.github.erkko68.filament.compose.scene.primitives.Sphere
-import io.github.erkko68.filament.compose.scene.rememberCameraState
-import io.github.erkko68.filament.compose.scene.rememberKTXEnvironment
-import io.github.erkko68.filament.compose.scene.rememberMaterial
-import io.github.erkko68.filament.compose.scene.rememberMaterialInstance
-import io.github.erkko68.filament.compose.scene.rememberSkyboxState
-import io.github.erkko68.filament.compose.scene.setParameter
-import io.github.erkko68.filament.utils.Float3
-import io.github.erkko68.filament.utils.Quaternion
-import io.github.erkko68.filament.utils.cross
-import io.github.erkko68.filament.utils.dot
-import io.github.erkko68.filament.utils.normalize
+import io.github.erkko68.filament.utils.*
 import ligand.shared.generated.resources.Res
 import ligand.shared.generated.resources.ball_and_stick
 import ligand.shared.generated.resources.ball_and_stick_epm
@@ -212,6 +178,16 @@ fun BoxScope.Molecule3DViewer(
                     beginAtomZPos
                 )
 
+                val cameraPosition = cameraState.eye
+                val viewVector = normalize(
+                    Float3(
+                        cameraPosition.x - beginAtomXPos,
+                        cameraPosition.y - beginAtomYPos,
+                        cameraPosition.z - beginAtomZPos
+                    )
+                )
+
+                val bondOffsetDirection = cross(targetDirection, viewVector)
                 when (bond) {
                     is Bond.Single ->
                         CylinderBond(
@@ -220,16 +196,18 @@ fun BoxScope.Molecule3DViewer(
 
                     is Bond.Double -> {
                         val spacing = .15f
+                        val offset = Direction(bondOffsetDirection.times(spacing))
+
                         CylinderBond(
                             bondMaterial,
-                            position.plus(Direction(rotationAxis.times(spacing))),
+                            position.plus(offset),
                             height,
                             rotationAxis,
                             rotationAngle
                         )
                         CylinderBond(
                             bondMaterial,
-                            position.minus(Direction(rotationAxis.times(spacing))),
+                            position.minus(offset),
                             height,
                             rotationAxis,
                             rotationAngle
@@ -238,19 +216,25 @@ fun BoxScope.Molecule3DViewer(
 
                     is Bond.Triple -> {
                         val spacing = 0.25f
+                        val offset = Direction(bondOffsetDirection.times(spacing))
+
                         CylinderBond(
                             bondMaterial,
-                            position.plus(Direction(rotationAxis.times(spacing))),
+                            position.plus(offset),
                             height,
                             rotationAxis,
                             rotationAngle
                         )
                         CylinderBond(
-                            bondMaterial, position, height, rotationAxis, rotationAngle
+                            bondMaterial,
+                            position,
+                            height,
+                            rotationAxis,
+                            rotationAngle
                         )
                         CylinderBond(
                             bondMaterial,
-                            position.minus(Direction(rotationAxis.times(spacing))),
+                            position.minus(offset),
                             height,
                             rotationAxis,
                             rotationAngle
