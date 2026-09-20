@@ -24,7 +24,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
             packageName = "org.ligand.app"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
 
             appResourcesRootDir.set(project.layout.projectDirectory.dir("libs"))
 
