@@ -56,7 +56,7 @@ fun DrawingPane(
             val selectedElement =
                 if (state.selectedTool is Tool.Element) state.selectedTool.symbol else null
             ElementPalette(
-                onAtomSelected = { symbol ->
+                onElementSelected = { symbol ->
                     onAction(
                         DrawingPaneAction.OnSelectTool(
                             Tool.Element(
@@ -65,7 +65,7 @@ fun DrawingPane(
                         )
                     )
                 },
-                selectedAtom = selectedElement
+                selectedElement = selectedElement
             )
         }
         state.valenceViolationExplanationAtom?.let { atom ->

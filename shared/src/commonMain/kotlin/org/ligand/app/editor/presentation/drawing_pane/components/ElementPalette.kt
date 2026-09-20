@@ -28,13 +28,13 @@ import org.ligand.app.editor.presentation.drawing_pane.modifier.fadingEdges
 
 @Composable
 fun BoxScope.ElementPalette(
-    selectedAtom: String?,
-    onAtomSelected: (String) -> Unit,
+    selectedElement: String?,
+    onElementSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val topAtoms = listOf("H", "C", "N", "O", "S")
-    val middleAtoms = listOf("P", "F", "Cl", "Br", "I")
-    val bottomAtoms = listOf("B", "Al", "Li", "Mg", "Fe")
+    val topElements = listOf("H", "C", "N", "O", "S")
+    val middleElements = listOf("P", "F", "Cl", "Br", "I")
+    val bottomElements = listOf("B", "Al", "Li", "Mg", "Fe")
 
     val scrollState = rememberScrollState()
     val background = MaterialTheme.colorScheme.surfaceContainerLow
@@ -55,11 +55,11 @@ fun BoxScope.ElementPalette(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        topAtoms.forEach { atom ->
+        topElements.forEach { element ->
             ElementItem(
-                atom = atom,
-                isSelected = atom == selectedAtom,
-                onSelect = { onAtomSelected(atom) }
+                element = element,
+                isSelected = element == selectedElement,
+                onSelect = { onElementSelected(element) }
             )
         }
 
@@ -70,11 +70,11 @@ fun BoxScope.ElementPalette(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        bottomAtoms.forEach { atom ->
+        bottomElements.forEach { element ->
             ElementItem(
-                atom = atom,
-                isSelected = atom == selectedAtom,
-                onSelect = { onAtomSelected(atom) }
+                element = element,
+                isSelected = element == selectedElement,
+                onSelect = { onElementSelected(element) }
             )
         }
 
@@ -85,11 +85,11 @@ fun BoxScope.ElementPalette(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        middleAtoms.forEach { atom ->
+        middleElements.forEach { element ->
             ElementItem(
-                atom = atom,
-                isSelected = atom == selectedAtom,
-                onSelect = { onAtomSelected(atom) }
+                element = element,
+                isSelected = element == selectedElement,
+                onSelect = { onElementSelected(element) }
             )
         }
     }
@@ -97,7 +97,7 @@ fun BoxScope.ElementPalette(
 
 @Composable
 private fun ElementItem(
-    atom: String,
+    element: String,
     isSelected: Boolean,
     onSelect: (String) -> Unit
 ) {
@@ -112,10 +112,10 @@ private fun ElementItem(
             .size(32.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
-            .clickable { onSelect(atom) }
+            .clickable { onSelect(element) }
     ) {
         Text(
-            text = atom,
+            text = element,
             color = textColor,
             fontSize = 20.sp,
             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
