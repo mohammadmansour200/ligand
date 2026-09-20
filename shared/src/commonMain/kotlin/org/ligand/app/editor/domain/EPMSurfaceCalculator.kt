@@ -347,17 +347,17 @@ private fun buildEpmSurface(
 
 /**
  * Maps potentials to u in [0,1]: u=1 -> red (electron-rich / negative potential),
- * u=0 -> blue (electron-poor / positive potential), u=0.5 -> green/neutral.
+ * u=0 -> blue (electron-poor / positive potential), u=0.5 -> white/neutral.
  */
 private fun potentialsToUvs(
     potentials: FloatArray,
-    fixedScale: Float = 0.20f
+    scale: Float = 0.12f
 ): FloatArray {
     if (potentials.isEmpty()) return FloatArray(0)
 
     val uvs = FloatArray(potentials.size * 2)
     for (i in potentials.indices) {
-        val ratio = (potentials[i] / fixedScale).coerceIn(-1f, 1f)
+        val ratio = (potentials[i] / scale).coerceIn(-1f, 1f)
         val t = (0.5f - 0.5f * ratio).coerceIn(0f, 1f)
         uvs[i * 2] = t
         uvs[i * 2 + 1] = 0.5f
