@@ -45,9 +45,10 @@ fun App() {
         val backNavigationBehavior = BackNavigationBehavior.PopUntilScaffoldValueChange
 
         NavigationBackHandler(
+            isBackEnabled = navigator.canNavigateBack(),
             state = rememberNavigationEventState(NavigationEventInfo.None),
             onBackCompleted = {
-                if (navigator.canNavigateBack()) scope.launch { navigator.navigateBack() }
+                scope.launch { navigator.navigateBack() }
             }
         )
 
