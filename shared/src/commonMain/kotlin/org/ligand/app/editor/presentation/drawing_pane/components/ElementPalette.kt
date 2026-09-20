@@ -70,7 +70,7 @@ fun BoxScope.ElementPalette(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        bottomElements.forEach { element ->
+        middleElements.forEach { element ->
             ElementItem(
                 element = element,
                 isSelected = element == selectedElement,
@@ -85,7 +85,7 @@ fun BoxScope.ElementPalette(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        middleElements.forEach { element ->
+        bottomElements.forEach { element ->
             ElementItem(
                 element = element,
                 isSelected = element == selectedElement,
