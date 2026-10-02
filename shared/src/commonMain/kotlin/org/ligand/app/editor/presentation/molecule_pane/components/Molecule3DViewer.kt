@@ -1,17 +1,43 @@
 package org.ligand.app.editor.presentation.molecule_pane.components
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.isTertiaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.erkko68.filament.Engine
 import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
-import io.github.erkko68.filament.compose.*
-import io.github.erkko68.filament.compose.scene.*
+import io.github.erkko68.filament.compose.FilamentSceneScope
+import io.github.erkko68.filament.compose.FilamentView
+import io.github.erkko68.filament.compose.rememberFilamentScene
+import io.github.erkko68.filament.compose.scene.AmbientOcclusion
+import io.github.erkko68.filament.compose.scene.AntiAliasing
+import io.github.erkko68.filament.compose.scene.Bloom
+import io.github.erkko68.filament.compose.scene.CameraState
 import io.github.erkko68.filament.compose.scene.Direction
 import io.github.erkko68.filament.compose.scene.DirectionalLight
 import io.github.erkko68.filament.compose.scene.LightIntensity
@@ -22,7 +48,19 @@ import io.github.erkko68.filament.compose.scene.Rotation
 import io.github.erkko68.filament.compose.scene.SkyboxSource
 import io.github.erkko68.filament.compose.scene.primitives.Cylinder
 import io.github.erkko68.filament.compose.scene.primitives.Sphere
-import io.github.erkko68.filament.utils.*
+import io.github.erkko68.filament.compose.scene.rememberCameraState
+import io.github.erkko68.filament.compose.scene.rememberKTXEnvironment
+import io.github.erkko68.filament.compose.scene.rememberMaterial
+import io.github.erkko68.filament.compose.scene.rememberMaterialInstance
+import io.github.erkko68.filament.compose.scene.rememberSkyboxState
+import io.github.erkko68.filament.compose.scene.setParameter
+import io.github.erkko68.filament.compose.scene.toDirection
+import io.github.erkko68.filament.utils.Float3
+import io.github.erkko68.filament.utils.Quaternion
+import io.github.erkko68.filament.utils.cross
+import io.github.erkko68.filament.utils.dot
+import io.github.erkko68.filament.utils.length
+import io.github.erkko68.filament.utils.normalize
 import ligand.shared.generated.resources.Res
 import ligand.shared.generated.resources.ball_and_stick
 import ligand.shared.generated.resources.ball_and_stick_epm
@@ -84,7 +122,6 @@ fun BoxScope.Molecule3DViewer(
 
     val skybox = rememberSkyboxState(initialSource = SkyboxSource.Color(LinearColor(0f, 0f, 0f)))
     val cameraState = rememberCameraState(initialEye = Position(0f, 1f, 25f))
-    val orbit = rememberOrbitCameraController(cameraState = cameraState, zoomSpeed = 10f)
 
     val environment = rememberKTXEnvironment(
         engine = engine,
@@ -272,7 +309,7 @@ fun BoxScope.Molecule3DViewer(
 
     if (error == null) {
         FilamentView(
-            modifier = Modifier.fillMaxSize().orbitGestures(orbit),
+            modifier = Modifier.fillMaxSize().freeOrbitGestures(cameraState),
             cameraState = cameraState,
             postProcessing = PostProcessing(
                 antiAliasing = AntiAliasing(),
@@ -378,3 +415,156 @@ private fun Molecule3dViewerErrorNotice(modifier: Modifier = Modifier, error: Ch
         }
     }
 }
+
+private fun Modifier.freeOrbitGestures(
+    camera: CameraState,
+    orbitSpeed: Float = 0.3f,
+    zoomSpeed: Float = 2.0f,
+    panSpeed: Float = 0.0015f,
+    enablePanning: Boolean = true,
+): Modifier = this
+    // --- DESKTOP ---
+    .pointerInput(camera) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                val changes = event.changes
+
+                when (event.type) {
+                    // MOUSE WHEEL / TRACKPAD SCROLL ZOOM
+                    PointerEventType.Scroll -> {
+                        val scrollDelta = changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                        if (scrollDelta != 0f) {
+                            val offset = camera.eye - camera.target
+                            var currentDistance = length(offset.toFloat3())
+
+                            if (currentDistance > 0.0001f) {
+                                val zoomFactor = if (scrollDelta < 0) 1.1f else 0.9f
+                                currentDistance = (currentDistance / zoomFactor)
+
+                                camera.eye = camera.target + offset.normalized() * currentDistance
+                            }
+                            changes.forEach { it.consume() }
+                        }
+                    }
+
+                    // MOUSE DRAG
+                    PointerEventType.Move -> {
+                        if (changes.size == 1) {
+                            val change = changes.first()
+                            if (change.pressed) {
+                                val panDelta = change.position - change.previousPosition
+                                if (panDelta != Offset.Zero) {
+                                    val isPanTriggered =
+                                        event.buttons.isSecondaryPressed || // Right Click
+                                                event.buttons.isTertiaryPressed ||  // Middle Click
+                                                (event.buttons.isPrimaryPressed && event.keyboardModifiers.isShiftPressed) // Shift + Left Click
+
+                                    var offset = camera.eye - camera.target
+                                    val currentDistance = length(offset.toFloat3())
+
+                                    if (currentDistance > 0.0001f) {
+                                        if (enablePanning && isPanTriggered) {
+                                            // DESKTOP PAN
+                                            val forward = (-offset).normalized()
+                                            val right = cross(
+                                                forward.toFloat3(),
+                                                camera.up.toFloat3()
+                                            ).toDirection()
+                                            val cameraUp = cross(
+                                                right.toFloat3(),
+                                                forward.toFloat3()
+                                            ).toDirection()
+
+                                            val panScale = currentDistance * panSpeed
+                                            val panVector =
+                                                (right * (-panDelta.x * panScale)) + (cameraUp * (panDelta.y * panScale))
+
+                                            camera.target += panVector
+                                            camera.eye += panVector
+                                            change.consume()
+                                        } else if (event.buttons.isPrimaryPressed && !event.keyboardModifiers.isShiftPressed) {
+                                            // DESKTOP ORBIT
+                                            if (panDelta.x != 0f) {
+                                                offset = Rotation.axisAngle(
+                                                    camera.up,
+                                                    -panDelta.x * orbitSpeed
+                                                ) * offset
+                                            }
+                                            if (panDelta.y != 0f) {
+                                                val right =
+                                                    cross(camera.up.toFloat3(), offset.toFloat3())
+                                                val rightLength = length(right)
+                                                if (rightLength > 0.0001f) {
+                                                    val pitch = Rotation.axisAngle(
+                                                        (right / rightLength).toDirection(),
+                                                        -panDelta.y * orbitSpeed
+                                                    )
+                                                    offset = pitch * offset
+                                                    camera.up = (pitch * camera.up).normalized()
+                                                }
+                                            }
+                                            camera.eye =
+                                                camera.target + offset.normalized() * currentDistance
+                                            change.consume()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // --- TOUCH GESTURES ---
+    .pointerInput(camera) {
+        detectTransformGestures { _, pan, zoom, _ ->
+            var offset = camera.eye - camera.target
+            var currentDistance = length(offset.toFloat3())
+
+            if (currentDistance <= 0.0001f) return@detectTransformGestures
+
+            if (zoom != 1.0f && zoom > 0f) {
+                val adjustedZoom = 1.0f + (zoom - 1.0f) * zoomSpeed
+                if (adjustedZoom > 0f) {
+                    currentDistance =
+                        (currentDistance / adjustedZoom)
+                }
+            }
+
+            val isMultiTouch = zoom != 1.0f
+
+            if (enablePanning && isMultiTouch) {
+                // Two-finger Touch Pan
+                val forward = (-offset).normalized()
+                val right = cross(forward.toFloat3(), camera.up.toFloat3()).toDirection()
+                val cameraUp = cross(right.toFloat3(), forward.toFloat3()).toDirection()
+
+                val panScale = currentDistance * panSpeed
+                val panVector = (right * (-pan.x * panScale)) + (cameraUp * (pan.y * panScale))
+
+                camera.target += panVector
+                camera.eye += panVector
+            } else if (!isMultiTouch) {
+                // One-finger Touch Orbit
+                if (pan.x != 0f) {
+                    offset = Rotation.axisAngle(camera.up, -pan.x * orbitSpeed) * offset
+                }
+                if (pan.y != 0f) {
+                    val right = cross(camera.up.toFloat3(), offset.toFloat3())
+                    val rightLength = length(right)
+                    if (rightLength > 0.0001f) {
+                        val pitch = Rotation.axisAngle(
+                            (right / rightLength).toDirection(),
+                            -pan.y * orbitSpeed
+                        )
+                        offset = pitch * offset
+                        camera.up = (pitch * camera.up).normalized()
+                    }
+                }
+            }
+
+            camera.eye = camera.target + offset.normalized() * currentDistance
+        }
+    }
