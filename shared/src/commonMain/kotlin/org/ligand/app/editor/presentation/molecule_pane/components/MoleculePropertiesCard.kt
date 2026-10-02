@@ -96,7 +96,7 @@ fun BoxScope.MoleculePropertiesCard(
                     .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
             ) {
                 IconButton(
-                    modifier = Modifier.align(Alignment.CenterEnd),
+                    modifier = Modifier.align(Alignment.BottomEnd),
                     onClick = { propertiesExpanded = false }) {
                     IconWithTooltip(
                         icon = vectorResource(Res.drawable.close),

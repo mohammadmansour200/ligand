@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -64,6 +65,7 @@ import io.github.erkko68.filament.utils.normalize
 import ligand.shared.generated.resources.Res
 import ligand.shared.generated.resources.ball_and_stick
 import ligand.shared.generated.resources.ball_and_stick_epm
+import ligand.shared.generated.resources.reset_camera
 import ligand.shared.generated.resources.van_der_waals
 import org.jetbrains.compose.resources.vectorResource
 import org.ligand.app.core.domain.ChemistryError
@@ -108,6 +110,10 @@ val moleculeRenderModeOptions = listOf(
     )
 )
 
+val CAMERA_INITIAL_EYE = Position(0f, 1f, 25f)
+val CAMERA_INITIAL_TARGET = Position(0f, 0f, 0f)
+val CAMERA_INITIAL_UP = Direction(0f, 1f, 0f)
+
 @Composable
 fun BoxScope.Molecule3DViewer(
     engine: Engine,
@@ -121,7 +127,7 @@ fun BoxScope.Molecule3DViewer(
     var moleculeRenderMode by remember { mutableStateOf(MoleculeRenderMode.BALL_AND_STICK) }
 
     val skybox = rememberSkyboxState(initialSource = SkyboxSource.Color(LinearColor(0f, 0f, 0f)))
-    val cameraState = rememberCameraState(initialEye = Position(0f, 1f, 25f))
+    val cameraState = rememberCameraState(initialEye = CAMERA_INITIAL_EYE)
 
     val environment = rememberKTXEnvironment(
         engine = engine,
@@ -336,6 +342,20 @@ fun BoxScope.Molecule3DViewer(
                     }
                 )
             }
+        }
+
+        FilledTonalIconButton(
+            modifier = Modifier.padding(8.dp).align(Alignment.BottomStart),
+            onClick = {
+                cameraState.eye = CAMERA_INITIAL_EYE
+                cameraState.target = CAMERA_INITIAL_TARGET
+                cameraState.up = CAMERA_INITIAL_UP
+            }
+        ) {
+            IconWithTooltip(
+                icon = vectorResource(Res.drawable.reset_camera),
+                text = "Reset Camera",
+            )
         }
     } else Molecule3dViewerErrorNotice(
         error = error,
