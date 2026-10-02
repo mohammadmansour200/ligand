@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
@@ -217,6 +218,9 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
             }
         )
             .fillMaxSize()
+            .onSizeChanged { size ->
+                onAction(DrawingPaneAction.OnCanvasSizeChanged(size))
+            }
             .clip(RoundedCornerShape(10.dp))
             .background(background)
             .transformable(

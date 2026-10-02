@@ -3,6 +3,7 @@ package org.ligand.app.editor.presentation.drawing_pane
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.IntSize
 import org.ligand.app.editor.domain.Atom
 import org.ligand.app.editor.domain.Molecule
 import org.ligand.app.editor.domain.ReactionArrow
@@ -18,6 +19,7 @@ data class DrawingDocument(
 
 @Immutable
 data class DrawingPaneState(
+    val canvasSize: IntSize = IntSize.Zero,
     val canvasOffset: Offset = Offset.Zero,
     val canvasScale: Float = 1f,
     val document: DrawingDocument = DrawingDocument(),

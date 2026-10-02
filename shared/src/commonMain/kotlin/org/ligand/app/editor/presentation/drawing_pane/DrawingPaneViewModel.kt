@@ -2,6 +2,9 @@ package org.ligand.app.editor.presentation.drawing_pane
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.center
+import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.ViewModel
@@ -43,6 +46,8 @@ import org.ligand.app.editor.presentation.utils.getSymbolLabelLayout
 import org.ligand.app.editor.presentation.utils.offsetPx
 import org.ligand.app.editor.presentation.utils.snapAngle
 import org.ligand.app.editor.presentation.utils.toPositionAngstrom
+import uk.ac.cam.ch.wwmm.opsin.NameToStructure
+import uk.ac.cam.ch.wwmm.opsin.OpsinResult
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
@@ -55,7 +60,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.uuid.Uuid
 
-class DrawingPaneViewModel(private val cheminformaticsDataSource: CheminformaticsDataSource) :
+class DrawingPaneViewModel(
+    private val cheminformaticsDataSource: CheminformaticsDataSource,
+    private val nameToStructure: NameToStructure
+) :
     ViewModel() {
     private val history = UndoRedoStack(DrawingDocument())
     private val _state = MutableStateFlow(DrawingPaneState())
@@ -66,11 +74,13 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
     fun onAction(action: DrawingPaneAction) {
         when (action) {
+            is DrawingPaneAction.OnCanvasSizeChanged -> handleCanvasSizeChanged(action.change)
             is DrawingPaneAction.OnZoom -> handleZoom(action.change)
             is DrawingPaneAction.OnPan -> handlePan(action.change)
             is DrawingPaneAction.OnRedo -> handleRedo()
             is DrawingPaneAction.OnUndo -> handleUndo()
             is DrawingPaneAction.OnFilePick -> parseFile(action.file)
+            is DrawingPaneAction.OnNameToStructure -> handleConvertNameToStructure(action.name)
             is DrawingPaneAction.OnCacheLabelLayouts -> cacheAtomLabelLayouts(
                 action.symbolLayouts,
                 action.hydrogenLayouts
@@ -91,6 +101,10 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
             is DrawingPaneAction.OnDragEnd -> handleDragEnd()
             is DrawingPaneAction.OnDismissValenceViolationDialog -> handleValenceViolationDialogDismiss()
         }
+    }
+
+    private fun handleCanvasSizeChanged(change: IntSize) {
+        _state.update { it.copy(canvasSize = change) }
     }
 
     private fun handleZoom(change: Float) {
@@ -233,6 +247,35 @@ class DrawingPaneViewModel(private val cheminformaticsDataSource: Cheminformatic
 
             // Delete temporary file
             tempFile.deleteIfExists()
+        }
+    }
+
+    private fun handleConvertNameToStructure(name: String) {
+        viewModelScope.launch {
+            val parsedChemicalName = nameToStructure.parseChemicalName(name)
+
+            if (parsedChemicalName.status == OpsinResult.OPSIN_RESULT_STATUS.FAILURE) {
+                // TODO: handle errors
+//                _events.send()
+                return@launch
+            }
+
+            val canvasCenter = _state.value.canvasSize.center.toOffset()
+            val canvasOffset = _state.value.canvasOffset
+            val canvasScale = _state.value.canvasScale
+            val transformedCanvasCenter =
+                (canvasCenter - canvasOffset) / canvasScale
+            val angstromTransformedCanvasCenter = transformedCanvasCenter.toPositionAngstrom()
+
+            val newMolecule = cheminformaticsDataSource.createMoleculeFromSmiles(
+                parsedChemicalName.smiles,
+                angstromTransformedCanvasCenter.first,
+                angstromTransformedCanvasCenter.second
+            )
+
+            val editedMolecules = _state.value.document.molecules.toMutableList()
+            editedMolecules.add(newMolecule)
+            commitEdit(_state.value.document.copy(molecules = editedMolecules))
         }
     }
 

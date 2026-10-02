@@ -2,10 +2,14 @@ package org.ligand.app.editor.presentation.drawing_pane
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.IntSize
 import io.github.vinceglb.filekit.PlatformFile
 import org.ligand.app.editor.domain.Tool
 
 sealed interface DrawingPaneAction {
+    /** Triggered when canvas resizes */
+    data class OnCanvasSizeChanged(val change: IntSize) : DrawingPaneAction
+
     /** Triggered when user zooms canvas */
     data class OnZoom(val change: Float) : DrawingPaneAction
 
@@ -24,6 +28,13 @@ sealed interface DrawingPaneAction {
      * @property file File from rememberFilePickerLauncher
      */
     data class OnFilePick(val file: PlatformFile) : DrawingPaneAction
+
+    /**
+     * Action triggered when a user inputs name in `Name to Structure` dialog .
+     * Name is parsed via OPSIN which returns smiles string. smiles is parsed using Cheminformatics engine and saved in state
+     * @property name systematic IUPAC nomenclature (e.g. butane, 5-fluorouracil, (S)-alanine, beta-D-glucose)
+     */
+    data class OnNameToStructure(val name: String) : DrawingPaneAction
 
     /**
      * Action triggered as effect to prevent repetitive TextMeasurer calls.

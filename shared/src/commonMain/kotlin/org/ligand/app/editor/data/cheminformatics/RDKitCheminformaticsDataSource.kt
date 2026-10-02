@@ -516,6 +516,9 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
             val conformer = mol.conformer
 
+            // --- ASSIGN MOLECULE WEDGE/DASHED WEDGE BONDS ---
+            mol.WedgeMolBonds(conformer)
+
             // --- PLACE MOLECULE AT CENTER OF X, Y coordinates ---
             // offsets to place molecule center at target (x, y)
             val centroid = conformer.computeCentroid()

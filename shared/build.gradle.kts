@@ -39,6 +39,8 @@ kotlin {
 
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.compose)
+
+            implementation(libs.stax.api)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -59,6 +61,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
 
             implementation(files("libs/org.RDKit.jar"))
+            implementation(files("libs/opsin-2.9.0.jar"))
 
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs.compose)

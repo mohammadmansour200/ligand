@@ -7,13 +7,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -102,6 +107,8 @@ private fun MoreOptions(
     onAction: (DrawingPaneAction) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showNameDialog by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
 
     val filePickerLauncher = rememberFilePickerLauncher(
         mode = FileKitMode.Single,
@@ -126,17 +133,75 @@ private fun MoreOptions(
         ) {
             DropdownMenuItem(
                 text = { Text("Open File") },
-                onClick = { filePickerLauncher.launch() }
+                onClick = {
+                    expanded = false
+                    filePickerLauncher.launch()
+                }
             )
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("") },
-                onClick = { /* Do something... */ }
-            )
-            DropdownMenuItem(
-                text = { Text("") },
-                onClick = { /* Do something... */ }
+                text = { Text("Name to Structure") },
+                onClick = {
+                    expanded = false
+                    showNameDialog = true
+                }
             )
         }
+    }
+
+    if (showNameDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showNameDialog = false
+                name = ""
+            },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = {
+                        Text(
+                            "e.g. butane, 5-fluorouracil, (S)-alanine, beta-D-glucose",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.3f
+                        )
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (name.isNotBlank()) {
+                            onAction(DrawingPaneAction.OnNameToStructure(name.trim()))
+                            showNameDialog = false
+                            name = ""
+                        }
+                    },
+                    enabled = name.isNotBlank()
+                ) {
+                    Text("Convert")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showNameDialog = false
+                        name = ""
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
