@@ -328,7 +328,10 @@ private fun ToolGroup(
 ) {
     var showDropdownMenu by remember { mutableStateOf(false) }
 
-    var primaryTool by remember { mutableStateOf(options[0]) }
+    var primaryTool by remember {
+        val selectedToolOption = options.find { it.first == selectedTool }
+        mutableStateOf(selectedToolOption ?: options[0])
+    }
 
     Box {
         ToolbarButton(
