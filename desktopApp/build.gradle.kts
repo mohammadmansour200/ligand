@@ -52,3 +52,18 @@ compose.desktop {
         }
     }
 }
+
+tasks.register<Zip>("packagePortableZip") {
+    group = "compose desktop"
+    description = "Packages a portable Windows ZIP release containing the .exe and runtime."
+
+    dependsOn("createReleaseDistributable")
+
+    val appName = libs.versions.app.name.get()
+    val versionName = libs.versions.app.version.name.get()
+
+    archiveFileName.set("${appName}_${versionName}_portable.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main-release/zip"))
+
+    from(layout.buildDirectory.dir("compose/binaries/main-release/app/$appName"))
+}
