@@ -43,11 +43,17 @@ jobs:
       - name: Build Android APK
         run: ./gradlew :androidApp:assembleRelease
 
-      - name: Save APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-android
-          path: androidApp/build/outputs/apk/release/*.apk
+      - name: Stage APK Artifact
+        shell: bash
+        run: |
+          mkdir -p staging-android
+          cp androidApp/build/outputs/apk/release/*.apk staging-android/
+          
+          - name: Save APK Artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: release-android
+              path: staging-android/*
 
   # -----------------------------------------------------------------
   # 2. Build Desktop Installers (MSI, EXE, DEB, RPM)
@@ -79,15 +85,17 @@ jobs:
         if: matrix.platform == 'windows'
         run: .\gradlew.bat :desktopApp:packageReleaseMsi :desktopApp:packagePortableZip
 
-      - name: Save Desktop Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-desktop-${{ matrix.platform }}
-          path: |
-            desktopApp/build/compose/binaries/main-release/deb/*.deb
-            desktopApp/build/compose/binaries/main-release/rpm/*.rpm
-            desktopApp/build/compose/binaries/main-release/msi/*.msi
-            desktopApp/build/compose/binaries/main-release/zip/*.zip
+      - name: Stage Desktop Artifacts
+        shell: bash
+        run: |
+          mkdir -p staging-desktop
+          find desktopApp/build/compose/binaries/main-release/ -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.zip" \) -exec cp {} staging-desktop/ \;
+          
+          - name: Save Desktop Artifacts
+            uses: actions/upload-artifact@v4
+            with:
+              name: release-desktop-${{ matrix.platform }}
+              path: staging-desktop/*
 
   # -----------------------------------------------------------------
   # 3. Consolidate & Publish Single GitHub Release
