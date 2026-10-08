@@ -22,6 +22,12 @@ compose.desktop {
     application {
         mainClass = "org.ligand.app.MainKt"
 
+        buildTypes.release {
+            proguard {
+                isEnabled.set(false)
+            }
+        }
+
         nativeDistributions {
             targetFormats(
                 TargetFormat.Msi,
