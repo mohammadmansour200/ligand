@@ -61,3 +61,20 @@ android {
         }
     }
 }
+
+androidComponents {
+    onVariants { variant ->
+        val appVersionName = libs.versions.app.version.name.get()
+        val appName = libs.versions.app.name.get()
+
+        variant.outputs.forEach { output ->
+            if (output is com.android.build.api.variant.impl.VariantOutputImpl) {
+                val abiFilter = output.filters.find {
+                    it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI
+                }?.identifier
+
+                output.outputFileName = "${appName}_${appVersionName}_${abiFilter}.apk"
+            }
+        }
+    }
+}
