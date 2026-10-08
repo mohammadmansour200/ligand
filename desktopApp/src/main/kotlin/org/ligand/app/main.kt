@@ -3,6 +3,9 @@ package org.ligand.app
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import io.github.vinceglb.filekit.FileKit
+import ligand.shared.generated.resources.Res
+import ligand.shared.generated.resources.app_icon
+import org.jetbrains.compose.resources.painterResource
 import org.ligand.app.di.initKoin
 
 fun main() {
@@ -30,6 +33,7 @@ fun main() {
         Window(
             onCloseRequest = ::exitApplication,
             title = "Ligand",
+            icon = painterResource(Res.drawable.app_icon)
         ) {
             App()
         }

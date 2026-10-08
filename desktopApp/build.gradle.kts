@@ -11,6 +11,7 @@ dependencies {
 
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutinesSwing)
+    implementation(compose.components.resources)
 
     implementation(libs.compose.uiToolingPreview)
 
@@ -22,14 +23,24 @@ compose.desktop {
         mainClass = "org.ligand.app.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
-            packageName = "org.ligand.app"
+            targetFormats(
+                TargetFormat.Msi,
+                TargetFormat.Exe,
+                TargetFormat.Deb,
+                TargetFormat.Rpm,
+                TargetFormat.AppImage
+            )
+            packageName = "Ligand"
             packageVersion = "1.0.1"
 
             appResourcesRootDir.set(project.layout.projectDirectory.dir("libs"))
 
             linux {
+                iconFile.set(project.file("src/main/resources/icons/icon.png"))
                 modules("jdk.security.auth")
+            }
+            windows {
+                iconFile.set(project.file("src/main/resources/icons/icon.ico"))
             }
         }
     }
