@@ -28,7 +28,6 @@ compose.desktop {
                 TargetFormat.Exe,
                 TargetFormat.Deb,
                 TargetFormat.Rpm,
-                TargetFormat.AppImage
             )
             packageName = libs.versions.app.name.get()
             packageVersion = libs.versions.app.version.name.get()
