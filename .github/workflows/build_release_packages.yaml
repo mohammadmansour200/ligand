@@ -1,0 +1,135 @@
+name: Production Release Workflow
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # -----------------------------------------------------------------
+  # 1. Build Android APK
+  # -----------------------------------------------------------------
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: recursive
+      - name: Checkout LFS objects
+        run: git lfs checkout
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '22.0.2'
+          cache: 'gradle'
+
+      - name: Decode keystore and save to file
+        run: |
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+        shell: bash
+
+      - name: Set environment variables for signing
+        run: |
+          echo "SIGNING_KEYSTORE_PATH=$(pwd)/keystore.jks" >> $GITHUB_ENV
+          echo "SIGNING_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "SIGNING_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> $GITHUB_ENV
+          echo "SIGNING_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Build Android APK
+        run: ./gradlew :androidApp:assembleRelease
+
+      - name: Save APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: androidApp/build/outputs/apk/release/*.apk
+
+  # -----------------------------------------------------------------
+  # 2. Build Desktop Installers (MSI, EXE, DEB, RPM)
+  # -----------------------------------------------------------------
+  build-desktop:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '22.0.2'
+          cache: 'gradle'
+
+      - name: Build Linux Packages
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y rpm fakeroot
+          ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseRpm
+
+      - name: Build Windows Packages
+        if: matrix.platform == 'windows'
+        run: .\gradlew.bat :desktopApp:packageReleaseMsi :desktopApp:packagePortableZip
+
+      - name: Save Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-desktop-${{ matrix.platform }}
+          path: |
+            desktopApp/build/compose/binaries/main-release/deb/*.deb
+            desktopApp/build/compose/binaries/main-release/rpm/*.rpm
+            desktopApp/build/compose/binaries/main-release/msi/*.msi
+            desktopApp/build/compose/binaries/main-release/zip/*.zip
+
+  # -----------------------------------------------------------------
+  # 3. Consolidate & Publish Single GitHub Release
+  # -----------------------------------------------------------------
+  publish-release:
+    name: Publish Unified Release
+    needs: [ build-android, build-desktop ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Downloads all files saved from previous jobs into current directory
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Install Minisign
+        run: sudo apt-get update && sudo apt-get install -y minisign
+
+      - name: Generate Hashes and Sign Manifest
+        env:
+          MINISIGN_PRIVATE_KEY: ${{ secrets.MINISIGN_PRIVATE_KEY }}
+          MINISIGN_PASSPHRASE: ${{ secrets.MINISIGN_PASSPHRASE }}
+        run: |
+          cd dist
+          
+          # 1. Generate SHA-256 hashes for all binaries
+          sha256sum * > SHA256SUMS
+          
+          # 2. Reconstruct the private key file
+          echo "$MINISIGN_PRIVATE_KEY" > minisign.key
+          
+          # 3. Digitally sign the SHA256SUMS file (outputs SHA256SUMS.minisig)
+          echo "$MINISIGN_PASSPHRASE" | minisign -S -s minisign.key -m SHA256SUMS
+          
+          # 4. Immediately delete the private key from the worker node
+          rm minisign.key
+
+      - name: Create Single GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
