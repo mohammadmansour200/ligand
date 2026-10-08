@@ -166,8 +166,7 @@ private fun MoleculePropertiesTable(state: MoleculePaneState) {
             .verticalScroll(scrollState)
     ) {
         state.properties?.let { properties ->
-            val iupacValue = when (state.iupacError) {
-                null -> properties.iupacName ?: "Not available for this compound"
+            val namesError = when (state.namesError) {
                 DataError.NoInternet -> "No internet connection"
                 DataError.RequestTimeout -> "Connection timed out"
                 DataError.TooManyRequests -> "Too many requests — try again in a moment"
@@ -175,14 +174,29 @@ private fun MoleculePropertiesTable(state: MoleculePaneState) {
                 DataError.Serialization,
                 DataError.FileCorrupted,
                 DataError.Unknown -> "Couldn't load name"
+
+                else -> null
             }
 
+            val iupacName = namesError ?: (state.properties.iupacName
+                ?: "Not available for this compound")
             TableRow(
                 label = "IUPAC Name",
-                value = iupacValue,
+                value = iupacName,
                 stacked = true,
-                isLoading = state.isIupacLoading
+                isLoading = state.isNamesLoading
             )
+
+            val synonym =
+                namesError ?: (state.properties.synonym ?: "Not available for this compound")
+            if (!synonym.equals(iupacName, ignoreCase = true)) {
+                TableRow(
+                    label = "Synonym",
+                    value = synonym,
+                    stacked = true,
+                    isLoading = state.isNamesLoading
+                )
+            }
             TableRow(
                 label = "Molecular Formula",
                 value = formulaToSubscriptAnnotatedString(properties.formula)

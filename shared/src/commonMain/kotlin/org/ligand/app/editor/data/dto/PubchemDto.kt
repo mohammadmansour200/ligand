@@ -1,4 +1,4 @@
-package org.ligand.app.editor.data.mappers
+package org.ligand.app.editor.data.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -18,5 +18,7 @@ data class PropertyTableDto(
 @Serializable
 data class PropertyDto(
     @SerialName("IUPACName")
-    val iupacName: String? = null
+    val iupacName: String? = null,
+    @SerialName("Title")
+    val synonym: String? = null
 )

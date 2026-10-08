@@ -168,6 +168,7 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 return@withContext Result.Success(
                     MoleculeProperties(
                         iupacName = null,
+                        synonym = null,
                         formula = formula,
                         logp = logp,
                         molecularWeight = mwt,

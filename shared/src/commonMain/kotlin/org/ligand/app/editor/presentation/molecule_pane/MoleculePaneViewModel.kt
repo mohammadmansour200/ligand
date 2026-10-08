@@ -83,7 +83,8 @@ class MoleculePaneViewModel(
     }
 
     private var previousCalcPropertiesMolecule: Molecule? = null
-    private var iupacNameJob: Job? = null
+    private var moleculeNamesJob: Job? = null
+
     private fun calcProperties(molecule: Molecule?) {
         if (previousCalcPropertiesMolecule == molecule) return
         previousCalcPropertiesMolecule = molecule
@@ -93,49 +94,67 @@ class MoleculePaneViewModel(
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(isIupacLoading = true, propertiesError = null) }
+            _state.update {
+                it.copy(
+                    isNamesLoading = true,
+                    propertiesError = null
+                )
+            }
 
             cheminformaticsDataSource.calcProperties(molecule)
                 .onSuccess { properties ->
                     _state.update { it.copy(properties = properties, propertiesError = null) }
-                    fetchIupacName(molecule)
+                    fetchMoleculeNames(molecule)
                 }
                 .onError { error ->
-                    _state.update { it.copy(propertiesError = error, isIupacLoading = false) }
+                    _state.update {
+                        it.copy(
+                            propertiesError = error,
+                            isNamesLoading = false,
+                        )
+                    }
                 }
         }
     }
 
-    private fun fetchIupacName(molecule: Molecule) {
-        iupacNameJob?.cancel()
-        iupacNameJob = viewModelScope.launch {
+    private fun fetchMoleculeNames(molecule: Molecule) {
+        moleculeNamesJob?.cancel()
+        viewModelScope.launch {
             cheminformaticsDataSource.getInchiKey(molecule)
                 .onSuccess { key ->
-                    pubchemDataSource.getIupacName(key)
-                        .onSuccess { name ->
-                            _state.update {
-                                it.copy(
-                                    properties = it.properties?.copy(iupacName = name),
-                                    isIupacLoading = false,
-                                    iupacError = null
-                                )
+                    moleculeNamesJob = viewModelScope.launch {
+                        pubchemDataSource.getMoleculeNames(key)
+                            .onSuccess { names ->
+                                _state.update {
+                                    it.copy(
+                                        properties = it.properties?.copy(
+                                            iupacName = names.iupacName,
+                                            synonym = names.synonym
+                                        ),
+                                        isNamesLoading = false,
+                                        namesError = null,
+                                    )
+                                }
                             }
-                        }
-                        .onError { error ->
-                            _state.update {
-                                it.copy(
-                                    properties = it.properties?.copy(iupacName = null),
-                                    isIupacLoading = false,
-                                    iupacError = error
-                                )
+                            .onError { error ->
+                                _state.update {
+                                    it.copy(
+                                        properties = it.properties?.copy(
+                                            iupacName = null,
+                                            synonym = null
+                                        ),
+                                        isNamesLoading = false,
+                                        namesError = error
+                                    )
+                                }
                             }
-                        }
+                    }
                 }
                 .onError {
                     _state.update {
                         it.copy(
-                            properties = it.properties?.copy(iupacName = null),
-                            isIupacLoading = false
+                            properties = it.properties?.copy(iupacName = null, synonym = null),
+                            isNamesLoading = false,
                         )
                     }
                 }

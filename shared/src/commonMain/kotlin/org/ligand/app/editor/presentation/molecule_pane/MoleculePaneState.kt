@@ -12,8 +12,8 @@ data class MoleculePaneState(
     val epmMeshData: EPMMeshData? = null,
     val conformer: Molecule? = null,
     val properties: MoleculeProperties? = null,
-    val isIupacLoading: Boolean = false,
+    val isNamesLoading: Boolean = false,
     val conformerError: ChemistryError? = null,
     val propertiesError: ChemistryError? = null,
-    val iupacError: DataError? = null,
+    val namesError: DataError? = null,
 )
