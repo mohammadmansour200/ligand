@@ -6,22 +6,28 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // Load Android RDKit shared libs
-        try {
-            System.loadLibrary("c++_shared")
-            System.loadLibrary("RDKitChemDraw")
-            System.loadLibrary("GraphMolWrap")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return
+    // --- LOAD RDKIT ---
+    companion object {
+        init {
+            try {
+                System.loadLibrary("c++_shared")
+                System.loadLibrary("RDKitChemDraw")
+                System.loadLibrary("GraphMolWrap")
+            } catch (e: UnsatisfiedLinkError) {
+                e.printStackTrace()
+            }
         }
+    }
 
-        enableEdgeToEdge()
+    // --- CREATE UI ---
+    override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
-
+        enableEdgeToEdge()
         setContent {
             App()
         }
