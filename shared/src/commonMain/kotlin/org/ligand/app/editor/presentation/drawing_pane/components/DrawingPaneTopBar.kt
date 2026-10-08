@@ -132,18 +132,18 @@ private fun MoreOptions(
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Open File") },
-                onClick = {
-                    expanded = false
-                    filePickerLauncher.launch()
-                }
-            )
-            HorizontalDivider()
-            DropdownMenuItem(
                 text = { Text("Name to Structure") },
                 onClick = {
                     expanded = false
                     showNameDialog = true
+                }
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Open File") },
+                onClick = {
+                    expanded = false
+                    filePickerLauncher.launch()
                 }
             )
         }
