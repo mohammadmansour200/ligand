@@ -59,7 +59,6 @@ import ligand.shared.generated.resources.reaction_forward_arrow_tool
 import ligand.shared.generated.resources.reaction_resonance_arrow_tool
 import ligand.shared.generated.resources.reaction_single_electron_pushing_arrow_tool
 import ligand.shared.generated.resources.single_bond
-import ligand.shared.generated.resources.structure_select_tool
 import ligand.shared.generated.resources.triple_bond_tool
 import ligand.shared.generated.resources.wedge_bond
 import org.jetbrains.compose.resources.DrawableResource
@@ -90,12 +89,12 @@ fun BoxScope.DrawingToolbar(selectedTool: Tool, onSelectTool: (Tool) -> Unit) {
             icon = Res.drawable.pan_tool,
             tooltipText = "Pan"
         )
-        ToolbarButton(
-            checked = selectedTool == Tool.StructureSelect,
-            onClick = { onSelectTool(Tool.StructureSelect) },
-            icon = Res.drawable.structure_select_tool,
-            tooltipText = "Structure Selection"
-        )
+//        ToolbarButton(
+//            checked = selectedTool == Tool.StructureSelect,
+//            onClick = { onSelectTool(Tool.StructureSelect) },
+//            app_icon = Res.drawable.structure_select_tool,
+//            tooltipText = "Structure Selection"
+//        )
         ToolbarButton(
             checked = selectedTool == Tool.Erase,
             onClick = { onSelectTool(Tool.Erase) },
