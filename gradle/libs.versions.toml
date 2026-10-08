@@ -1,4 +1,9 @@
 [versions]
+app-name = "Ligand"
+app-version-name = "1.0.1"
+app-version-code = "2"
+app-vendor = "Mohammad Abd Al-Tawab"
+app-description = "Cross-platform organic chemistry structures sketching, 3D visualizing and analysis app."
 agp = "9.1.0"
 android-compileSdk = "37"
 android-minSdk = "24"
