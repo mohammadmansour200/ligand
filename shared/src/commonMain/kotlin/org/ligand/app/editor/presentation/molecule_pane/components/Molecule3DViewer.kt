@@ -214,7 +214,7 @@ fun BoxScope.Molecule3DViewer(
                     )
                 )
 
-                val initialDirection = normalize(Float3(0f, 1f, 0f))
+                val initialDirection = Float3(0f, 1f, 0f)
                 val targetDirection = normalize(
                     Float3(
                         endAtomXPos - beginAtomXPos,
@@ -243,7 +243,7 @@ fun BoxScope.Molecule3DViewer(
                     )
                 )
 
-                val bondOffsetDirection = cross(targetDirection, viewVector)
+                val bondOffsetDirection = normalize(cross(targetDirection, viewVector))
                 when (bond) {
                     is Bond.Single ->
                         CylinderBond(
