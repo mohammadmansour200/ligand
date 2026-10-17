@@ -1,0 +1,40 @@
+{
+  "version": "v1.1.0",
+  "assets": [
+    {
+      "name": "ligand-1.1.0-1.x86_64.rpm",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/ligand-1.1.0-1.x86_64.rpm",
+      "size": "122.58 MB"
+    },
+    {
+      "name": "Ligand-1.1.0.msi",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/Ligand-1.1.0.msi",
+      "size": "118.60 MB"
+    },
+    {
+      "name": "ligand_1.1.0_amd64.deb",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/ligand_1.1.0_amd64.deb",
+      "size": "112.16 MB"
+    },
+    {
+      "name": "Ligand_1.1.0_arm64-v8a.apk",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/Ligand_1.1.0_arm64-v8a.apk",
+      "size": "57.53 MB"
+    },
+    {
+      "name": "Ligand_1.1.0_portable.zip",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/Ligand_1.1.0_portable.zip",
+      "size": "117.32 MB"
+    },
+    {
+      "name": "SHA256SUMS",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/SHA256SUMS",
+      "size": "0.00 MB"
+    },
+    {
+      "name": "SHA256SUMS.minisig",
+      "downloadUrl": "https://github.com/mohammadmansour200/ligand/releases/download/v1.1.0/SHA256SUMS.minisig",
+      "size": "0.00 MB"
+    }
+  ]
+}

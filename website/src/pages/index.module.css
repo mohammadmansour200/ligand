@@ -1,0 +1,42 @@
+.heroBanner {
+    padding: 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--ifm-color-border);
+}
+
+.download {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.container {
+    display: grid;
+    align-items: center;
+    gap: 2rem;
+}
+
+.container img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media (min-width: 1024px) {
+    .heroBanner {
+        padding: 4rem 0rem;
+    }
+    .container {
+        grid-template-columns: 1fr 1.5fr;
+    }
+    .buttons {
+        flex-direction: row;
+    }
+}
