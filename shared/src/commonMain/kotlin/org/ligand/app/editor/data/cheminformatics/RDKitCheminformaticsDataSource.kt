@@ -98,26 +98,48 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
             var hydrogenatedRdkitRWMol: RWMol? = null
 
             try {
-                val conformerId = DistanceGeom.EmbedMolecule(hydrogenatedRdkitROMol, embedParams)
-                ForceField.MMFFOptimizeMolecule(
-                    hydrogenatedRdkitROMol,
-                    "MMFF94",
-                    1000,
-                    10.0,
-                    conformerId,
-                    false
-                )
+                // --- PICK CONFORMER WITH LOWEST ENERGY ---
+                val conformerIds =
+                    DistanceGeom.EmbedMultipleConfs(hydrogenatedRdkitROMol, 10, embedParams)
+
+                var bestConformerId: Int = -1
+                var bestConformerEnergy = Double.POSITIVE_INFINITY
+
+                for (i in 0 until conformerIds.size()) {
+                    val confId = conformerIds[i.toInt()]
+
+                    val ff =
+                        ForceField.MMFFGetMoleculeForceField(
+                            hydrogenatedRdkitROMol,
+                            "MMFF94",
+                            100.0,
+                            confId,
+                            true
+                        )
+
+                    ff.initialize()
+                    ff.minimize()
+
+                    val e = ff.calcEnergy()
+                    if (e < bestConformerEnergy) {
+                        bestConformerEnergy = e
+                        bestConformerId = confId
+                    }
+                }
+
+                // --- COMPUTE GASTEIGER CHARGES ---
                 hydrogenatedRdkitROMol.computeGasteigerCharges()
 
+                // --- ALIGN CONFORMER WITH DRAWN 2D STRUCTURE ---
                 try {
                     matchVect = Match_Vect()
                     val numHeavyAtoms = rdkitMol.numHeavyAtoms
                     for (i in 0 until numHeavyAtoms) {
                         matchVect.add(Int_Pair(i.toInt(), i.toInt()))
                     }
-                    hydrogenatedRdkitROMol.alignMol(rdkitMol, conformerId, 0, matchVect)
+                    hydrogenatedRdkitROMol.alignMol(rdkitMol, bestConformerId, 0, matchVect)
 
-                    val conf3D = hydrogenatedRdkitROMol.getConformer(conformerId)
+                    val conf3D = hydrogenatedRdkitROMol.getConformer(bestConformerId)
                     centroid = conf3D.computeCentroid()
                     transform = Transform3D()
                     point3D = Point3D(-centroid.x, -centroid.y, -centroid.z)
@@ -128,14 +150,16 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
 
                 // --- CONVERT RDKIT MOLECULE INTO UI MOLECULE ---
                 hydrogenatedRdkitRWMol = RWMol(hydrogenatedRdkitROMol)
-                val resultMolecule = hydrogenatedRdkitRWMol.toMolecule(false)
+                val resultMolecule = hydrogenatedRdkitRWMol.toMolecule(
+                    includeDepictionMetadata = false,
+                    conformerId = bestConformerId
+                )
                 return@withContext Result.Success(resultMolecule)
             } catch (_: ConformerException) {
                 return@withContext Result.Error(
                     ChemistryError.NoConformation
                 )
-            } catch (e: Exception) {
-                println(e)
+            } catch (_: Exception) {
                 return@withContext Result.Error(
                     ChemistryError.SanitizationFailed
                 )
