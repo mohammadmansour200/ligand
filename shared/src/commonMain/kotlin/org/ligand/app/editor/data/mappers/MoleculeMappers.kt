@@ -70,7 +70,7 @@ fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
 }
 
 /**Converts RDKit molecule to UI molecule - DOESN'T HANDLE CLEANUP and should invoke mol.delete()*/
-fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
+fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true, conformerId: Int = -1): Molecule {
     this.Kekulize(false, false)
 
     // Generate 2d conformer if none available
@@ -78,7 +78,7 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true): Molecule {
         this.compute2DCoords()
     }
 
-    val conformer = this.conformer
+    val conformer = this.getConformer(conformerId)
 
     // --- SET ATOMS ---
     val atoms = mutableListOf<Atom>()
