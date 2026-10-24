@@ -1,0 +1,23 @@
+{
+  "uniqueId": "rdkit",
+  "name": "RDKit",
+  "artifactVersion": "2026_03_3",
+  "description": "Open-source cheminformatics toolkit",
+  "website": "https://www.rdkit.org",
+  "developers": [
+    {
+      "name": "Greg Landrum",
+      "organisationUrl": "https://www.rdkit.org"
+    }
+  ],
+  "organization": {
+    "name": "RDKit Project",
+    "url": "https://www.rdkit.org"
+  },
+  "scm": {
+    "url": "https://github.com/rdkit/rdkit"
+  },
+  "licenses": [
+    "BSD-3-Clause"
+  ]
+}

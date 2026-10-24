@@ -1,0 +1,23 @@
+{
+  "uniqueId": "ketcher-icons",
+  "name": "Ketcher icons",
+  "artifactVersion": "2026_10_19",
+  "description": "Toolbar icons adapted from the Ketcher chemical structure editor. Converted from SVG to Android vector drawables.",
+  "website": "https://github.com/epam/ketcher",
+  "developers": [
+    {
+      "name": "EPAM Systems",
+      "organisationUrl": "https://www.epam.com"
+    }
+  ],
+  "organization": {
+    "name": "EPAM Systems",
+    "url": "https://www.epam.com"
+  },
+  "scm": {
+    "url": "https://github.com/epam/ketcher"
+  },
+  "licenses": [
+    "Apache-2.0"
+  ]
+}

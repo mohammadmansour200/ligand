@@ -21,12 +21,14 @@ import org.ligand.app.editor.presentation.drawing_pane.components.ValenceViolati
 fun DrawingPaneRoot(
     viewModel: DrawingPaneViewModel = koinViewModel(),
     onNavigateToSupporting: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     DrawingPane(
         state = state,
         onAction = viewModel::onAction,
         onNavigateToSupporting = onNavigateToSupporting,
+        onNavigateToAbout = onNavigateToAbout,
     )
 }
 
@@ -36,6 +38,7 @@ fun DrawingPane(
     state: DrawingPaneState,
     onAction: (DrawingPaneAction) -> Unit,
     onNavigateToSupporting: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -43,6 +46,7 @@ fun DrawingPane(
                 state = state,
                 onAction = { onAction(it) },
                 onNavigateToSupporting = onNavigateToSupporting,
+                onNavigateToAbout = onNavigateToAbout,
             )
         },
     ) {

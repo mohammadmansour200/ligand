@@ -1,0 +1,23 @@
+{
+  "uniqueId": "opsin",
+  "name": "OPSIN",
+  "artifactVersion": "2.9.0",
+  "description": "Open Parser for Systematic IUPAC Nomenclature. Chemical name to structure conversion",
+  "website": "https://www.ebi.ac.uk/opsin/",
+  "developers": [
+    {
+      "name": "Daniel Lowe",
+      "organisationUrl": "https://github.com/dan2097"
+    }
+  ],
+  "organization": {
+    "name": "OPSIN Project",
+    "url": "https://www.ebi.ac.uk/opsin/"
+  },
+  "scm": {
+    "url": "https://github.com/dan2097/opsin"
+  },
+  "licenses": [
+    "MIT"
+  ]
+}

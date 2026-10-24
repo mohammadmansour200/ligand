@@ -47,6 +47,7 @@ fun DrawingPaneTopBar(
     state: DrawingPaneState,
     onAction: (DrawingPaneAction) -> Unit,
     onNavigateToSupporting: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.statusBarsPadding(),
@@ -56,7 +57,7 @@ fun DrawingPaneTopBar(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MoreOptions(onAction)
+            MoreOptions(onAction = onAction, onNavigateToAbout = onNavigateToAbout)
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -105,6 +106,7 @@ val supportedExtensions =
 @Composable
 private fun MoreOptions(
     onAction: (DrawingPaneAction) -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
@@ -123,7 +125,7 @@ private fun MoreOptions(
     ) {
         IconButton(onClick = { expanded = true }) {
             IconWithTooltip(
-                text = "",
+                text = "More Options",
                 icon = vectorResource(Res.drawable.menu),
             )
         }
@@ -144,6 +146,14 @@ private fun MoreOptions(
                 onClick = {
                     expanded = false
                     filePickerLauncher.launch()
+                }
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("About Ligand") },
+                onClick = {
+                    expanded = false
+                    onNavigateToAbout()
                 }
             )
         }

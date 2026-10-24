@@ -1,3 +1,5 @@
+import com.mikepenz.aboutlibraries.plugin.DuplicateMode
+import com.mikepenz.aboutlibraries.plugin.DuplicateRule
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -6,6 +8,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.aboutLibraries)
+    alias(libs.plugins.buildKonfig)
 }
 
 compose.resources {
@@ -59,6 +63,7 @@ kotlin {
             implementation(libs.androidx.adaptive)
             implementation(libs.androidx.adaptive.layout)
             implementation(libs.androidx.adaptive.navigation)
+            implementation(libs.jetbrains.navigation3.ui)
 
             api(libs.koin.core)
             implementation(libs.koin.compose)
@@ -76,6 +81,8 @@ kotlin {
             implementation(libs.compose.navigationevent)
 
             implementation(libs.bundles.ktor)
+
+            implementation(libs.aboutlibraries.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -86,4 +93,30 @@ kotlin {
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
+}
+
+aboutLibraries {
+    export {
+        outputPath = file("src/commonMain/composeResources/files/libraries.json")
+        prettyPrint = true
+    }
+    library {
+        duplicationMode = DuplicateMode.MERGE
+        duplicationRule = DuplicateRule.SIMPLE
+    }
+    collect {
+        configPath = file("config")
+    }
+}
+
+buildkonfig {
+    packageName = "org.ligand.app"
+
+    defaultConfigs {
+        buildConfigField(
+            com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING,
+            "APP_VERSION",
+            libs.versions.app.version.name.get()
+        )
+    }
 }
