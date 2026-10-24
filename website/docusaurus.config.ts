@@ -5,7 +5,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "Ligand",
   tagline:
-    "Application for Sketching, 3D visualizing, and Analyzing Organic Chemistry Structure",
+    "Open-source application for sketching, 3D visualizing, and analyzing organic chemistry structure.",
   favicon: "img/favicon.ico",
 
   future: {
