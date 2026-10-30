@@ -10,6 +10,7 @@
   <a href="#features-">Features</a> &bull;
   <a href="#platform-support-%EF%B8%8F">Platform Support</a> &bull;
   <a href="#download-links-">Download Links</a> &bull;
+  <a href="#milestones-">Milestones</a> &bull;
   <a href="#contributing-">Contributing</a> &bull;
   <a href="#contact-">Contact</a> &bull;
   <a href="#license-">License</a>
@@ -28,10 +29,10 @@
 - ✏️ **2D Chemical Sketcher**: Draw skeletal structures with single, double, triple, wedge,
   hashed-wedge, and hydrogen bonds. Fuse rings. Insert benzene, cyclohexanes, and carbon chains.
 - 🌐 **3D Visualizer**: Inspect sketched molecules in three rendering modes:
-    - **Ball-and-Stick**: CPK-colored spheres and cylinder bonds.
-    - **Space-Filling**: Van der Waals radii spheres showing steric hindrance and volume.
-    - **Electrostatic Potential Map (EPM)**: Translucent electrostatic potential maps showing charge
-      density across the molecular surface.
+  - **Ball-and-Stick**: CPK-colored spheres and cylinder bonds.
+  - **Space-Filling**: Van der Waals radii spheres showing steric hindrance and volume.
+  - **Electrostatic Potential Map (EPM)**: Translucent electrostatic potential maps showing charge
+    density across the molecular surface.
 - 🔤 **Offline Name-to-Structure**: Convert systematic IUPAC names (e.g. _2,2-dichlorobutane_ or
   _alpha-D-glucopyranose_) directly into structures.
 - 🧪 **Structure Analysis**: Nomenclate compound. Estimate molecular formula, molecular weight, LogP,
@@ -42,7 +43,7 @@
 ## Platform Support 🖥️
 
 | Platform    | Supported Versions               |
-|:------------|:---------------------------------|
+| :---------- | :------------------------------- |
 | **Android** | Android 7.0 (API 24) and above   |
 | **Linux**   | Ubuntu, Debian, Fedora, openSUSE |
 | **Windows** | Windows 10 and above (x64)       |
@@ -51,6 +52,13 @@
 
 - [GitHub Releases](https://github.com/mohammadmansour200/ligand/releases)
 - [Ligand Official Website](https://mohammadmansour200.github.io/ligand/)
+
+## Milestones 🎯
+
+- [ ] Rule-based offline structure nomenclature
+- [ ] Structure selection, translation, and rotation tool
+- [ ] 2D structure export (.mol, .sdf, .png, .svg)
+- [ ] 3D model export (.png, .pdb, .xyz, .obj, .gltf)
 
 ## Building from Source 🛠️
 
