@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions / usage help
+    url: https://github.com/mohammadmansour200/ligand/discussions
+    about: Ask usage questions, troubleshooting help, or general project support.
