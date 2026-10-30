@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a new idea, enhancement, or improvement for the project
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the feature, the value it would add, and any ideas you have for how it could be implemented.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the feature
+      description: A clear and concise description of the feature or enhancement.
+      placeholder: e.g. Add support for exporting ligand structures as a .mol file.
+    validations:
+      required: true
+
+  - type: textarea
+    id: priority
+    attributes:
+      label: Why this matters?
+      description: Explain the value or urgency of this feature for you or your workflow.
+      placeholder: This would save time during collaborative analysis and reduce manual conversion errors.
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe your ideal solution or how you think this should work.
+      placeholder: Add an export option in the menu that allows users to save the current structure as a MOL file.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Target platform
+      description: Select the platform this feature would affect.
+      multiple: false
+      options:
+        - Android
+        - Linux
+        - Windows
+        - All platforms
+    validations:
+      required: true
