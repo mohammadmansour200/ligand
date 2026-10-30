@@ -60,6 +60,12 @@ const config: Config = {
       },
       items: [
         {
+          type: "doc",
+          docId: "contributing/index",
+          position: "left",
+          label: "Contributing",
+        },
+        {
           href: "https://github.com/mohammadmansour200/ligand",
           position: "right",
           className: "header-github-link",

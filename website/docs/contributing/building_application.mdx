@@ -1,0 +1,180 @@
+---
+id: building_application
+title: Building Application
+sidebar_label: Building Application
+sidebar_position: 2
+description: How to configure your environment, prerequisites, and build Ligand locally for desktop and Android.
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Building Application
+
+This guide walks you through setting up your local environment to build, run, and test Ligand.
+
+## Prerequisites
+
+| Tool              | Required Version                 | Purpose                                                        |
+| :---------------- | :------------------------------- | :------------------------------------------------------------- |
+| **JDK**           | Java 22 or higher                | Configured in `shared/build.gradle.kts` via `jvmToolchain(22)` |
+| **Android SDK**   | `compileSdk = 37`, `minSdk = 24` | Android build and device/emulator deployment                   |
+| **Node.js**       | Node.js 18+ and npm              | Running and compiling the Docusaurus website                   |
+| **Git & Git LFS** | Latest stable                    | Source code management                                         |
+
+### Install the tools
+
+<Tabs groupId="operating-systems" queryString="os">
+<TabItem value="windows" label="Windows" default>
+
+Run in PowerShell with [winget](https://learn.microsoft.com/windows/package-manager/winget/):
+
+```powershell
+winget install Microsoft.OpenJDK.22
+winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+winget install GitHub.GitLFS
+winget install Google.AndroidStudio
+```
+
+Restart your terminal afterwards so the new `PATH` takes effect.
+
+</TabItem>
+<TabItem value="mac" label="macOS">
+
+Using [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask temurin@22 android-studio
+brew install node git git-lfs
+```
+
+Add to your `~/.zshrc`:
+
+```bash
+export JAVA_HOME="$(/usr/libexec/java_home -v 22)"
+```
+
+</TabItem>
+<TabItem value="linux" label="Linux">
+
+Install JDK 22 with [SDKMAN!](https://sdkman.io):
+
+```bash
+curl -s "https://get.sdkman.io" | bash
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+sdk install java 22.0.2-tem
+```
+
+Then install the remaining tools with your package manager:
+
+<Tabs groupId="linux-distros" queryString="distro">
+<TabItem value="debian" label="Debian / Ubuntu" default>
+
+```bash
+sudo apt update && sudo apt install -y git git-lfs nodejs npm
+sudo snap install android-studio --classic
+```
+
+</TabItem>
+<TabItem value="fedora" label="Fedora">
+
+```bash
+sudo dnf install -y git git-lfs nodejs npm
+```
+
+Download [Android Studio](https://developer.android.com/studio) manually.
+
+</TabItem>
+<TabItem value="arch" label="Arch">
+
+```bash
+sudo pacman -S --needed git git-lfs nodejs npm android-studio
+```
+
+</TabItem>
+</Tabs>
+
+:::tip
+If `node --version` reports below 18, install a current LTS with [nvm](https://github.com/nvm-sh/nvm).
+:::
+
+</TabItem>
+</Tabs>
+
+### Set up the Android SDK
+
+On every platform, open Android Studio, go to **SDK Manager**, and install **Android SDK Platform 37**.
+
+:::note
+Android Studio configures the SDK location for you when you open the project. You only need to set `ANDROID_HOME` yourself when building from a bare terminal.
+:::
+
+### Verify your setup
+
+```bash
+java -version    # 22 or higher
+node --version   # v18 or higher
+git lfs version
+```
+
+## Cloning the Repository
+
+```bash
+git lfs install
+git clone https://github.com/mohammadmansour200/ligand.git
+cd ligand
+```
+
+## Building and Running
+
+### Desktop Application
+
+Run in development mode:
+
+```bash
+./gradlew :desktopApp:run
+```
+
+Package a platform-native installer (`.deb`, `.rpm`, or `.msi`):
+
+```bash
+./gradlew :desktopApp:packageDistributionForCurrentOS
+```
+
+Package a portable ZIP:
+
+```bash
+./gradlew :desktopApp:packagePortableZip
+```
+
+Output is written to `desktopApp/build/compose/binaries/main-release/`.
+
+### Android Application
+
+Build the debug APK:
+
+```bash
+./gradlew :androidApp:assembleDebug
+```
+
+The APK is generated in `androidApp/build/outputs/apk/debug/`.
+
+Install and run on a connected device or emulator:
+
+```bash
+./gradlew :androidApp:installDebug
+```
+
+## Running the Documentation Site
+
+The documentation site is built with [Docusaurus](https://docusaurus.io/).
+
+```bash
+cd website
+npm install
+npm run start    # dev server at http://localhost:3000/ligand/
+npm run build    # production build validation
+```
+
+Changes to files in `docs/` hot-reload automatically.
