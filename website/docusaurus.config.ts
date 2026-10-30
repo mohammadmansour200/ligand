@@ -61,6 +61,12 @@ const config: Config = {
       items: [
         {
           type: "doc",
+          docId: "activities/index",
+          position: "left",
+          label: "Activities",
+        },
+        {
+          type: "doc",
           docId: "contributing/index",
           position: "left",
           label: "Contributing",
@@ -79,6 +85,10 @@ const config: Config = {
         {
           title: "Docs",
           items: [
+            {
+              label: "Activities",
+              to: "/docs/activities",
+            },
             {
               label: "Contributing",
               to: "/docs/contributing",
