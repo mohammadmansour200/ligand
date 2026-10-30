@@ -1,8 +1,6 @@
 <center>
-  <img src="website/static/img/Ligand_Header.webp" alt="Ligand Interface" width="100%">
-</center>
-
-<center>
+  <img src="website/static/img/Ligand_Header.webp" alt="Ligand Interface" width="80%">
+  <h1>Ligand</h1>
   <h2>Open-source cross-platform application for sketching, 3D visualizing, and analyzing organic chemistry structure.</h2>
 </center>
 
@@ -59,35 +57,6 @@
 - [ ] Structure selection, translation, and rotation tool
 - [ ] 2D structure export (.mol, .sdf, .png, .svg)
 - [ ] 3D model export (.png, .pdb, .xyz, .obj, .gltf)
-
-## Building from Source 🛠️
-
-### Prerequisites
-
-- **JDK 22** or higher (configured in `shared/build.gradle.kts` via `jvmToolchain(22)`).
-- **Android SDK** with `compileSdk = 37` (for building the Android app).
-
-### Run Desktop App
-
-```bash
-./gradlew :desktopApp:run
-```
-
-### Build Android App
-
-```bash
-./gradlew :androidApp:assembleDebug
-```
-
-### Package Desktop Releases
-
-```bash
-# Package platform-native installer (.deb, .rpm, or .msi)
-./gradlew :desktopApp:packageDistributionForCurrentOS
-
-# Package portable ZIP archive
-./gradlew :desktopApp:packagePortableZip
-```
 
 ## Contributing 🤝
 
