@@ -22,5 +22,5 @@ There are many valuable ways to contribute to Ligand:
 
 ## Guide Navigation
 
-- 🛠️ **[Building Application](./building_application.md)**: Set up development environment, and build desktop & Android targets.
+- 🛠️ **[Building Application](./building_application.mdx)**: Set up development environment, and build desktop & Android targets.
 - 💖 **[Credits & Acknowledgments](./credits.md)**: Acknowledgments, open-source libraries, design assets Ligand relies on.
