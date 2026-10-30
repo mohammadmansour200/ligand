@@ -1,8 +1,8 @@
 [versions]
 aboutLibraries = "15.3.0"
 app-name = "Ligand"
-app-version-name = "1.1.0"
-app-version-code = "3"
+app-version-name = "1.2.0"
+app-version-code = "4"
 app-vendor = "Mohammad Abd Al-Tawab"
 app-description = "Open-source application for sketching, 3D visualizing, and analyzing organic chemistry structure."
 agp = "9.1.0"
