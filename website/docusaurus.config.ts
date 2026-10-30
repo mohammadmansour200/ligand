@@ -75,39 +75,51 @@ const config: Config = {
       ],
     },
     footer: {
-      style: "dark",
-      // links: [
-      //   {
-      //     title: "Community",
-      //     items: [
-      //       {
-      //         label: "Stack Overflow",
-      //         href: "https://stackoverflow.com/questions/tagged/docusaurus",
-      //       },
-      //       {
-      //         label: "Discord",
-      //         href: "https://discordapp.com/invite/docusaurus",
-      //       },
-      //       {
-      //         label: "X",
-      //         href: "https://x.com/docusaurus",
-      //       },
-      //     ],
-      //   },
-      //   {
-      //     title: "More",
-      //     items: [
-      //       {
-      //         label: "Blog",
-      //         to: "/blog",
-      //       },
-      //       {
-      //         label: "GitHub",
-      //         href: "https://github.com/facebook/docusaurus",
-      //       },
-      //     ],
-      //   },
-      // ],
+      links: [
+        {
+          title: "Docs",
+          items: [
+            {
+              label: "Contributing",
+              to: "/docs/contributing",
+            },
+          ],
+        },
+        {
+          title: "Community",
+          items: [
+            {
+              label: "GitHub Issues",
+              href: "https://github.com/mohammadmansour200/ligand/issues",
+            },
+            {
+              label: "GitHub Pull Requests",
+              href: "https://github.com/mohammadmansour200/ligand/pulls",
+            },
+            {
+              label: "GitHub Discussions",
+              href: "https://github.com/mohammadmansour200/ligand/discussions",
+            },
+          ],
+        },
+        {
+          title: "Contact",
+          items: [
+            {
+              label: "LinkedIn",
+              href: "https://www.linkedin.com/in/mohammadtabdulkader/",
+            },
+            {
+              label: "Email",
+              href: "mailto:mohammadamansour03@gmail.com",
+            },
+            {
+              label: "Donate",
+              href: "https://ko-fi.com/ligand",
+            },
+          ],
+        },
+      ],
       copyright: `Copyright © ${new Date().getFullYear()} Mohammad Abd Al-Tawab. Built with Docusaurus.<br /><small>RDKit, OPSIN, and PubChem names and logos belong to their respective owners and are used for identification only. Their use does not imply endorsement of or affiliation with Ligand.</small>`,
     },
     prism: {
