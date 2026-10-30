@@ -1,8 +1,7 @@
 name: Bug report
 description: Report a bug or unexpected behavior in the application
-title: ""
 labels:
-  - bug
+  - ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
@@ -66,7 +65,7 @@ body:
     id: os-version
     attributes:
       label: OS version
-      description: Example: Android 14, Ubuntu 24.04, Windows 11
+      description: "Example: Android 14, Ubuntu 24.04, Windows 11"
       placeholder: e.g. Android 14
     validations:
       required: true

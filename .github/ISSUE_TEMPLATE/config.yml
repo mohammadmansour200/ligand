@@ -1,9 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Bug report
-    description: Report crashes, incorrect behavior, or reproducible issues using the bug form.
-    file: bug_report.yml
-
   - name: Questions / usage help
     url: https://github.com/mohammadmansour200/ligand/discussions
     about: Ask usage questions, troubleshooting help, or general project support.
