@@ -9,7 +9,7 @@ description: Use Ligand's 3D model to look down a C-C bond and observe how stagg
 ## Task
 
 1. Sketch **ethane** in Ligand and examine the 3D model.
-2. Rotate the view so you look straight down the carbon-carbon bond. A carbon to the front, and the other carbon to the rear.
+2. Rotate the view so that one carbon appears at the front, and another carbon to the rear.
 3. Observe the hydrogens. Are the front carbon hydrogens lined up with rear carbon hydrogens, or away from each other?
 
 ## Solution
