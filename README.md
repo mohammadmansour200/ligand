@@ -1,10 +1,10 @@
-<center>
+<div style="text-align: center;">
   <img src="website/static/img/Ligand_Header.webp" alt="Ligand Interface" width="80%">
   <h1>Ligand</h1>
   <h2>Open-source cross-platform application for sketching, 3D visualizing, and analyzing organic chemistry structure.</h2>
-</center>
+</div>
 
-<p align="center">
+<div style="text-align: center;">
   <a href="#features-">Features</a> &bull;
   <a href="#platform-support-%EF%B8%8F">Platform Support</a> &bull;
   <a href="#download-links-">Download Links</a> &bull;
@@ -12,36 +12,36 @@
   <a href="#contributing-">Contributing</a> &bull;
   <a href="#contact-">Contact</a> &bull;
   <a href="#license-">License</a>
-</p>
+</div>
 
-<p align="center">
+<div style="text-align: center;">
   <a href="https://github.com/mohammadmansour200/ligand/releases"><img src="https://img.shields.io/github/v/release/mohammadmansour200/ligand" alt="GitHub release"></a>
   <a href="https://github.com/mohammadmansour200/ligand/issues"><img src="https://img.shields.io/github/issues/mohammadmansour200/ligand" alt="GitHub issues"></a>
   <a href="https://github.com/mohammadmansour200/ligand/pulls"><img src="https://img.shields.io/github/issues-pr/mohammadmansour200/ligand" alt="GitHub pull requests"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
-</p>
+</div>
 
 ## Features 🌟
 
-- 📦 **Portable & Self-Contained**: Runs without installation from a USB flash drive.
-- ✏️ **2D Chemical Sketcher**: Draw skeletal structures with single, double, triple, wedge,
-  hashed-wedge, and hydrogen bonds. Fuse rings. Insert benzene, cyclohexanes, and carbon chains.
-- 🌐 **3D Visualizer**: Inspect sketched molecules in three rendering modes:
-  - **Ball-and-Stick**: CPK-colored spheres and cylinder bonds.
-  - **Space-Filling**: Van der Waals radii spheres showing steric hindrance and volume.
-  - **Electrostatic Potential Map (EPM)**: Translucent electrostatic potential maps showing charge
-    density across the molecular surface.
+- 📦 **Lightweight & Portable**: Lightweight and portable to the extent of working directly
+  from a USB drive.
+- ✏️ **2D Sketching**: Draw skeletal structures with single, double, triple, wedge,
+  hashed-wedge, and hydrogen bonds or simple insert benzene rings, cyclohexanes, and carbon chains.
+- 🌐 **3D Visualization**: Visualize sketched structures in three rendering modes:
+    - **Ball-and-Stick**: CPK-colored spheres and cylinder bonds showing spatial connectivity and
+      geometry.
+    - **Space-Filling**: Van der Waals radii spheres showing steric hindrance and volume.
+    - **Electrostatic Potential Map (EPM)**: Translucent electrostatic potential maps showing charge
+      density across the molecular surface.
 - 🔤 **Offline Name-to-Structure**: Convert systematic IUPAC names (e.g. _2,2-dichlorobutane_ or
   _alpha-D-glucopyranose_) directly into structures.
-- 🧪 **Structure Analysis**: Nomenclate compound. Estimate molecular formula, molecular weight, LogP,
-  rotatable bonds, hydrogen bond donors and acceptors.
-- ⚠️ **Valence Checking**: Identify valence mistakes in real time with built-in explanation dialogs.
-- 📂 **File Import**: Open `.mol` and `.sdf` files directly from local storage.
+- 🧪 **Structure Analysis**: Structure to name conversion. Estimate molecular formula,
+  molecular weight, LogP, rotatable bonds, hydrogen bond donors and acceptors.
 
 ## Platform Support 🖥️
 
 | Platform    | Supported Versions               |
-| :---------- | :------------------------------- |
+|:------------|:---------------------------------|
 | **Android** | Android 7.0 (API 24) and above   |
 | **Linux**   | Ubuntu, Debian, Fedora, openSUSE |
 | **Windows** | Windows 10 and above (x64)       |
@@ -53,10 +53,11 @@
 
 ## Milestones 🎯
 
-- [ ] Rule-based offline structure nomenclature
-- [ ] Structure selection, translation, and rotation tool
+- [ ] Rule-based offline structure to name conversion
+- [ ] Conformational analysis tools
 - [ ] 2D structure export (.mol, .sdf, .png, .svg)
 - [ ] 3D model export (.png, .pdb, .xyz, .obj, .gltf)
+- [ ] Structure selection, translation, and rotation tool
 
 ## Contributing 🤝
 
