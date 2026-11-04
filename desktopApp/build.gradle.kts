@@ -49,6 +49,7 @@ compose.desktop {
                 modules("jdk.security.auth")
             }
             windows {
+                menu = true
                 iconFile.set(project.file("src/main/resources/icons/icon.ico"))
             }
         }
