@@ -42,6 +42,8 @@ compose.desktop {
 
             appResourcesRootDir.set(project.layout.projectDirectory.dir("libs"))
 
+            modules("java.instrument", "java.management", "jdk.security.auth", "jdk.unsupported")
+
             linux {
                 iconFile.set(project.file("src/main/resources/icons/icon.png"))
                 modules("jdk.security.auth")
