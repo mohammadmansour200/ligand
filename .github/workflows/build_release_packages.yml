@@ -25,18 +25,25 @@ jobs:
           distribution: 'jetbrains'
           java-version: '21'
           cache: 'gradle'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decode keystore and save to file
-        run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_B64" | base64 -d > keystore.jks
         shell: bash
 
       - name: Set environment variables for signing
+        env:
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
         run: |
           echo "SIGNING_KEYSTORE_PATH=$(pwd)/keystore.jks" >> $GITHUB_ENV
-          echo "SIGNING_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
-          echo "SIGNING_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> $GITHUB_ENV
-          echo "SIGNING_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "SIGNING_KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+          echo "SIGNING_STORE_PASSWORD=$STORE_PASSWORD" >> $GITHUB_ENV
         shell: bash
 
       - name: Build Android APK
@@ -77,6 +84,8 @@ jobs:
           distribution: 'jetbrains'
           java-version: '21'
           cache: 'gradle'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Linux Packages
         if: matrix.platform == 'linux'
