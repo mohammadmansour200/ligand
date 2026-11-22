@@ -39,12 +39,15 @@ class MoleculePaneViewModel(
             val ibl = Res.readBytes("files/lightroom_ibl.ktx")
             val solidColor = Res.readBytes("files/lit_color.filamat")
             val epm = Res.readBytes("files/epm.filamat")
-            _filamentResources.value = FilamentResources.Ready(engine, ibl, solidColor, epm)
+            if (engine != null) _filamentResources.value =
+                FilamentResources.Ready(engine, ibl, solidColor, epm)
         }
     }
 
     override fun onCleared() {
-        (_filamentResources.value as? FilamentResources.Ready)?.engine?.destroy()
+        (_filamentResources.value as? FilamentResources.Ready)?.engine?.use {
+            it.close()
+        }
     }
 
     fun onAction(action: MoleculePaneAction) {
