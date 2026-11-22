@@ -17,11 +17,11 @@ compose.resources {
 }
 
 kotlin {
-    jvmToolchain(22)
+    jvmToolchain(17)
 
     jvm {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_22
+            jvmTarget = JvmTarget.JVM_17
         }
     }
 
