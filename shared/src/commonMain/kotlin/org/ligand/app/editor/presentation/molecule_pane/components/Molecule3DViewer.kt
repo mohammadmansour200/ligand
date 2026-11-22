@@ -1,7 +1,11 @@
 package org.ligand.app.editor.presentation.molecule_pane.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +33,7 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.erkko68.filament.Engine
@@ -79,6 +84,7 @@ import org.ligand.app.editor.domain.MoleculePaneConstants.CPK_ATOM_COLOR_MAP
 import org.ligand.app.editor.domain.MoleculePaneConstants.FALLBACK_ATOM_COLOR
 import org.ligand.app.editor.domain.MoleculePaneConstants.FALLBACK_ATOM_VAN_DER_WAALS_RADII
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -437,6 +443,8 @@ private fun Molecule3dViewerErrorNotice(modifier: Modifier = Modifier, error: Ch
     }
 }
 
+private enum class TwoFingerMode { UNDECIDED, ZOOM, PAN }
+
 private fun Modifier.freeOrbitGestures(
     camera: CameraState,
     orbitSpeed: Float = 0.3f,
@@ -539,53 +547,96 @@ private fun Modifier.freeOrbitGestures(
         }
     }
     // --- TOUCH GESTURES ---
-    .pointerInput(camera) {
-        detectTransformGestures { _, pan, zoom, _ ->
-            var offset = camera.eye - camera.target
-            var currentDistance = length(offset.toFloat3())
+    .pointerInput(camera, zoomSpeed, orbitSpeed, panSpeed, enablePanning) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            val touchSlop = viewConfiguration.touchSlop
 
-            if (currentDistance <= 0.0001f) return@detectTransformGestures
+            var twoFingerMode = TwoFingerMode.UNDECIDED
+            var accZoom = 1f
+            var accPan = Offset.Zero
+            var maxPointers = 1
 
-            if (zoom != 1.0f && zoom > 0f) {
-                val adjustedZoom = 1.0f + (zoom - 1.0f) * zoomSpeed
-                if (adjustedZoom > 0f) {
-                    currentDistance =
-                        (currentDistance / adjustedZoom)
-                }
-            }
+            do {
+                val event = awaitPointerEvent()
 
-            val isMultiTouch = zoom != 1.0f
+                val pointerCount = event.changes.count { it.pressed }
+                if (pointerCount > maxPointers) maxPointers = pointerCount
 
-            if (enablePanning && isMultiTouch) {
-                // Two-finger Touch Pan
-                val forward = (-offset).normalized()
-                val right = cross(forward.toFloat3(), camera.up.toFloat3()).toDirection()
-                val cameraUp = cross(right.toFloat3(), forward.toFloat3()).toDirection()
+                val pan = event.calculatePan()
+                val zoom = event.calculateZoom()
 
-                val panScale = currentDistance * panSpeed
-                val panVector = (right * (-pan.x * panScale)) + (cameraUp * (pan.y * panScale))
+                var offset = camera.eye - camera.target
+                var currentDistance = length(offset.toFloat3())
 
-                camera.target += panVector
-                camera.eye += panVector
-            } else if (!isMultiTouch) {
-                // One-finger Touch Orbit
-                if (pan.x != 0f) {
-                    offset = Rotation.axisAngle(camera.up, -pan.x * orbitSpeed) * offset
-                }
-                if (pan.y != 0f) {
-                    val right = cross(camera.up.toFloat3(), offset.toFloat3())
-                    val rightLength = length(right)
-                    if (rightLength > 0.0001f) {
-                        val pitch = Rotation.axisAngle(
-                            (right / rightLength).toDirection(),
-                            -pan.y * orbitSpeed
-                        )
-                        offset = pitch * offset
-                        camera.up = (pitch * camera.up).normalized()
+                // --- TOUCH PAN & ZOOM ---
+                if (pointerCount == 2) {
+                    when (twoFingerMode) {
+                        TwoFingerMode.UNDECIDED -> {
+                            accZoom *= zoom
+                            accPan += pan
+                            val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                            val zoomMotion = abs(1f - accZoom) * centroidSize
+                            val panMotion = accPan.getDistance()
+                            if (maxOf(zoomMotion, panMotion) > touchSlop) {
+                                twoFingerMode =
+                                    if (zoomMotion > panMotion) TwoFingerMode.ZOOM else TwoFingerMode.PAN
+                            }
+                        }
+
+                        TwoFingerMode.ZOOM -> {
+                            if (zoom != 1f && zoom > 0f) {
+                                val adjustedZoom = 1f + (zoom - 1f) * zoomSpeed
+                                if (adjustedZoom > 0f) currentDistance /= adjustedZoom
+                            }
+                        }
+
+                        TwoFingerMode.PAN -> {
+                            if (enablePanning) {
+                                val forward = (-offset).normalized()
+                                val right =
+                                    cross(
+                                        forward.toFloat3(),
+                                        camera.up.toFloat3()
+                                    ).toDirection()
+                                val cameraUp =
+                                    cross(right.toFloat3(), forward.toFloat3()).toDirection()
+
+                                val panScale = currentDistance * panSpeed
+                                val panVector =
+                                    (right * (-pan.x * panScale)) + (cameraUp * (pan.y * panScale))
+
+                                camera.target += panVector
+                                camera.eye += panVector
+                            }
+                        }
+                    }
+                    // --- TOUCH ORBIT ---
+                } else {
+                    twoFingerMode = TwoFingerMode.UNDECIDED
+                    accZoom = 1f
+                    accPan = Offset.Zero
+                    
+                    if (pointerCount == 1 && maxPointers == 1) {
+                        if (pan.x != 0f) {
+                            offset = Rotation.axisAngle(camera.up, -pan.x * orbitSpeed) * offset
+                        }
+                        if (pan.y != 0f) {
+                            val right = cross(camera.up.toFloat3(), offset.toFloat3())
+                            val rightLength = length(right)
+                            val pitch = Rotation.axisAngle(
+                                (right / rightLength).toDirection(),
+                                -pan.y * orbitSpeed
+                            )
+                            offset = pitch * offset
+                            camera.up = (pitch * camera.up).normalized()
+                        }
                     }
                 }
-            }
 
-            camera.eye = camera.target + offset.normalized() * currentDistance
+                camera.eye = camera.target + offset.normalized() * currentDistance
+
+                event.changes.forEach { if (it.positionChanged()) it.consume() }
+            } while (event.changes.any { it.pressed })
         }
     }
