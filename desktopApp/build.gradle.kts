@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.compose.reload.gradle.ComposeHotRun
 
 plugins {
     alias(libs.plugins.kotlinJvm)
@@ -54,6 +55,23 @@ compose.desktop {
             }
         }
     }
+}
+
+val resourcesOsDir: String = run {
+    val os = System.getProperty("os.name").lowercase()
+
+    when {
+        "win" in os -> "windows"
+        "mac" in os || "darwin" in os -> "macos"
+        else -> "linux"
+    }
+}
+
+tasks.withType<ComposeHotRun>().configureEach {
+    systemProperty(
+        "compose.application.resources.dir",
+        layout.projectDirectory.dir("libs/$resourcesOsDir").asFile.absolutePath
+    )
 }
 
 tasks.register<Zip>("packagePortableZip") {
