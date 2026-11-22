@@ -1,5 +1,6 @@
 package org.ligand.app.editor.presentation.molecule_pane.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -45,7 +47,6 @@ import io.github.erkko68.filament.compose.scene.LinearColor
 import io.github.erkko68.filament.compose.scene.Position
 import io.github.erkko68.filament.compose.scene.PostProcessing
 import io.github.erkko68.filament.compose.scene.Rotation
-import io.github.erkko68.filament.compose.scene.Skybox
 import io.github.erkko68.filament.compose.scene.primitives.Cylinder
 import io.github.erkko68.filament.compose.scene.primitives.Sphere
 import io.github.erkko68.filament.compose.scene.rememberCameraState
@@ -340,7 +341,7 @@ fun BoxScope.Molecule3DViewer(
         }
 
         FilledTonalIconButton(
-            modifier = Modifier.padding(8.dp).align(Alignment.BottomStart),
+            modifier = Modifier.padding(16.dp).align(Alignment.BottomStart),
             onClick = {
                 cameraState.eye = CAMERA_INITIAL_EYE
                 cameraState.target = CAMERA_INITIAL_TARGET
