@@ -144,7 +144,6 @@ fun BoxScope.Molecule3DViewer(
             intensity = 10_000f,
             rotation = Rotation.lookTowards(cameraState.target - cameraState.eye, cameraState.up)
         )
-        Skybox(color = LinearColor(0f, 0f, 0f))
 
         val template = rememberMaterial { solidColorMaterialBytes }
 
@@ -315,7 +314,8 @@ fun BoxScope.Molecule3DViewer(
 
     if (error == null) {
         FilamentView(
-            modifier = Modifier.fillMaxSize().freeOrbitGestures(cameraState),
+            modifier = Modifier.fillMaxSize().background(Color.Black)
+                .freeOrbitGestures(cameraState),
             cameraState = cameraState,
             postProcessing = PostProcessing(
                 antiAliasing = AntiAliasing(),
@@ -323,6 +323,7 @@ fun BoxScope.Molecule3DViewer(
                 ambientOcclusion = AmbientOcclusion()
             ),
             scene = scene,
+            transparent = true
         )
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)) {

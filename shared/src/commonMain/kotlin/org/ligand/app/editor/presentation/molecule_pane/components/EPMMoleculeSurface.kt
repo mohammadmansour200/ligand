@@ -80,7 +80,7 @@ private fun createEpmLutTexture(engine: Engine, width: Int = 256): Texture {
 private fun rememberEPMSurfaceInstance(
     engine: Engine,
     materialBytes: ByteArray,
-    opacity: Float = 0.3f,
+    opacity: Float = 0.7f,
 ): MaterialInstance? {
     val template = rememberMaterial { materialBytes }
 
