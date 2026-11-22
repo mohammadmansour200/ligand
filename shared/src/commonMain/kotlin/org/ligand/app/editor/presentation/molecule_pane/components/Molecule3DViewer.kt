@@ -125,7 +125,11 @@ fun BoxScope.Molecule3DViewer(
 ) {
     var moleculeRenderMode by remember { mutableStateOf(MoleculeRenderMode.BALL_AND_STICK) }
 
-    val cameraState = rememberCameraState()
+    val cameraState = rememberCameraState(
+        initialEye = CAMERA_INITIAL_EYE,
+        initialTarget = CAMERA_INITIAL_TARGET,
+        initialUp = CAMERA_INITIAL_UP
+    )
 
     val environment = rememberKtxEnvironment(
         engine = engine,
