@@ -52,7 +52,7 @@ import ligand.shared.generated.resources.close
 import ligand.shared.generated.resources.error
 import ligand.shared.generated.resources.info
 import org.jetbrains.compose.resources.vectorResource
-import org.ligand.app.core.domain.DataError
+import org.ligand.app.core.domain.NetworkError
 import org.ligand.app.core.presentation.IconWithTooltip
 import org.ligand.app.core.utils.truncateTo
 import org.ligand.app.editor.presentation.drawing_pane.modifier.fadingEdges
@@ -167,19 +167,13 @@ private fun MoleculePropertiesTable(state: MoleculePaneState) {
     ) {
         state.properties?.let { properties ->
             val namesError = when (state.namesError) {
-                DataError.NoInternet -> "No internet connection"
-                DataError.RequestTimeout -> "Connection timed out"
-                DataError.TooManyRequests -> "Too many requests — try again in a moment"
-                DataError.Server,
-                DataError.Serialization,
-                DataError.FileCorrupted,
-                DataError.Unknown -> "Couldn't load name"
-
-                else -> null
+                NetworkError.NoInternet -> "No internet connection"
+                NetworkError.RequestTimeout -> "Connection timed out"
+                NetworkError.TooManyRequests -> "Too many requests — try again in a moment"
+                else -> "Couldn't load name"
             }
 
-            val iupacName = namesError ?: (state.properties.iupacName
-                ?: "Not available for this compound")
+            val iupacName = state.properties.iupacName ?: namesError
             TableRow(
                 label = "IUPAC Name",
                 value = iupacName,
@@ -187,8 +181,7 @@ private fun MoleculePropertiesTable(state: MoleculePaneState) {
                 isLoading = state.isNamesLoading
             )
 
-            val synonym =
-                namesError ?: (state.properties.synonym ?: "Not available for this compound")
+            val synonym = state.properties.synonym ?: namesError
             if (!synonym.equals(iupacName, ignoreCase = true)) {
                 TableRow(
                     label = "Synonym",

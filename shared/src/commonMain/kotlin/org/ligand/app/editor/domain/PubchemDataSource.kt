@@ -1,6 +1,6 @@
 package org.ligand.app.editor.domain
 
-import org.ligand.app.core.domain.DataError
+import org.ligand.app.core.domain.NetworkError
 import org.ligand.app.core.domain.Result
 
 data class MoleculeNames(
@@ -11,5 +11,5 @@ data class MoleculeNames(
 interface PubchemDataSource {
     suspend fun getMoleculeNames(
         inchiKey: String
-    ): Result<MoleculeNames, DataError>
+    ): Result<MoleculeNames, NetworkError>
 }

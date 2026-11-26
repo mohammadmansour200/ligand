@@ -6,22 +6,22 @@ import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.statement.HttpResponse
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.ensureActive
-import org.ligand.app.core.domain.DataError
+import org.ligand.app.core.domain.NetworkError
 import org.ligand.app.core.domain.Result
 import kotlin.coroutines.coroutineContext
 
 suspend inline fun <reified T> safeCall(
     execute: () -> HttpResponse
-): Result<T, DataError> {
+): Result<T, NetworkError> {
     val response = try {
         execute()
     } catch (e: SocketTimeoutException) {
-        return Result.Error(DataError.RequestTimeout)
+        return Result.Error(NetworkError.RequestTimeout)
     } catch (e: UnresolvedAddressException) {
-        return Result.Error(DataError.NoInternet)
+        return Result.Error(NetworkError.NoInternet)
     } catch (e: Exception) {
         coroutineContext.ensureActive()
-        return Result.Error(DataError.Unknown)
+        return Result.Error(NetworkError.Unknown)
     }
 
     return responseToResult(response)
@@ -29,19 +29,19 @@ suspend inline fun <reified T> safeCall(
 
 suspend inline fun <reified T> responseToResult(
     response: HttpResponse
-): Result<T, DataError> {
+): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
             try {
                 Result.Success(response.body<T>())
             } catch (e: NoTransformationFoundException) {
-                Result.Error(DataError.Serialization)
+                Result.Error(NetworkError.Serialization)
             }
         }
 
-        408 -> Result.Error(DataError.RequestTimeout)
-        429 -> Result.Error(DataError.TooManyRequests)
-        in 500..599 -> Result.Error(DataError.Server)
-        else -> Result.Error(DataError.Unknown)
+        408 -> Result.Error(NetworkError.RequestTimeout)
+        429 -> Result.Error(NetworkError.TooManyRequests)
+        in 500..599 -> Result.Error(NetworkError.Server)
+        else -> Result.Error(NetworkError.Unknown)
     }
 }

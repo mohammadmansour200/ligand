@@ -2,7 +2,7 @@ package org.ligand.app.editor.presentation.molecule_pane
 
 import androidx.compose.runtime.Immutable
 import org.ligand.app.core.domain.ChemistryError
-import org.ligand.app.core.domain.DataError
+import org.ligand.app.core.domain.NetworkError
 import org.ligand.app.editor.domain.EPMMeshData
 import org.ligand.app.editor.domain.Molecule
 import org.ligand.app.editor.domain.MoleculeProperties
@@ -15,5 +15,5 @@ data class MoleculePaneState(
     val isNamesLoading: Boolean = false,
     val conformerError: ChemistryError? = null,
     val propertiesError: ChemistryError? = null,
-    val namesError: DataError? = null,
+    val namesError: NetworkError? = null,
 )
