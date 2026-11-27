@@ -105,17 +105,25 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 var bestConformerId: Int = -1
                 var bestConformerEnergy = Double.POSITIVE_INFINITY
 
+                val hasMMFFParams = ForceField.MMFFHasAllMoleculeParams(hydrogenatedRdkitROMol)
                 for (i in 0 until conformerIds.size()) {
                     val confId = conformerIds[i.toInt()]
 
                     val ff =
-                        ForceField.MMFFGetMoleculeForceField(
+                        if (hasMMFFParams) ForceField.MMFFGetMoleculeForceField(
                             hydrogenatedRdkitROMol,
-                            "MMFF94",
+                            "MMFF94s",
                             100.0,
                             confId,
                             true
                         )
+                        else
+                            ForceField.UFFGetMoleculeForceField(
+                                hydrogenatedRdkitROMol,
+                                100.0,
+                                confId,
+                                true
+                            )
 
                     ff.initialize()
                     ff.minimize()
@@ -155,11 +163,13 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                     conformerId = bestConformerId
                 )
                 return@withContext Result.Success(resultMolecule)
-            } catch (_: ConformerException) {
+            } catch (e: ConformerException) {
+                println(e)
                 return@withContext Result.Error(
                     ChemistryError.NoConformation
                 )
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                println(e)
                 return@withContext Result.Error(
                     ChemistryError.SanitizationFailed
                 )
