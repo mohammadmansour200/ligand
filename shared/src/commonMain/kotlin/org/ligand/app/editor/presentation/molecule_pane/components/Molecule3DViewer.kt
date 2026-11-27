@@ -6,13 +6,17 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroidSize
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -22,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,12 +41,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import io.github.erkko68.filament.Engine
 import io.github.erkko68.filament.Material
 import io.github.erkko68.filament.MaterialInstance
 import io.github.erkko68.filament.compose.FilamentSceneScope
 import io.github.erkko68.filament.compose.FilamentView
 import io.github.erkko68.filament.compose.rememberFilamentScene
+import io.github.erkko68.filament.compose.rememberFilamentViewState
 import io.github.erkko68.filament.compose.scene.AmbientOcclusion
 import io.github.erkko68.filament.compose.scene.AntiAliasing
 import io.github.erkko68.filament.compose.scene.Bloom
@@ -66,23 +71,29 @@ import io.github.erkko68.filament.utils.cross
 import io.github.erkko68.filament.utils.dot
 import io.github.erkko68.filament.utils.length
 import io.github.erkko68.filament.utils.normalize
+import kotlinx.coroutines.launch
 import ligand.shared.generated.resources.Res
 import ligand.shared.generated.resources.ball_and_stick
 import ligand.shared.generated.resources.ball_and_stick_epm
 import ligand.shared.generated.resources.reset_camera
+import ligand.shared.generated.resources.save
 import ligand.shared.generated.resources.van_der_waals
 import org.jetbrains.compose.resources.vectorResource
 import org.ligand.app.core.domain.ChemistryError
 import org.ligand.app.core.presentation.IconWithTooltip
 import org.ligand.app.core.presentation.toErrorText
 import org.ligand.app.editor.domain.Bond
+import org.ligand.app.editor.domain.ChemicalExportFormat
 import org.ligand.app.editor.domain.EPMMeshData
+import org.ligand.app.editor.domain.ImageExportFormat
 import org.ligand.app.editor.domain.Molecule
 import org.ligand.app.editor.domain.MoleculePaneConstants.ATOM_VAN_DER_WAALS_RADII_MAP
 import org.ligand.app.editor.domain.MoleculePaneConstants.BALL_STICK_RADII_SCALE
 import org.ligand.app.editor.domain.MoleculePaneConstants.CPK_ATOM_COLOR_MAP
 import org.ligand.app.editor.domain.MoleculePaneConstants.FALLBACK_ATOM_COLOR
 import org.ligand.app.editor.domain.MoleculePaneConstants.FALLBACK_ATOM_VAN_DER_WAALS_RADII
+import org.ligand.app.editor.presentation.molecule_pane.FilamentResources
+import org.ligand.app.editor.presentation.molecule_pane.MoleculePaneAction
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
@@ -121,26 +132,32 @@ val CAMERA_INITIAL_UP = Direction(0f, 1f, 0f)
 
 @Composable
 fun BoxScope.Molecule3DViewer(
-    engine: Engine,
-    epmMeshData: EPMMeshData,
+    filamentResources: FilamentResources.Ready,
     conformer: Molecule,
-    iblBytes: ByteArray,
-    solidColorMaterialBytes: ByteArray,
-    epmMaterialBytes: ByteArray,
-    error: ChemistryError?
+    epmMeshData: EPMMeshData,
+    error: ChemistryError?,
+    onAction: (MoleculePaneAction) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+
+    val engine = filamentResources.engine
+    val iblBytes = filamentResources.iblBytes
+    val epmMaterialBytes = filamentResources.epmMaterialBytes
+    val solidColorMaterialBytes = filamentResources.solidColorMaterialBytes
+
     var moleculeRenderMode by remember { mutableStateOf(MoleculeRenderMode.BALL_AND_STICK) }
+    var exportMenuExpanded by remember { mutableStateOf(false) }
 
     val cameraState = rememberCameraState(
         initialEye = CAMERA_INITIAL_EYE,
         initialTarget = CAMERA_INITIAL_TARGET,
         initialUp = CAMERA_INITIAL_UP
     )
-
     val environment = rememberKtxEnvironment(
         engine = engine,
         ibl = { iblBytes },
     )
+    val viewState = rememberFilamentViewState()
 
     val scene = rememberFilamentScene(
         engine = engine,
@@ -309,6 +326,7 @@ fun BoxScope.Molecule3DViewer(
             }
         }
 
+        // --- EPM SURFACE ---
         val isEPMSurfaceVisible = moleculeRenderMode == MoleculeRenderMode.ELECTRON_DISTRIBUTION
         EPMMoleculeSurface(
             engine = engine,
@@ -319,6 +337,7 @@ fun BoxScope.Molecule3DViewer(
     }
 
     if (error == null) {
+        // --- FILAMENT VIEW ---
         FilamentView(
             modifier = Modifier.fillMaxSize().background(Color.Black)
                 .freeOrbitGestures(cameraState),
@@ -329,9 +348,73 @@ fun BoxScope.Molecule3DViewer(
                 ambientOcclusion = AmbientOcclusion()
             ),
             scene = scene,
-            transparent = true
+            transparent = true,
+            viewState = viewState
         )
 
+        // --- EXPORT ---
+        Box(
+            modifier = Modifier
+                .padding(8.dp)
+                .align(Alignment.TopStart)
+        ) {
+            // --- EXPORT BUTTON ---
+            FilledTonalIconButton(onClick = { exportMenuExpanded = true }) {
+                IconWithTooltip(
+                    icon = vectorResource(Res.drawable.save),
+                    text = "Export 3D model",
+                )
+            }
+
+            // --- EXPORT DROPDOWN MENU ---
+            DropdownMenu(
+                expanded = exportMenuExpanded,
+                onDismissRequest = { exportMenuExpanded = false },
+            ) {
+                ImageExportFormat.entries.forEach { format ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(format.name)
+                        },
+                        onClick = {
+                            scope.launch {
+                                exportMenuExpanded = false
+
+                                val imageBitmap = viewState.capture() ?: return@launch
+                                onAction(
+                                    MoleculePaneAction.OnExportImage(
+                                        imageBitmap,
+                                        format
+                                    )
+                                )
+                            }
+                        },
+                    )
+                }
+
+                HorizontalDivider()
+
+                ChemicalExportFormat.entries.forEach { format ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(format.name)
+                        },
+                        onClick = {
+                            exportMenuExpanded = false
+
+                            onAction(
+                                MoleculePaneAction.OnExportChemicalFile(
+                                    molecule = conformer,
+                                    format = format
+                                )
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        // --- 3D MODEL MODE BUTTONS ---
         SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)) {
             moleculeRenderModeOptions.forEachIndexed { index, (icon, label, mode) ->
                 SegmentedButton(
@@ -351,6 +434,7 @@ fun BoxScope.Molecule3DViewer(
             }
         }
 
+        // --- RESET CAMERA BUTTON ---
         FilledTonalIconButton(
             modifier = Modifier.padding(16.dp).align(Alignment.BottomStart),
             onClick = {
@@ -616,7 +700,7 @@ private fun Modifier.freeOrbitGestures(
                     twoFingerMode = TwoFingerMode.UNDECIDED
                     accZoom = 1f
                     accPan = Offset.Zero
-                    
+
                     if (pointerCount == 1 && maxPointers == 1) {
                         if (pan.x != 0f) {
                             offset = Rotation.axisAngle(camera.up, -pan.x * orbitSpeed) * offset

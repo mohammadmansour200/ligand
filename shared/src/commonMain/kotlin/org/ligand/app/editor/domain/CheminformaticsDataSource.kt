@@ -296,4 +296,14 @@ interface CheminformaticsDataSource {
     suspend fun getInchiKey(
         molecule: Molecule,
     ): Result<String, ChemistryError>
+
+    /**
+     * Converts 3D molecule to the specified chemical format.
+     * @param molecule The target [Molecule] to be exported.
+     * @return [String] File Content on success, or a [DataError].
+     */
+    suspend fun convertMolecule(
+        molecule: Molecule,
+        format: ChemicalExportFormat
+    ): Result<String, DataError>
 }

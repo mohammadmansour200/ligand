@@ -16,7 +16,7 @@ fun ChemistryError.toErrorText(): ErrorText {
             hint = null
         )
 
-        ChemistryError.NoConformation -> ErrorText(
+        else -> ErrorText(
             title = "Couldn't generate a 3D structure",
             body = "This molecule's geometry couldn't be resolved.",
             hint = null

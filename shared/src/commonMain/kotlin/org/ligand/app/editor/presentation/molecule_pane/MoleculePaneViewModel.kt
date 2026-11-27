@@ -1,25 +1,38 @@
 package org.ligand.app.editor.presentation.molecule_pane
 
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.erkko68.filament.Engine
 import io.github.erkko68.filament.Filament
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.ImageFormat
+import io.github.vinceglb.filekit.dialogs.compose.util.encodeToByteArray
+import io.github.vinceglb.filekit.dialogs.openFileSaver
+import io.github.vinceglb.filekit.write
+import io.github.vinceglb.filekit.writeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ligand.shared.generated.resources.Res
+import org.ligand.app.core.domain.DataError
 import org.ligand.app.core.domain.onError
 import org.ligand.app.core.domain.onSuccess
 import org.ligand.app.editor.domain.Atom
+import org.ligand.app.editor.domain.ChemicalExportFormat
 import org.ligand.app.editor.domain.CheminformaticsDataSource
 import org.ligand.app.editor.domain.EPMMeshData
+import org.ligand.app.editor.domain.ImageExportFormat
 import org.ligand.app.editor.domain.Molecule
 import org.ligand.app.editor.domain.PubchemDataSource
 import org.ligand.app.editor.domain.computeEpmMeshData
+import kotlin.uuid.Uuid
 
 class MoleculePaneViewModel(
     private val cheminformaticsDataSource: CheminformaticsDataSource,
@@ -28,6 +41,9 @@ class MoleculePaneViewModel(
     ViewModel() {
     private val _state = MutableStateFlow(MoleculePaneState())
     val state = _state.asStateFlow()
+
+    private val _events = Channel<MoleculePaneEvent>()
+    val events = _events.receiveAsFlow()
 
     private val _filamentResources = MutableStateFlow<FilamentResources>(FilamentResources.Loading)
     val filamentResources = _filamentResources.asStateFlow()
@@ -54,6 +70,11 @@ class MoleculePaneViewModel(
         when (action) {
             is MoleculePaneAction.OnGenerateConformer -> generateConformer(action.molecule)
             is MoleculePaneAction.OnCalcProperties -> calcProperties(action.molecule)
+            is MoleculePaneAction.OnExportImage -> exportImage(action.imageBitmap, action.format)
+            is MoleculePaneAction.OnExportChemicalFile -> exportChemicalFile(
+                action.molecule,
+                action.format
+            )
         }
     }
 
@@ -161,6 +182,64 @@ class MoleculePaneViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    private fun exportImage(imageBitmap: ImageBitmap, format: ImageExportFormat) {
+        viewModelScope.launch(Dispatchers.Default) {
+            // --- ENCODE BITMAP ---
+            val encodeFormat = when (format) {
+                ImageExportFormat.PNG -> ImageFormat.PNG
+                ImageExportFormat.JPG -> ImageFormat.JPEG
+            }
+            val bytes = try {
+                imageBitmap.encodeToByteArray(format = encodeFormat)
+            } catch (e: Exception) {
+                _events.send(MoleculePaneEvent.ExportError(DataError.ExportFailed(e.stackTraceToString())))
+                return@launch
+            }
+
+            /// --- WRITE FILE ---
+            val prefix = _state.value.properties?.let { it.iupacName ?: it.formula } ?: "molecule"
+            val suffix = Uuid.random().toString().take(4)
+            val fileName = "${prefix}_$suffix"
+            val extension = format.name.lowercase()
+
+            val targetFile = FileKit.openFileSaver(
+                suggestedName = fileName,
+                defaultExtension = extension,
+            )
+
+            if (targetFile != null) {
+                targetFile.write(bytes)
+                _events.send(MoleculePaneEvent.ExportSuccess(targetFile))
+            }
+        }
+    }
+
+    private fun exportChemicalFile(molecule: Molecule, format: ChemicalExportFormat) {
+        viewModelScope.launch {
+            // --- CONVERT TO SPECIFIED FORMAT ---
+            cheminformaticsDataSource.convertMolecule(molecule, format).onSuccess { content ->
+                /// --- WRITE FILE ---
+                val prefix =
+                    _state.value.properties?.let { it.iupacName ?: it.formula } ?: "molecule"
+                val suffix = Uuid.random().toString().take(4)
+                val fileName = "${prefix}_$suffix"
+                val extension = format.name.lowercase()
+
+                val targetFile = FileKit.openFileSaver(
+                    suggestedName = fileName,
+                    defaultExtension = extension,
+                )
+
+                if (targetFile != null) {
+                    targetFile.writeString(content)
+                    _events.send(MoleculePaneEvent.ExportSuccess(targetFile))
+                }
+            }.onError { error ->
+                _events.send(MoleculePaneEvent.ExportError(error))
+            }
         }
     }
 

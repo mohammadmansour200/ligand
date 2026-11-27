@@ -21,7 +21,7 @@ fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
         val rdkitAtom = org.RDKit.Atom(atom.symbol)
         rdkitAtom.formalCharge = atom.charge
         mol.addAtom(rdkitAtom)
-        conformer.setAtomPos(index.toLong(), Point3D(atom.x, atom.y, 0.0))
+        conformer.setAtomPos(index.toLong(), Point3D(atom.x, atom.y, atom.z))
     }
 
     // --- SET BONDS ---
@@ -51,7 +51,6 @@ fun Molecule.toRWMol(sanitize: Boolean = false): RWMol {
     }
 
     // --- SET ATOM X, Y POSITIONS ---
-    conformer.is3D = false
     mol.addConformer(
         conformer, true
     )

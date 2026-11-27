@@ -23,6 +23,7 @@ import org.ligand.app.core.domain.DataError
 import org.ligand.app.core.domain.Result
 import org.ligand.app.editor.data.mappers.toMolecule
 import org.ligand.app.editor.data.mappers.toRWMol
+import org.ligand.app.editor.domain.ChemicalExportFormat
 import org.ligand.app.editor.domain.CheminformaticsDataSource
 import org.ligand.app.editor.domain.DrawingPaneConstants.BOND_LENGTH
 import org.ligand.app.editor.domain.DrawingPaneConstants.MAX_FORMAL_CHARGE
@@ -911,4 +912,36 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
                 mol.delete()
             }
         }
+
+    override suspend fun convertMolecule(
+        molecule: Molecule,
+        format: ChemicalExportFormat
+    ): Result<String, DataError> = withContext(Dispatchers.Default) {
+        // --- CONVERT UI MOLECULE INTO RDKIT MOLECULE ---
+        val mol = molecule.toRWMol(sanitize = true)
+
+        try {
+            // --- CONVERT ---
+            val output = when (format) {
+                ChemicalExportFormat.MOL -> RDKFuncs.MolToMolBlock(mol)
+
+                ChemicalExportFormat.SDF -> RDKFuncs.MolToMolBlock(mol).trimEnd() + "\n$$$$\n"
+
+                ChemicalExportFormat.PDB -> RDKFuncs.MolToPDBBlock(mol)
+
+                ChemicalExportFormat.XYZ -> RDKFuncs.MolToXYZBlock(mol)
+            }
+
+            if (output.isNullOrBlank()) {
+                Result.Error(DataError.ExportFailed(null))
+            } else {
+                Result.Success(output)
+            }
+        } catch (e: Exception) {
+            Result.Error(DataError.ExportFailed(e.stackTraceToString()))
+        } finally {
+            // --- CLEANUP ---
+            mol.delete()
+        }
+    }
 }
