@@ -28,6 +28,8 @@ import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -82,6 +84,7 @@ import org.ligand.app.editor.presentation.utils.toAnnotatedString
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -449,7 +452,8 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                                     color = bondColor,
                                     strokeWidth = BOND_STROKE_WIDTH,
                                     start = beginAtomOffset,
-                                    end = endAtomOffset
+                                    end = endAtomOffset,
+                                    cap = StrokeCap.Round
                                 )
 
                                 BondDir.BEGINWEDGE -> drawWedgeBond(
@@ -849,21 +853,43 @@ private fun DrawScope.drawWedgeBond(
     strokeWidth: Float,
     color: Color
 ) {
-    val wedgeWidth = strokeWidth * 4f
-    val angle = atan2(end.y - start.y, end.x - start.x)
-    val perpendicularAngle = angle + (Math.PI / 2).toFloat()
+    val dxTotal = end.x - start.x
+    val dyTotal = end.y - start.y
+    val length = hypot(dxTotal, dyTotal)
+    if (length < 1f) return
 
-    val dx = (wedgeWidth / 2f) * cos(perpendicularAngle)
-    val dy = (wedgeWidth / 2f) * sin(perpendicularAngle)
+    val ux = dxTotal / length
+    val uy = dyTotal / length
+    val px = -uy
+    val py = ux
+
+    val tipHalf = strokeWidth * 0.3f
+    val baseHalf = strokeWidth * 2f
+    val radius = strokeWidth * 0.35f
+
+    val s = Offset(start.x + ux * radius, start.y + uy * radius)
+    val e = Offset(end.x - ux * radius, end.y - uy * radius)
+    val tip = (tipHalf - radius).coerceAtLeast(0f)
+    val base = (baseHalf - radius).coerceAtLeast(0f)
 
     val path = Path().apply {
-        moveTo(start.x, start.y)
-        lineTo(end.x + dx, end.y + dy)
-        lineTo(end.x - dx, end.y - dy)
+        moveTo(s.x + px * tip, s.y + py * tip)
+        lineTo(e.x + px * base, e.y + py * base)
+        lineTo(e.x - px * base, e.y - py * base)
+        lineTo(s.x - px * tip, s.y - py * tip)
         close()
     }
 
-    drawPath(path = path, color = color)
+    drawPath(path = path, color = color, style = Fill)
+    drawPath(
+        path = path,
+        color = color,
+        style = Stroke(
+            width = radius * 2f,
+            join = StrokeJoin.Round,
+            cap = StrokeCap.Round
+        )
+    )
 }
 
 private fun DrawScope.drawDashBond(
@@ -872,26 +898,44 @@ private fun DrawScope.drawDashBond(
     strokeWidth: Float,
     color: Color,
 ) {
-    val maxWedgeWidth = strokeWidth * 4f
-    val angle = atan2(end.y - start.y, end.x - start.x)
-    val perpAngle = angle + (Math.PI / 2).toFloat()
+    val dxTotal = end.x - start.x
+    val dyTotal = end.y - start.y
+    val length = hypot(dxTotal, dyTotal)
+    if (length < 1f) return
 
-    val dashCount = 10
+    val ux = dxTotal / length
+    val uy = dyTotal / length
+    val px = -uy
+    val py = ux
+
+    val dashStroke = strokeWidth * 0.8f
+    val capRadius = dashStroke / 2f
+
+    val minHalf = strokeWidth * 0.3f
+    val maxHalf = strokeWidth * 2f
+
+    val spacing = strokeWidth * 2.4f
+    val usable = length - 2f * capRadius
+    val dashCount = (usable / spacing).toInt() + 1
+
+    val tStart = capRadius / length
+    val tEnd = 1f - capRadius / length
+
     for (i in 0 until dashCount) {
-        val t = i.toFloat() / (dashCount - 1)
+        val f = i.toFloat() / (dashCount - 1)
+        val t = tStart + f * (tEnd - tStart)
 
-        val currentX = start.x + t * (end.x - start.x)
-        val currentY = start.y + t * (end.y - start.y)
+        val cx = start.x + t * dxTotal
+        val cy = start.y + t * dyTotal
 
-        val currentWidth = t * maxWedgeWidth
-        val dx = (currentWidth / 2f) * cos(perpAngle)
-        val dy = (currentWidth / 2f) * sin(perpAngle)
+        val half = (minHalf + f * (maxHalf - minHalf) - capRadius).coerceAtLeast(0f)
 
         drawLine(
             color = color,
-            start = Offset(currentX - dx, currentY - dy),
-            end = Offset(currentX + dx, currentY + dy),
-            strokeWidth = strokeWidth
+            start = Offset(cx - px * half, cy - py * half),
+            end = Offset(cx + px * half, cy + py * half),
+            strokeWidth = dashStroke,
+            cap = StrokeCap.Round
         )
     }
 }
@@ -907,7 +951,8 @@ fun DrawScope.drawAsymmetricDoubleBond(
         color = color,
         start = start,
         end = end,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 
     val (sideStart, sideEnd) = offsetLine(
@@ -921,7 +966,8 @@ fun DrawScope.drawAsymmetricDoubleBond(
         color = color,
         start = sideStart,
         end = sideEnd,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 }
 
@@ -936,28 +982,30 @@ fun DrawScope.drawCenteredDoubleBond(
         start = start,
         end = end,
         offsetDistance = spacing,
-        lerpStart = -0.05f,
-        lerpEnd = 1.05f
+        lerpStart = -.02f,
+        lerpEnd = 1f
     )
     drawLine(
         color = color,
         start = positiveSideStart,
         end = positiveSideEnd,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 
     val (negativeSideStart, negativeSideEnd) = offsetLine(
         start = start,
         end = end,
         offsetDistance = -spacing,
-        lerpStart = -0.05f,
-        lerpEnd = 1.05f
+        lerpStart = -.02f,
+        lerpEnd = 1f
     )
     drawLine(
         color = color,
         start = negativeSideStart,
         end = negativeSideEnd,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 }
 
@@ -972,31 +1020,38 @@ fun DrawScope.drawTripleBond(
         color = color,
         start = start,
         end = end,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 
     val (positiveSideStart, positiveSideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = spacing
+        offsetDistance = spacing,
+        lerpStart = 0f,
+        lerpEnd = 1f
     )
     drawLine(
         color = color,
         start = positiveSideStart,
         end = positiveSideEnd,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 
     val (negativeSideStart, negativeSideEnd) = offsetLine(
         start = start,
         end = end,
-        offsetDistance = -spacing
+        offsetDistance = -spacing,
+        lerpStart = 0f,
+        lerpEnd = 1f
     )
     drawLine(
         color = color,
         start = negativeSideStart,
         end = negativeSideEnd,
-        strokeWidth = strokeWidth
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Round
     )
 }
 
@@ -1013,7 +1068,8 @@ fun DrawScope.drawHydrogenBond(
         start = start,
         end = end,
         strokeWidth = strokeWidth,
-        pathEffect = pathEffect
+        pathEffect = pathEffect,
+        cap = StrokeCap.Round
     )
 }
 
