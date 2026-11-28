@@ -79,14 +79,19 @@ class MoleculePaneViewModel(
     }
 
     private var previousGenerateConformerMolecule: Molecule? = null
+    private var generateConformerJob: Job? = null
+
     private fun generateConformer(molecule: Molecule?) {
         if (previousGenerateConformerMolecule == molecule) return
         previousGenerateConformerMolecule = molecule
         if (molecule == null) {
-            _state.update { it.copy(conformer = molecule, conformerError = null) }
+            _state.update { it.copy(conformer = null, conformerError = null) }
             return
         }
-        viewModelScope.launch {
+
+        generateConformerJob?.cancel()
+        
+        generateConformerJob = viewModelScope.launch {
             cheminformaticsDataSource.generate3DConformer(molecule)
                 .onSuccess { mol ->
                     val epmMeshData = handleComputeEpmMeshData(mol.atoms)
