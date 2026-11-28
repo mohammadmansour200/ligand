@@ -15,6 +15,8 @@ private val ELEMENTS_WITH_PREFIXED_HYDROGEN = setOf(
  * Determines whether hydrogen count placement, whether its to the left (WEST), or to the right (EAST), or on top (NORTH), or on the bottom (SOUTH) of the symbol.
  */
 fun Atom.labelOrientation(conformer: Conformer): LabelOrientation {
+    if (!this.isLabelVisible()) return LabelOrientation.EAST
+
     // --- NO HYDROGENS ---
     if (this.totalNumHs == 0L) return LabelOrientation.EAST
 
@@ -69,7 +71,7 @@ fun Atom.labelOrientation(conformer: Conformer): LabelOrientation {
                 gaps.add(gap)
             } else {
                 val nextAngle = angles[i + 1]
-                val gap = currentAngle - nextAngle
+                val gap = nextAngle - currentAngle
                 gaps.add(gap)
             }
         }
