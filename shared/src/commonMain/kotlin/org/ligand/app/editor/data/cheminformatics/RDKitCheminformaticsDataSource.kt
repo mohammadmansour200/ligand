@@ -677,11 +677,28 @@ class RDKitCheminformaticsDataSource : CheminformaticsDataSource {
         val mol = molecule.toRWMol()
 
         try {
-            val bond = mol.getBondWithIdx(targetBondIdx)
+            val targetBond = mol.getBondWithIdx(targetBondIdx)
 
             // --- SET NEW BOND TYPE AND DIRECTION ---
-            bond.bondType = type
-            mol.getBondBetweenAtoms(bond.beginAtomIdx, bond.endAtomIdx)?.bondDir = dir
+            targetBond.bondType = type
+
+            val targetBondDir =
+                mol.getBondBetweenAtoms(targetBond.beginAtomIdx, targetBond.endAtomIdx)?.bondDir
+
+            // --- FLIP BOND DIRECTION ---
+            if (targetBondDir != Bond.BondDir.NONE && targetBondDir == dir) {
+                val beginAtomIdx = targetBond.beginAtomIdx
+                val endAtomIdx = targetBond.endAtomIdx
+
+                mol.removeBond(beginAtomIdx, endAtomIdx)
+
+                mol.addBond(endAtomIdx, beginAtomIdx, type)
+                mol.getBondBetweenAtoms(endAtomIdx, beginAtomIdx)?.bondDir = dir
+            } else {
+                // --- SET BOND DIRECTION ---
+                mol.getBondBetweenAtoms(targetBond.beginAtomIdx, targetBond.endAtomIdx)?.bondDir =
+                    dir
+            }
 
             try {
                 mol.sanitizeMol()
