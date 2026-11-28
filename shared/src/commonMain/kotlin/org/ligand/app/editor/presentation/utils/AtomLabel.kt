@@ -11,10 +11,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.center
 import org.ligand.app.editor.domain.DrawingPaneConstants.HYDROGEN_COUNT_FONT_SIZE
 import org.ligand.app.editor.domain.DrawingPaneConstants.SYMBOL_FONT_SIZE
+import org.ligand.app.editor.domain.LabelOrientation
 
 fun chargeLabel(charge: Int, baseStyle: TextStyle): AnnotatedString {
     val magnitude = kotlin.math.abs(charge)
@@ -40,32 +39,57 @@ data class AtomLabelLayout(
 fun getAtomLabelLayout(
     symbolLayout: TextLayoutResult?,
     hydrogenLayout: TextLayoutResult?,
-    isReversed: Boolean,
+    labelOrientation: LabelOrientation,
     atomOffset: Offset,
 ): AtomLabelLayout {
-    val symbolDimensions = symbolLayout?.size ?: IntSize.Zero
-    val hydrogenDimensions = hydrogenLayout?.size ?: IntSize.Zero
+    val symbolWidth = symbolLayout?.size?.width?.toFloat() ?: 0f
+    val symbolHeight = symbolLayout?.size?.height?.toFloat() ?: 0f
+    val hydrogenWidth = hydrogenLayout?.size?.width?.toFloat() ?: 0f
+    val hydrogenHeight = hydrogenLayout?.size?.height?.toFloat() ?: 0f
+    
+    val symbolLeft = atomOffset.x - symbolWidth / 2f
+    val symbolTop = atomOffset.y - symbolHeight / 2f
+    val symbolTopLeft = Offset(symbolLeft, symbolTop)
 
-    val width = symbolDimensions.width + hydrogenDimensions.width
-    val height = symbolDimensions.height
-
-    val leftOffset = if (isReversed) hydrogenDimensions.width + symbolDimensions.center.x
-    else symbolDimensions.center.x
-    val left = atomOffset.x - leftOffset
-    val top = atomOffset.y - (height / 2f)
-
-    val symbolTopLeft =
-        if (isReversed) Offset(left + hydrogenDimensions.width, top) else Offset(
-            left,
-            top
+    val verticalGap = symbolHeight * 0.75f
+    val hydrogenTopLeft = when (labelOrientation) {
+        LabelOrientation.EAST -> Offset(
+            x = symbolLeft + symbolWidth,
+            y = symbolTop
         )
-    val hydrogenTopLeft = if (isReversed) Offset(left, top) else Offset(
-        left + symbolDimensions.width,
-        top
-    )
+
+        LabelOrientation.WEST -> Offset(
+            x = symbolLeft - hydrogenWidth,
+            y = symbolTop
+        )
+
+        LabelOrientation.NORTH -> Offset(
+            x = atomOffset.x - hydrogenWidth / 2f,
+            y = atomOffset.y - verticalGap - hydrogenHeight / 2f
+        )
+
+        LabelOrientation.SOUTH -> Offset(
+            x = atomOffset.x - hydrogenWidth / 2f,
+            y = atomOffset.y + verticalGap - hydrogenHeight / 2f
+        )
+    }
+
+    val hasHydrogen = hydrogenLayout != null
+    val left = if (hasHydrogen) minOf(symbolTopLeft.x, hydrogenTopLeft.x) else symbolTopLeft.x
+    val top = if (hasHydrogen) minOf(symbolTopLeft.y, hydrogenTopLeft.y) else symbolTopLeft.y
+    val right = if (hasHydrogen) {
+        maxOf(symbolTopLeft.x + symbolWidth, hydrogenTopLeft.x + hydrogenWidth)
+    } else {
+        symbolTopLeft.x + symbolWidth
+    }
+    val bottom = if (hasHydrogen) {
+        maxOf(symbolTopLeft.y + symbolHeight, hydrogenTopLeft.y + hydrogenHeight)
+    } else {
+        symbolTopLeft.y + symbolHeight
+    }
 
     return AtomLabelLayout(
-        boundingRect = Rect(left, top, left + width, top + height),
+        boundingRect = Rect(left, top, right, bottom),
         symbolTopLeft = symbolTopLeft,
         hydrogenTopLeft = hydrogenTopLeft,
     )

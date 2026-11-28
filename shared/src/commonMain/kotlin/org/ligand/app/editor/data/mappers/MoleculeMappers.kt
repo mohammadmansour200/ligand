@@ -9,6 +9,7 @@ import org.ligand.app.editor.domain.Atom
 import org.ligand.app.editor.domain.Bond
 import org.ligand.app.editor.domain.BondDir
 import org.ligand.app.editor.domain.DoubleBondAlignment
+import org.ligand.app.editor.domain.LabelOrientation
 import org.ligand.app.editor.domain.Molecule
 
 /**Converts UI molecule to RDKit molecule - DOESN'T HANDLE CLEANUP and should invoke mol.delete()*/
@@ -101,7 +102,7 @@ fun RWMol.toMolecule(includeDepictionMetadata: Boolean = true, conformerId: Int 
                 hydrogenCount = atom.totalNumHs,
                 charge = atom.formalCharge,
                 gasteigerCharge = gasteigerCharge,
-                isLabelReversed = if (includeDepictionMetadata) atom.isLabelReversed(conformer) else false,
+                labelOrientation = if (includeDepictionMetadata) atom.labelOrientation(conformer) else LabelOrientation.EAST,
                 isLabelVisible = if (includeDepictionMetadata) atom.isLabelVisible() else false,
                 hasValenceViolation = if (includeDepictionMetadata) atom.hasValenceViolation() else false
             )

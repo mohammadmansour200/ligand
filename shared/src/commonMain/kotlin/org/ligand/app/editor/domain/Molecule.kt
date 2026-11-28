@@ -1,5 +1,6 @@
 package org.ligand.app.editor.domain
 
+enum class LabelOrientation { NORTH, SOUTH, WEST, EAST }
 data class Atom(
     val x: Double,
     val y: Double,
@@ -8,7 +9,7 @@ data class Atom(
     val symbol: String,
     val hydrogenCount: Long,
     val charge: Int,
-    val isLabelReversed: Boolean,
+    val labelOrientation: LabelOrientation,
     val isLabelVisible: Boolean,
     val hasValenceViolation: Boolean
 )

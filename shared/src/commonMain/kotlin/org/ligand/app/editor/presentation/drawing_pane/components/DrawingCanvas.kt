@@ -341,7 +341,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                     val labelLayout = getAtomLabelLayout(
                         symbolLayout = symbolLayout,
                         hydrogenLayout = hydrogenLayout,
-                        isReversed = atom.isLabelReversed,
+                        labelOrientation = atom.labelOrientation,
                         atomOffset = atom.offsetPx(),
                     )
 
@@ -401,7 +401,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val beginAtomLabelRect = getAtomLabelLayout(
                             symbolLayout = symbolLayout,
                             hydrogenLayout = hydrogenLayout,
-                            isReversed = beginAtom.isLabelReversed,
+                            labelOrientation = beginAtom.labelOrientation,
                             atomOffset = beginAtom.offsetPx(),
                         ).boundingRect
 
@@ -423,7 +423,7 @@ fun DrawingCanvas(state: DrawingPaneState, onAction: (DrawingPaneAction) -> Unit
                         val endAtomLabelRect = getAtomLabelLayout(
                             symbolLayout = symbolLayout,
                             hydrogenLayout = hydrogenLayout,
-                            isReversed = endAtom.isLabelReversed,
+                            labelOrientation = endAtom.labelOrientation,
                             atomOffset = endAtom.offsetPx(),
                         ).boundingRect
 

@@ -944,7 +944,7 @@ class DrawingPaneViewModel(
                 val rect = getAtomLabelLayout(
                     symbolLayout = symbolLayout,
                     hydrogenLayout = hydrogenLayout,
-                    isReversed = atom.isLabelReversed,
+                    labelOrientation = atom.labelOrientation,
                     atomOffset = atom.offsetPx(),
                 ).boundingRect
 
